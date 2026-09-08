@@ -1,0 +1,18 @@
+name: Dextana
+description: A local-first, single-owner desktop work assistant powered by Ollama.
+version: 0.1.0
+supportedInterfaces:
+  - url: http://127.0.0.1:8080
+    protocolBinding: HTTP+JSON
+    protocolVersion: "1.0"
+capabilities:
+  streaming: true
+defaultInputModes:
+  - text/plain
+defaultOutputModes:
+  - text/plain
+skills:
+  - id: respond
+    name: Respond
+    description: Responds clearly to user requests.
+    tags: [assistant]

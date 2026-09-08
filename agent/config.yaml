@@ -1,0 +1,29 @@
+apiVersion: harnest.dev/v1alpha1
+kind: Agent
+server:
+  live: true
+metadata:
+  name: dextana
+  displayName: Dextana
+spec:
+  enabled: true
+  entrypoint: agent:root_agent
+  framework:
+    name: adk
+    mode: managed
+  runtime:
+    version: "3.12"
+    dependencyFile: pyproject.toml
+  resources:
+    cpu: "1"
+    memory: 1Gi
+    ephemeralStorage: 1Gi
+    timeoutSeconds: 300
+    maxConcurrentRequests: 8
+  scaling:
+    minReplicas: 0
+    maxReplicas: 1
+  environment:
+    LITELLM_LOCAL_MODEL_COST_MAP: "True"
+    OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT: NO_CONTENT
+    ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS: "false"

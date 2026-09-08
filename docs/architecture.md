@@ -1,0 +1,70 @@
+# Architecture
+
+```text
+React desktop renderer
+  └─ explicit, validated Electron IPC through sandboxed preload
+      ├─ Store: atomic local settings / transcripts / action receipts
+      ├─ Activities: run limits, cancellation, delegation, approval decisions
+      ├─ Runtime: authenticated loopback Harnest child process
+      │   └─ Harnest managed ADK agent
+      │       ├─ per-invocation Ollama routing through LiteLLMLifecycle
+      │       └─ typed desktop client tools: browser / fused / delegate
+      ├─ Browsers: one WebContentsView and isolated persistent storage per activity
+      └─ Fused: one Streamable HTTP MCP session per activity
+```
+
+## Ownership and concurrency
+
+There is one owner identity. No organization, workspace membership, roles, or account server is required. Model selection and Ollama routing are captured in each activity and sent as non-secret request metadata to Harnest. The model routing hook runs against the active invocation context, never mutable global provider settings.
+
+Each desktop activity maps to one Harnest session while the runtime is alive. Harnest owns that session's model conversation and checkpoints. The desktop owns the human-visible activity/transcript mirror. Concurrent activities share the Harnest process while isolating invocation state. A desktop activity accepts one active turn at a time.
+
+`delegate` is a typed Harnest client tool. The desktop scheduler starts independent Harnest worker sessions and awaits their results in parallel. Each worker receives only the explicitly supplied assignment, not an implicit copy of its parent's session. Workers use the same agent definition and have their own browsers and MCP clients. Workers remain visible and cancellable in the app.
+
+## Execution protocol
+
+The main process creates an authenticated Harnest session with `POST /sessions`, then connects that session to `/live` with the same owner token. A `response.create` frame starts the turn. Frames update only their originating activity. The desktop executes each `client_tool.requested` action once and returns a `client_tool.result` on that activity's socket; subsequent model output continues streaming. The loop is bounded and never resubmits the initial user request to continue a tool call. Cancellation sends `response.cancel` and closes the connection.
+
+The authored ADK plugin enables incremental model events, and the output policy exposes provider-supplied thinking separately from answer text. Thoughts expand while arriving and remain expanded through tool waits until answer text arrives or the turn ends. The stored duration adds thought phases and excludes tool waits. The owner can expand the grey thought panel after completion or restart. Models that do not emit thinking show only their answer.
+
+Browser and MCP approvals are enforced in the main process before tool dispatch, including MCP connection and discovery. They belong to an exact activity and pending request. Decisions are consumed once; stale/cross-activity decisions fail, and cancellation removes the pending gate. Denial stops the turn instead of returning an error that the model could retry. Optional auto-allow is persisted separately for browser and MCP actions in each chat, after a successful save; workers do not inherit it. The owner can revoke it with Ask next time on the in-chat confirmation. A changed MCP endpoint invalidates an outstanding approval. Tokens are owned by the main-process Fused service and are never tool arguments. MCP transport failures do not trigger execution retries.
+
+The desktop records an action-start receipt before dispatch and a result receipt afterward. A crash between these records leaves an explicitly uncertain outcome. Restarted conversations receive those receipts as context and are instructed not to replay earlier actions. This is not a transactional exactly-once guarantee across a desktop crash and external side effect.
+
+## Custom MCP execution
+
+`MCPConnections` owns discovery, encrypted connection credentials, per-tool policies, and a separate client session per activity and connection. HTTP and stdio use the MCP SDK in the main process. Only the owner can save connections and policies through validated IPC. Cached discovery exposes enabled tools to the agent without network access. New/changed schemas default to disabled.
+
+The managed agent's `mcp` tool calls an internal desktop client-tool helper to prepare one action. The desktop binds a single-use ticket to the activity, Harnest call ID, arguments, and connection revision. For tools marked `ask`, the agent enters `request_human_approval(action="mcp.execute", arguments=...)` around the exact execution. The live transport presents `approval.requested` in the desktop and sends `approval.decision`; only a matching `approval.resolved` grant releases the ticket. The internal helper is not a model-facing tool. A final live-schema/revision check precedes `callTool`. Disabled tools, stale tickets, cancellation, changed settings, and missing grants fail closed. Chat-wide auto-allow does not override per-tool `ask` policies.
+
+## In-app browser
+
+`WebContentsView` renders inside the main window alongside the conversation. The trusted renderer supplies the browser chrome; a native child view renders the untrusted page. Browser selection follows the owner's selected activity. Background runs create their own views without changing the selected pane.
+
+Each activity saves its latest HTTP(S) page on navigation and uses a stable, hashed persistent Chromium partition. Shutdown flushes browser storage and queued transcript saves. Startup restores bookmarks (including migration from the previous visible page or visited context), without creating browser views or loading sites. The owner's Reopen browser action loads the saved address as a new navigation and restores the cursor; it never replays clicks or form submissions. Failed loads preserve a retryable bookmark. Cookies with persistent lifetimes and local storage survive restarts; session-only cookies, expired server sessions, unsent forms, and navigation history are not guaranteed to survive. Older ephemeral browser storage cannot be migrated after closing the old app.
+
+Fixed isolated-world scripts produce bounded page text and element references. Fill/click operate only on references observed during the latest read and reject detached elements. The visible green cursor moves to the target before acting. Model-supplied values are serialized as data into these fixed scripts. No model-authored script, shell, or filesystem tool is exposed.
+
+## Next milestones
+
+1. Durable Harnest session/checkpoint storage suitable for a single-owner desktop, with explicit recovery semantics for uncertain actions.
+2. Packaged and signed Electron releases with a pinned Harnest runtime and portable process lifecycle management.
+3. Richer browser controls, iframe support, downloads as reviewed artifacts, and resilient locator handling.
+4. Optional OS computer-use behind a separate capability boundary.
+5. Fused operation-authoring affordances and fixed/dynamic resource selector configuration.
+
+Each milestone must add real desktop E2E coverage before expanding to the next feature.
+
+## Work files and context
+
+The managed `files` client tool delegates to `WorkFiles` in Electron's main process. Preparation validates formats, sizes, table structure, and destination metadata without reading file contents. Activities obtains an exact read/create approval before execution, using separate `fileRead`/`fileCreate` chat capabilities. The preview is rendered as document text or sheet tables, not a code editor. Cancellation and denial reuse the existing approval lifecycle; permissions are persisted before auto-allowed dispatch.
+
+Reads use a bounded regular-file handle with no-follow, nonblocking flags; symlink leaf paths and special files are rejected. Workbook ZIP metadata and extracted table sizes have explicit limits, formulas/links are not evaluated. Creation uses exclusive creation with no-follow flags and never overwrites a file. The approved parent directory identity is checked again at execution. Paths from the native picker are normalized by resolving their parent, preventing macOS path aliases from creating duplicate context entries. Credentials and application source formats are not exposed by the document tool's allowlist.
+
+Each Activity owns its persisted context references. Attachments on queued messages enter context only when their turn begins. The runtime receives reference metadata with an explicit untrusted-content boundary; selecting a path never reads contents. Successful file and browser results update context, as do HTTP(S) references in owner requests and final responses. Context controls expose only a validated external link or revealing a file already listed in that activity; embedded pages cannot call these IPC endpoints. No filesystem scanning, shell, file editing, or code-development tooling is provided.
+
+## Everyday result presentation
+
+The agent is instructed to explain outcomes in plain language, use tables where useful, and never echo tool payloads in normal replies. As a fallback, `readableResponse` converts JSON replies (whole, fenced, prose-wrapped, or double-encoded) into Markdown fields and tables. `readableData` unwraps MCP text results and presents document receipts using filenames and the Context affordance. Incomplete structured output is buffered behind “Preparing results…” while streaming; malformed output gets a recovery message. Values are escaped as display text. The stored response and runtime/tool payloads remain unchanged, so presentation cannot alter approvals or execution.
+
+Browser and integration approval arguments use the same readable fields, preserving the requested values for review. Document approvals retain their text/table previews. Valid structured display cards still render; the conversation no longer offers a raw UI source inspector, and invalid/incomplete cards show a plain-language notice. Technical connection configuration remains available in Settings.
