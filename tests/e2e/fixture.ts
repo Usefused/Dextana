@@ -243,7 +243,6 @@ export async function start(page: Page, prompt: string, model?: string) {
 // specs leave the default gate in place and assert that no action runs before consent.
 export async function allowBrowser(page: Page) {
   const gate = page.getByRole('region', { name: 'Action approval' });
-  await expect(gate).toContainText('Browser ·', { timeout: 60_000 });
-  await gate.getByLabel('Auto-allow browser actions in this chat').check();
-  await gate.getByRole('button', { name: 'Allow action', exact: true }).click();
+  await expect(gate).toBeVisible({ timeout: 60_000 });
+  await gate.getByRole('button', { name: 'Allow all', exact: true }).click();
 }

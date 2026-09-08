@@ -65,3 +65,44 @@ test('unknown tool permissions cannot silently enable undiscovered tools', async
     'each discovered tool',
   );
 });
+
+test('native Fused token access always needs exact approval and fails closed without its token service', async () => {
+  const { store, mcp } = setup('auto');
+  store.state.fusedWorkspace = { url: 'https://engine.example', connectedAt: 'now', servers: [{ id: 'v1', mcpId: 'family', name: 'Mail', version: '1', url: 'https://engine.example/mcp/v1/mcp' }] };
+  await expect(mcp.selectFused('v1', true, ['*'])).rejects.toThrow('wildcards');
+  await mcp.selectFused('v1', true, ['mail.send']);
+  const connection = store.state.mcpConnections!.find(c => c.fusedNative)!;
+  connection.tools[0].policy = 'auto';
+  const plan = mcp.prepare('chat', 'call', connection.id, 'connect', '{}');
+  expect(plan.requiresApproval).toBe(true);
+  await expect(mcp.execute('chat', 'call', plan.ticket, new AbortController().signal)).rejects.toThrow('exact approved');
+  mcp.grant('chat', 'call');
+  await expect(mcp.execute('chat', 'call', plan.ticket, new AbortController().signal)).rejects.toThrow('No token was created');
+  expect(() => mcp.grant('chat', 'call')).toThrow('No matching');
+  delete store.state.fusedWorkspace;
+  expect(mcp.catalog().find(c => c.id === connection.id)).toBeUndefined();
+});
+
+test('session-wide permission allows enabled MCP tools but revocation invalidates pending automatic calls', async () => {
+  const { store, mcp } = setup('ask');
+  store.state.activities.push({ id: 'chat', allowAllApprovals: true } as any);
+  const plan = mcp.prepare('chat', 'call', 'server', 'change', '{}');
+  expect(plan.requiresApproval).toBe(false);
+  store.state.activities[0].allowAllApprovals = false;
+  await expect(mcp.execute('chat', 'call', plan.ticket, new AbortController().signal)).rejects.toThrow('Session approval setting changed');
+});
+
+test('native Fused tokens are chat-specific and expiry restores connection approval', async () => {
+  const { store, mcp } = setup('ask');
+  store.state.fusedWorkspace = { url: 'https://engine.example', connectedAt: 'now', servers: [{ id: 'v1', mcpId: 'family', name: 'Mail', version: '1', url: 'https://engine.example/mcp/v1/mcp' }] };
+  await mcp.selectFused('v1', true, ['mail.send']);
+  const connection = store.state.mcpConnections!.find(c => c.fusedNative)!;
+  connection.tools = [{ name: 'mail', description: 'Mail', inputSchema: { type: 'object' }, policy: 'ask', fingerprint: 'one' }];
+  const token = { token: 'private', name: 'test', mcpId: 'family', engine: 'https://engine.example', expiresAt: Date.now() + 10000 };
+  (mcp as any).tokens.set(`${connection.id}:chat`, { value: token, scope: (mcp as any).nativeScope(connection) });
+  expect(mcp.catalog('chat').find(c => c.id === connection.id)!.tools[0].name).toBe('mail');
+  expect(mcp.catalog('another-chat').find(c => c.id === connection.id)!.tools[0].name).toBe('connect');
+  token.expiresAt = Date.now() - 1;
+  expect(() => mcp.prepare('chat', 'call', connection.id, 'mail', '{}')).toThrow('expired');
+  expect(mcp.catalog('chat').find(c => c.id === connection.id)!.tools[0].name).toBe('connect');
+});

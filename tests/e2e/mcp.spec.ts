@@ -38,6 +38,7 @@ test('owner tests an MCP connection, selects tools, and Harnest dynamically appr
     await work.page.getByRole('button', { name: 'Settings', exact: true }).click();
     await work.page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name: 'MCP connections', exact: true }).click();
     await work.page.getByRole('group', { name: 'MCP setup options' }).getByRole('button', { name: 'Fused' }).click();
+    await work.page.getByRole('button', { name: 'Connect with an existing execution token', exact: true }).click();
     await expect(work.page.getByLabel('MCP connection name')).toHaveValue('Fused');
     await work.page.getByLabel('MCP connection name').fill('Tasks');
     await work.page.getByLabel('MCP server URL').fill(server.url);

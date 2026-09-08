@@ -1,0 +1,38 @@
+appId: com.dextana.desktop
+productName: Dextana
+executableName: Dextana
+asar: true
+beforePack: packaging/before-pack.cjs
+npmRebuild: false
+artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
+directories:
+  output: release
+  buildResources: assets
+files:
+  - dist/**
+  - assets/icon.png
+  - package.json
+extraResources:
+  - from: browser-extension
+    to: browser-extension
+    filter: [manifest.json, popup.html, popup.css, popup.js, transfer.js]
+  - from: .build/backend
+    to: backend
+mac:
+  category: public.app-category.productivity
+  icon: assets/icon.icns
+  target: [dmg, zip]
+  hardenedRuntime: true
+  notarize: false
+win:
+  icon: assets/icon.ico
+  target: [nsis, zip]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: Dextana
+linux:
+  icon: assets/icon.png
+  category: Office
+  target: [AppImage]

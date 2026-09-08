@@ -5,11 +5,11 @@ React desktop renderer
   └─ explicit, validated Electron IPC through sandboxed preload
       ├─ Store: atomic local settings / transcripts / action receipts
       ├─ Activities: run limits, cancellation, delegation, approval decisions
-      ├─ Runtime: authenticated loopback Harnest child process
+      ├─ Runtime: authenticated loopback compiled backend with private Python
       │   └─ Harnest managed ADK agent
       │       ├─ per-invocation Ollama routing through LiteLLMLifecycle
       │       └─ typed desktop client tools: browser / fused / delegate
-      ├─ Browsers: one WebContentsView and isolated persistent storage per activity
+      ├─ Browsers: one WebContentsView per tab; isolated persistent storage per activity
       └─ Fused: one Streamable HTTP MCP session per activity
 ```
 
@@ -41,14 +41,16 @@ The managed agent's `mcp` tool calls an internal desktop client-tool helper to p
 
 `WebContentsView` renders inside the main window alongside the conversation. The trusted renderer supplies the browser chrome; a native child view renders the untrusted page. Browser selection follows the owner's selected activity. Background runs create their own views without changing the selected pane.
 
-Each activity saves its latest HTTP(S) page on navigation and uses a stable, hashed persistent Chromium partition. Shutdown flushes browser storage and queued transcript saves. Startup restores bookmarks (including migration from the previous visible page or visited context), without creating browser views or loading sites. The owner's Reopen browser action loads the saved address as a new navigation and restores the cursor; it never replays clicks or form submissions. Failed loads preserve a retryable bookmark. Cookies with persistent lifetimes and local storage survive restarts; session-only cookies, expired server sessions, unsent forms, and navigation history are not guaranteed to survive. Older ephemeral browser storage cannot be migrated after closing the old app.
+Each activity saves its tabs and latest HTTP(S) pages on navigation and uses a stable, hashed persistent Chromium partition. Shutdown flushes browser storage and queued transcript saves. Startup restores bookmarks (including migration from the previous visible page or visited context), without creating browser views or loading sites. The owner's Reopen browser action loads the saved address as a new navigation and restores the cursor; it never replays clicks or form submissions. Failed loads preserve a retryable bookmark. Cookies with persistent lifetimes and local storage survive restarts; session-only cookies, expired server sessions, unsent forms, and navigation history are not guaranteed to survive. Older ephemeral browser storage cannot be migrated after closing the old app.
+
+The pane displays a tab strip across chats and delegated workers. A tab has a stable ID, owner activity, title, URL, and restore state. UI selection is independent of the agent’s default target; explicit `tab_id` arguments are checked against the calling activity. Implicit targets are fixed before the approval wait, so closing a tab never redirects a pending action. Browser calls remain approval-gated, including tab operations. Manual tab controls are explicit owner actions. Busy tabs cannot close mid-action. Each activity is limited to 12 tabs. Tabs share their owning activity’s storage partition; workers retain independent partitions. Closing a final tab is persisted without recreating it from historical context at startup.
 
 Fixed isolated-world scripts produce bounded page text and element references. Fill/click operate only on references observed during the latest read and reject detached elements. The visible green cursor moves to the target before acting. Model-supplied values are serialized as data into these fixed scripts. No model-authored script, shell, or filesystem tool is exposed.
 
 ## Next milestones
 
 1. Durable Harnest session/checkpoint storage suitable for a single-owner desktop, with explicit recovery semantics for uncertain actions.
-2. Packaged and signed Electron releases with a pinned Harnest runtime and portable process lifecycle management.
+2. Signing and notarization for the native Electron installers. Packaging CI and the pinned compiled backend/private Python runtime are implemented; see packaging.md.
 3. Richer browser controls, iframe support, downloads as reviewed artifacts, and resilient locator handling.
 4. Optional OS computer-use behind a separate capability boundary.
 5. Fused operation-authoring affordances and fixed/dynamic resource selector configuration.

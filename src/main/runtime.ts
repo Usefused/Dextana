@@ -2,10 +2,12 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import WebSocket from 'ws';
 
 export class Runtime {
+  constructor(private backendRoot = join(__dirname, '../.build/backend'), private workingDirectory = process.cwd()) {}
   private process?: ChildProcess;
   private ready?: Promise<void>;
   private url = '';
@@ -29,13 +31,19 @@ export class Runtime {
     await new Promise<void>((resolve) => probe.close(() => resolve()));
     this.url = `http://127.0.0.1:${port}`;
     let failure = '';
+    const python = join(this.backendRoot, 'python', process.platform === 'win32' ? 'python.exe' : 'bin/python3');
+    const launcher = join(this.backendRoot, 'agent/harnest-agent');
+    if (!existsSync(python) || !existsSync(launcher)) throw new Error('The built-in agent is missing. Reinstall Dextana, or run npm run backend:build when developing.');
     const child = spawn(
-      'harnest',
-      ['serve', join(__dirname, '../agent'), '--host', '127.0.0.1', '--port', String(port)],
+      python,
+      ['-I', '-B', launcher, 'serve', '--host', '127.0.0.1', '--port', String(port)],
       {
+        cwd: this.workingDirectory,
         env: {
           ...process.env,
+          PYTHONDONTWRITEBYTECODE: '1',
           DEXTANA_RUNTIME_TOKEN: this.token,
+          DEXTANA_SCHEDULER_DIRECTORY: this.workingDirectory,
           LITELLM_LOCAL_MODEL_COST_MAP: 'True',
         },
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -44,12 +52,12 @@ export class Runtime {
     );
     this.process = child;
     child.on('error', () => {
-      failure = 'Harnest is unavailable. Install Harnest 0.16.0 or newer and ensure it is on PATH.';
+      failure = 'The built-in agent could not start. Restart Dextana or reinstall the app.';
     });
     child.stdout?.resume();
     child.stderr?.resume();
     child.on('exit', () => {
-      failure ||= 'Harnest stopped. Run harnest test agent to diagnose the agent environment.';
+      failure ||= 'The built-in agent stopped. Restart Dextana to try again.';
       this.ready = undefined;
     });
     for (let attempt = 0; attempt < 240; attempt++) {
@@ -65,7 +73,7 @@ export class Runtime {
     }
     this.stop();
     throw new Error(
-      'Harnest startup timed out. Run harnest env sync agent --profile development, then restart Dextana.',
+      'The built-in agent took too long to start. Restart Dextana and try again.',
     );
   }
   request(path: string, init: RequestInit = {}) {

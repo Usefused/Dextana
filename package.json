@@ -12,10 +12,15 @@
   "scripts": {
     "format": "prettier --write src tests scripts *.ts *.json *.html *.md docs .github",
     "build": "tsc --noEmit && vite build && node scripts/build.mjs",
-    "start": "npm run build && electron .",
+    "start": "npm run backend:build && npm run build && electron .",
     "test": "vitest run",
-    "test:e2e": "npm run build && playwright test",
-    "check": "npm run test && npm run test:e2e"
+    "test:e2e": "npm run backend:build && npm run build && playwright test",
+    "check": "npm run test && npm run test:e2e",
+    "icons": "node scripts/generate-icons.mjs",
+    "backend:build": "node scripts/build-backend.mjs",
+    "pack": "npm run backend:build && npm run build && electron-builder --dir --publish never",
+    "dist": "npm run backend:build && npm run build && electron-builder --publish never",
+    "test:packaged": "node scripts/test-packaged.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -32,6 +37,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/adm-zip": "^0.5.8",
     "@types/node": "^26.5.0",
     "@types/react": "^19.2.18",
@@ -39,6 +45,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.7.0",
     "electron": "^41.10.7",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
@@ -49,5 +56,7 @@
     "exceljs": {
       "uuid": "11.1.1"
     }
-  }
+  },
+  "productName": "Dextana",
+  "author": "Dextana contributors"
 }

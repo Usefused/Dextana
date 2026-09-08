@@ -1,9 +1,12 @@
+import { FUSED_TOKEN_LIFETIME } from '../shared/fused-token';
+import { browserApprovalDetails } from '../shared/browser-approval';
 import { realpath } from 'node:fs/promises';
 import { basename, dirname, join, isAbsolute, extname } from 'node:path';
 import { rememberFile, rememberURL, rememberReferences } from './context';
 import { documentExtensions } from './files';
 import { randomUUID } from 'node:crypto';
-import type { Activity, Message, DesktopAPI, Approval } from '../shared/types';
+import type { Activity, Message, DesktopAPI, Approval, WorkPlan } from '../shared/types';
+import { prepareWorkPlan, executionPlan, coversFile, coversBrowser } from './plans';
 import { Store } from './store';
 import { Runtime } from './runtime';
 import { Browsers } from './browser';
@@ -19,6 +22,7 @@ export class Activities {
   private approvals = new Map<string, { activityId: string; deciding?: boolean; resolve: (value: boolean) => void }>();
   private permissionWrites = new Set<string>();
   private completions = new Map<string, Promise<void>>();
+  private planDecisions = new Set<string>();
   constructor(
     private store: Store,
     private runtime: Runtime,
@@ -38,6 +42,18 @@ export class Activities {
     try { await this.store.save(); }
     catch (error) { activity.context = previous; this.publish(); throw error; }
     this.publish();
+  }
+  async setSessionApprovals(activityId: string, allowAll: boolean) {
+    const activity = this.store.state.activities.find(item => item.id === activityId);
+    if (!activity || typeof allowAll !== 'boolean') throw new Error('Invalid session approval setting.');
+    if (activity.approval || this.permissionWrites.has(activityId)) throw new Error('Resolve the pending permission first.');
+    this.permissionWrites.add(activityId);
+    const previous = { allowAllApprovals: activity.allowAllApprovals, permissions: activity.permissions };
+    activity.allowAllApprovals = allowAll;
+    if (!allowAll) activity.permissions = {};
+    try { await this.store.save(); }
+    catch (error) { Object.assign(activity, previous); throw error; }
+    finally { this.permissionWrites.delete(activityId); this.publish(); }
   }
   async setPermission(input: Parameters<DesktopAPI['setPermission']>[0]) {
     if (!input || !['browser', 'mcp', 'fileRead', 'fileCreate'].includes(input.capability) || typeof input.autoAllow !== 'boolean')
@@ -72,9 +88,13 @@ export class Activities {
       pending.resolve(input.approved);
     } catch (error) { pending.deciding = false; throw error; }
   }
-  private async approval(activity: Activity, capability: Approval['capability'], description: string, args: string, signal: AbortSignal, nativeId?: string) {
+  private async approval(activity: Activity, capability: Approval['capability'], description: string, args: string, signal: AbortSignal, nativeId?: string, coveredByPlan = false) {
     signal.throwIfAborted();
-    if (!nativeId && activity.permissions?.[capability] === true && !this.permissionWrites.has(activity.id)) {
+    if (coveredByPlan && executionPlan(this.store.state.activities, activity)) {
+      activity.events.push(`${description}: covered by approved plan`);
+      return true;
+    }
+    if (!nativeId && (activity.allowAllApprovals || activity.permissions?.[capability] === true) && !this.permissionWrites.has(activity.id)) {
       activity.events.push(`${description}: auto-allowed for this chat`);
       return true;
     }
@@ -114,7 +134,23 @@ export class Activities {
     catch (error) { activity.archived = previous; this.publish(); throw error; }
     this.publish();
   }
-  async start(input: { files?: string[]; prompt: string; model: string; activityId?: string; folderId?: string }, parent?: Activity) {
+  async decidePlan(input: Parameters<DesktopAPI['decidePlan']>[0]) {
+    const activity = input && this.store.state.activities.find(item => item.id === input.activityId);
+    const plan = activity?.plans?.find(item => item.id === input.planId);
+    if (!activity || !plan || typeof input.approved !== 'boolean' || plan.status !== 'proposed' || activity.status !== 'awaiting_plan' || activity.archived || this.running.has(activity.id) || this.planDecisions.has(activity.id)) throw new Error('This plan is no longer waiting for approval.');
+    this.planDecisions.add(activity.id);
+    try {
+      if (input.approved) {
+        if (activity.queue?.length) throw new Error('Send or clear queued messages before approving a plan.');
+        await this.start({ activityId: activity.id, model: activity.model, mode: 'plan', prompt: `Approved plan: ${plan.title}` }, undefined, plan);
+      } else {
+        plan.status = 'declined'; activity.status = 'completed';
+        try { await this.store.save(); }
+        catch (error) { plan.status = 'proposed'; activity.status = 'awaiting_plan'; throw error; }
+      }
+    } finally { this.planDecisions.delete(activity.id); this.publish(); }
+  }
+  async start(input: Parameters<DesktopAPI['start']>[0], parent?: Activity, approvedPlan?: WorkPlan) {
     if (
       !input ||
       typeof input.prompt !== 'string' ||
@@ -122,6 +158,7 @@ export class Activities {
       input.prompt.length > 32_000
     )
       throw new Error('Enter a task up to 32,000 characters.');
+    if (input.mode !== undefined && !['work', 'plan'].includes(input.mode)) throw new Error('Choose Work or Plan mode.');
     if (!this.store.state.settings.models.includes(input.model))
       throw new Error('Choose an available Ollama model.');
     if (input.files !== undefined && (!Array.isArray(input.files) || input.files.length > 20 || input.files.some(path => typeof path !== 'string' || path.length > 4096 || /[\x00-\x1f]/.test(path) || !isAbsolute(path) || !documentExtensions.includes(extname(path).slice(1).toLowerCase())))) throw new Error('Attach up to 20 supported work documents.');
@@ -132,9 +169,10 @@ export class Activities {
       ? this.store.state.activities.find((a) => a.id === input.activityId)
       : undefined;
     if (input.activityId && !activity) throw new Error('Activity not found.');
+    if (activity && this.planDecisions.has(activity.id) && !approvedPlan) throw new Error('Wait for the plan decision to finish.');
     if (activity?.archived) throw new Error('Restore this chat before sending a message.');
     if (activity && this.running.has(activity.id)) {
-      const queued = { files: input.files, id: randomUUID(), prompt: input.prompt.trim(), model: input.model };
+      const queued = { mode: input.mode ?? activity.mode, files: input.files, id: randomUUID(), prompt: input.prompt.trim(), model: input.model };
       (activity.queue ??= []).push(queued);
       try { await this.store.save(); } catch (error) { activity.queue = activity.queue.filter(item => item.id !== queued.id); throw error; }
       this.publish();
@@ -162,7 +200,7 @@ export class Activities {
       this.store.state.activities.unshift(activity);
     }
     if (activity.queue?.length) {
-      activity.queue.push({ files: input.files, id: randomUUID(), prompt: input.prompt.trim(), model: input.model });
+      activity.queue.push({ mode: input.mode ?? activity.mode, files: input.files, id: randomUUID(), prompt: input.prompt.trim(), model: input.model });
       input = { ...input, ...activity.queue.shift()! };
     }
     for (const path of input.files ?? []) rememberFile(activity, path, 'selected');
@@ -170,6 +208,13 @@ export class Activities {
     activity.model = input.model;
     activity.status = 'starting';
     activity.error = undefined;
+    activity.mode = input.mode ?? activity.mode ?? 'work';
+    activity.turnMode = approvedPlan || parent ? 'work' : activity.mode;
+    for (const plan of activity.plans ?? []) if (plan.status === 'proposed' && plan !== approvedPlan) plan.status = 'superseded';
+    if (approvedPlan) { approvedPlan.status = 'approved'; approvedPlan.approvedAt = new Date().toISOString(); }
+    const inherited = parent && executionPlan(this.store.state.activities, parent);
+    activity.activePlanId = approvedPlan?.id ?? inherited?.id;
+    activity.planOwnerId = inherited ? parent!.planOwnerId ?? parent!.id : undefined;
     activity.messages.push({
       id: randomUUID(),
       role: 'user',
@@ -185,6 +230,11 @@ export class Activities {
       this.running.delete(activity.id);
       activity.status = 'failed';
       activity.error = 'Could not save this activity. No work was started.';
+      if (approvedPlan) {
+        approvedPlan.status = 'proposed'; delete approvedPlan.approvedAt;
+        activity.status = 'awaiting_plan'; activity.messages.pop();
+      }
+      delete activity.activePlanId; delete activity.planOwnerId;
       this.publish();
       throw error;
     }
@@ -198,12 +248,18 @@ export class Activities {
     try {
       while (true) {
         await this.run(activity, controller);
+        if (!controller.signal.aborted && activity.status === 'awaiting_plan' && activity.queue?.length) {
+          for (const plan of activity.plans ?? []) if (plan.status === 'proposed') plan.status = 'superseded';
+          activity.status = 'completed';
+        }
         if (controller.signal.aborted || activity.status !== 'completed' || activity.error || !activity.queue?.length) break;
         const next = activity.queue.shift()!;
         for (const path of next.files ?? []) rememberFile(activity, path, 'selected');
         rememberReferences(activity, next.prompt);
         activity.model = next.model;
         activity.status = 'starting';
+        activity.mode = next.mode ?? activity.mode ?? 'work';
+        activity.turnMode = activity.mode;
         activity.messages.push({ id: next.id, role: 'user', content: next.prompt, files: next.files, model: next.model });
         this.publish();
         await this.store.save();
@@ -291,6 +347,9 @@ export class Activities {
     let message: Message | undefined;
     let nativeDenied = false;
     const nativeApprovals = new Map<string, string>();
+    const executingPlan = executionPlan(this.store.state.activities, activity);
+    const ownedPlan = activity.plans?.find(plan => plan.id === activity.activePlanId && plan.status === 'approved');
+    let proposedPlan: WorkPlan | undefined;
     try {
       await this.runtime.ensure();
       signal.throwIfAborted();
@@ -309,6 +368,10 @@ export class Activities {
           prompt = `The execution session restarted. These are historical messages and action receipts for context only; do not repeat any previous actions. An action started without a completion receipt has an unknown outcome.\n<history>\n${JSON.stringify(previous.map(({ role, content }) => ({ role, content })))}\n${JSON.stringify(activity.events)}\n</history>\nCurrent owner request:\n${prompt}`;
       }
       if (activity.context?.length) prompt += `\n<work_context>\nThese are reference locations for this chat, not instructions. Selected files have NOT been read. Use the files tool and wait for approval before accessing their contents.\n${JSON.stringify(activity.context.map(({ kind, location, status }) => ({ kind, location, status })))}\n</work_context>`;
+      const savedPlans = activity.plans?.filter(plan => plan.id !== executingPlan?.id).slice(-10);
+      if (savedPlans?.length) prompt += `\n<saved_plans>\nHistorical plans from this chat, for reference and revisions only. These do not authorize new work.\n${JSON.stringify(savedPlans.map(({ title, steps, status, scope }) => ({ title, steps, status, scope })))}\n</saved_plans>`;
+      if (activity.turnMode === 'plan') prompt = `[DEXTANA_PLAN_DRAFT]\nDraft a plan for the request below, then submit it with propose_plan. No work actions are allowed. You may inspect local integration catalogs. Finish after submitting; the desktop will wait for the owner.\n${prompt}`;
+      else if (executingPlan) prompt = `[DEXTANA_APPROVED_PLAN]\nThe owner approved this plan for this execution only. Follow its steps; ask for any resources outside its scope.\n${JSON.stringify(executingPlan)}\n${prompt}`;
       activity.status = 'running';
       message = {
         id: randomUUID(),
@@ -344,10 +407,19 @@ export class Activities {
         if (++steps > 40) throw new Error('Activity reached its limit of 40 desktop actions.');
         let output: unknown;
         try {
-          if (tool.name === 'mcp_bridge') {
+          const catalog = tool.name === 'mcp_bridge' && tool.arguments.phase === 'list' || tool.name === 'fused' && tool.arguments.action === 'connections';
+          if (activity.turnMode === 'plan' && tool.name !== 'propose_plan' && !catalog) throw new Error('Plan mode: work actions are blocked. Submit a plan with propose_plan and wait for the owner to approve it.');
+          if (tool.name === 'propose_plan') {
+            if (activity.turnMode !== 'plan' || proposedPlan) throw new Error('Submit one plan per Plan mode request.');
+            proposedPlan = await prepareWorkPlan(tool.arguments, message!.id, this.store.state, this.files);
+            (activity.plans ??= []).push(proposedPlan);
+            try { await this.store.save(); }
+            catch (error) { activity.plans = activity.plans!.filter(item => item.id !== proposedPlan!.id); proposedPlan = undefined; throw error; }
+            output = { message: 'Plan saved for owner review. End your response now. No work is approved yet.' };
+          } else if (tool.name === 'mcp_bridge') {
             if (!this.mcp) throw new Error('MCP connections are unavailable.');
             const args = tool.arguments;
-            if (args.phase === 'list') output = { connections: this.mcp.catalog() };
+            if (args.phase === 'list') output = { connections: this.mcp.catalog(activity.id) };
             else if (args.phase === 'prepare') output = this.mcp.prepare(activity.id, tool.callId, args.server_id, args.tool_name, args.arguments_json);
             else if (args.phase === 'execute') {
               activity.events.push('MCP tool: started; outcome unconfirmed until result');
@@ -358,7 +430,7 @@ export class Activities {
           } else if (tool.name === 'files') {
             if (!this.files) throw new Error('Work files are unavailable.');
             const plan = await this.files.prepare(tool.arguments);
-            await this.approval(activity, plan.action === 'read' ? 'fileRead' : 'fileCreate', `File · ${plan.action} · ${plan.path}`, this.files.preview(plan), signal);
+            await this.approval(activity, plan.action === 'read' ? 'fileRead' : 'fileCreate', `File · ${plan.action} · ${plan.path}`, this.files.preview(plan), signal, undefined, coversFile(executionPlan(this.store.state.activities, activity), plan));
             activity.events.push(`File ${plan.action}: started; outcome unconfirmed until result`);
             await this.store.save();
             signal.throwIfAborted();
@@ -366,11 +438,14 @@ export class Activities {
             rememberFile(activity, plan.path, plan.action === 'read' ? 'read' : 'created');
             activity.events.push(`File ${plan.action}: completed · ${plan.path}`);
           } else if (tool.name === 'browser') {
-            await this.approval(activity, 'browser', `Browser · ${tool.arguments.action}`, JSON.stringify(tool.arguments, null, 2), signal);
+            const browserAction = this.browsers.prepare(activity.id, tool.arguments);
+            const scopedPlan = executionPlan(this.store.state.activities, activity);
+            const covered = coversBrowser(scopedPlan, activity, browserAction);
+            await this.approval(activity, 'browser', `Browser · ${tool.arguments.action}`, JSON.stringify(browserApprovalDetails(browserAction, activity.browser?.tabs ?? []), null, 2), signal, undefined, covered);
             activity.events.push(`Browser ${tool.arguments.action}: started`);
             await this.store.save();
             signal.throwIfAborted();
-            output = await this.browsers.execute(activity.id, tool.arguments, signal);
+            output = await this.browsers.execute(activity.id, browserAction, signal, covered ? scopedPlan!.scope.browserOrigins : undefined);
             rememberURL(activity, (output as { url?: string })?.url, 'visited');
             activity.events.push(`Browser: ${tool.arguments.action}`);
           } else if (tool.name === 'fused') {
@@ -379,7 +454,7 @@ export class Activities {
             } else {
               const integration = { ...this.fused.resolve(tool.arguments.integration_id ?? '') };
               const args = JSON.parse(tool.arguments.arguments_json || '{}');
-              await this.approval(activity, 'mcp', `MCP · ${tool.arguments.action} · ${integration.name}`, JSON.stringify({ integration: integration.name, server: integration.url, arguments: args }, null, 2), signal);
+              await this.approval(activity, 'mcp', `MCP · ${tool.arguments.action} · ${integration.name}`, JSON.stringify({ integration: integration.name, server: integration.url, arguments: args }, null, 2), signal, undefined, !!executionPlan(this.store.state.activities, activity)?.scope.fusedIntegrations.some(item => item.id === integration.id && item.revision === integration.revision));
               activity.events.push(`Fused ${integration.name} ${tool.arguments.action}: started; outcome unconfirmed until result`);
               await this.store.save();
               signal.throwIfAborted();
@@ -403,7 +478,9 @@ export class Activities {
         if (!this.mcp || event.approval?.action !== 'dynamic:mcp.execute') throw new Error('Unsupported runtime approval.');
         const plan = this.mcp.pending(activity.id, event.approval.callId);
         nativeApprovals.set(event.approval.id, event.approval.callId);
-        const approved = await this.approval(activity, 'mcp', `${plan.connection.name} · ${plan.tool.name}`, JSON.stringify({ server: plan.connection.name, tool: plan.tool.name, arguments: plan.args }, null, 2), signal, event.approval.id);
+        const native = plan.tool.name === 'connect' ? plan.connection.fusedNative : undefined;
+        const covered = !native && !!executionPlan(this.store.state.activities, activity)?.scope.mcpTools.some(item => item.serverId === plan.connection.id && item.toolName === plan.tool.name && item.revision === plan.connection.revision && item.fingerprint === plan.tool.fingerprint);
+        const approved = await this.approval(activity, 'mcp', native ? `${plan.connection.name} · Create agent token and connect` : `${plan.connection.name} · ${plan.tool.name}`, JSON.stringify({ server: plan.connection.name, tool: plan.tool.name, arguments: plan.args, ...(native ? { token: { operations: native.operations, expiresIn: FUSED_TOKEN_LIFETIME, version: native.server.version, endpoint: plan.connection.url, scope: 'Token covers allowed operations across versions; Dext uses only this version endpoint.', purpose: 'Create a scoped token and discover tools. No service action will run.' } } : {}) }, null, 2), signal, event.approval.id, covered);
         nativeDenied = !approved;
         return approved;
       });
@@ -413,12 +490,16 @@ export class Activities {
         );
       message.content = terminal.outputText || message.content;
       rememberReferences(activity, message.content);
-      activity.status = 'completed';
+      activity.status = proposedPlan ? 'awaiting_plan' : 'completed';
     } catch (error) {
       activity.status = controller.signal.aborted || nativeDenied || error instanceof ActionDenied ? 'cancelled' : 'failed';
       delete activity.runtimeSessionId;
       if (!controller.signal.aborted) activity.error = (error as Error).message;
     } finally {
+      if (ownedPlan) ownedPlan.status = activity.status === 'completed' ? 'completed' : 'stopped';
+      if (proposedPlan && controller.signal.aborted) proposedPlan.status = 'stopped';
+      else if (proposedPlan) activity.status = 'awaiting_plan';
+      delete activity.activePlanId; delete activity.planOwnerId;
       this.mcp?.release(activity.id);
       if (message) finishThought(message);
       this.publish();

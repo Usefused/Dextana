@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>DxT</title>
+  <rect x="32" y="32" width="960" height="960" rx="218" fill="#365f4c"/>
+  <g fill="#faf9f3">
+    <path fill-rule="evenodd" d="M140 340h121c90 0 135 66 135 172s-45 172-135 172H140v-44h27V384h-27Zm94 58v228h26c49 0 68-42 68-114s-19-114-68-114Z"/>
+    <path transform="translate(75 0) scale(.86 1)" d="M415 446h78l43 65 44-65h77v39h-22l-62 90 72 109h-83l-42-69-44 69h-80l75-109-61-90h-25Z"/>
+    <path d="M661 340h224v88h-42l-9-32h-27v244h30v44H709v-44h30V396h-27l-9 32h-42Z"/>
+  </g>
+</svg>

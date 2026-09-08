@@ -57,16 +57,17 @@ it('restores browser bookmarks as reopenable pages and migrates previous visible
       { ...chat('three'), browser: { url: 'file:///etc/passwd', needsReopen: false } },
       chat('four'),
     ];
-    store.state.browser = { activityId: 'four', url: 'https://example.com/current' };
+    store.state.browser = { activityId: 'four', url: 'https://example.com/current' } as typeof store.state.browser;
     await store.save();
     const restored = new Store(directory);
     await restored.load();
     expect(restored.state.browser).toBeUndefined();
-    expect(restored.state.activities.map(activity => activity.browser)).toEqual([
+    expect(restored.state.activities.map(activity => activity.browser && ({ url: activity.browser.url, needsReopen: activity.browser.needsReopen }))).toEqual([
       { url: 'https://example.com/saved', needsReopen: true },
       { url: 'https://example.com/visited', needsReopen: true },
       undefined,
       { url: 'https://example.com/current', needsReopen: true },
     ]);
+    expect(restored.state.activities[0].browser?.tabs).toEqual([{ id: 'one', activityId: 'one', title: 'example.com', url: 'https://example.com/saved', needsReopen: true }]);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

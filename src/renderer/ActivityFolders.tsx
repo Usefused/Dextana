@@ -3,6 +3,8 @@ import type { Activity, ConversationFolder } from '../shared/types';
 
 type Feedback = { changed: (message?: string) => Promise<void>; failed: (message: string) => void };
 export function ActivityFolders({
+  view,
+  onViewChange,
   activities,
   newChat,
   folders,
@@ -10,6 +12,8 @@ export function ActivityFolders({
   changed,
   failed,
 }: Feedback & {
+  view: 'activities' | 'cron';
+  onViewChange: (view: 'activities' | 'cron') => void;
   newChat: (folderId: string) => void;
   activities: Activity[];
   folders: ConversationFolder[];
@@ -107,6 +111,9 @@ export function ActivityFolders({
         >
           ＋
         </button>
+        <select className="workspace-view" aria-label="Workspace view" title="Switch workspace view" value={view} onChange={event => onViewChange(event.target.value as 'activities' | 'cron')}>
+          <option value="activities">Activities</option><option value="cron">Cron jobs</option>
+        </select>
       </div>
       {editing === 'new' && editor('new')}
       <div className="folder-list">

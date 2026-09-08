@@ -33,7 +33,7 @@ function setup(name = 'browser') {
     store,
     runtime,
     () => {},
-    { execute } as unknown as Browsers,
+    { execute, prepare: (_id: string, args: unknown) => args } as unknown as Browsers,
     { call: execute, resolve: () => store.state.fusedIntegrations![0] } as unknown as Fused,
   );
   async function start() {
@@ -127,4 +127,20 @@ test('changing the MCP endpoint while a decision is pending cannot use the old a
   await vi.waitFor(() => expect(activity.status).toBe('completed'));
   expect(execute).not.toHaveBeenCalled();
   expect(activity.events.some((event) => event.includes('MCP server changed'))).toBe(true);
+});
+
+test('session-wide approval settings save atomically and asking again clears automatic categories', async () => {
+  const { activities, store, start } = setup();
+  const { activity, input } = await start();
+  await activities.approve(input);
+  await vi.waitFor(() => expect(activity.status).toBe('completed'));
+  await activities.setSessionApprovals(activity.id, true);
+  expect(activity.allowAllApprovals).toBe(true);
+  vi.mocked(store.save).mockRejectedValueOnce(new Error('disk full'));
+  await expect(activities.setSessionApprovals(activity.id, false)).rejects.toThrow('disk full');
+  expect(activity.allowAllApprovals).toBe(true);
+  activity.permissions = { browser: true };
+  await activities.setSessionApprovals(activity.id, false);
+  expect(activity.allowAllApprovals).toBe(false);
+  expect(activity.permissions).toEqual({});
 });

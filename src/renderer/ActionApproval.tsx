@@ -1,3 +1,4 @@
+import { browserPermissionQuestion } from '../shared/browser-approval';
 import { ApprovalDetails } from './ApprovalDetails';
 import { FileApprovalPreview } from './FileApprovalPreview';
 import { useState } from 'react';
@@ -12,10 +13,10 @@ export function ActionApproval({
   activityId: string;
   approval: Approval;
 }) {
-  const [autoAllow, setAutoAllow] = useState(false);
+  const question = approval.capability === 'browser' ? browserPermissionQuestion(approval.arguments) : undefined;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  async function decide(approved: boolean) {
+  async function decide(approved: boolean, autoAllow = false) {
     setBusy(true);
     setError('');
     try {
@@ -34,27 +35,14 @@ export function ActionApproval({
   return (
     <section className="approval" aria-label="Action approval">
       <h2>Permission needed</h2>
-      <p>
-        <strong>{approval.description}</strong>
-      </p>
-      <p>Review this action before Dextana continues.</p>
-      {['fileRead', 'fileCreate'].includes(approval.capability) ? <FileApprovalPreview arguments={approval.arguments} /> : <ApprovalDetails arguments={approval.arguments} />}
-      {approval.source !== 'harnest' && (
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={autoAllow}
-            disabled={busy}
-            onChange={(event) => setAutoAllow(event.target.checked)}
-          />
-          Auto-allow {capabilityLabel[approval.capability]} in this chat
-        </label>
-      )}
-      <p className="muted">
-        {approval.source === 'harnest'
-          ? 'This tool requires permission for every execution. Change its policy in MCP connection settings.'
-          : 'Auto-allow applies only to this chat. Use Ask next time on the confirmation below to turn it off.'}
-      </p>
+      {question ? <>
+        <p className="permission-question">{question.question}</p>
+        {question.address && <p className="permission-address">{question.address}</p>}
+      </> : <>
+        <p><strong>{approval.description}</strong></p>
+        <p>Review this action before Dextana continues.</p>
+        {['fileRead', 'fileCreate'].includes(approval.capability) ? <FileApprovalPreview arguments={approval.arguments} /> : <ApprovalDetails arguments={approval.arguments} />}
+      </>}
       <button
         className="primary"
         disabled={busy}
@@ -73,6 +61,7 @@ export function ActionApproval({
       >
         Deny action
       </button>
+      {approval.source !== 'harnest' && <button className="allow-all-button" disabled={busy} title={`Allow all ${capabilityLabel[approval.capability]} in this session`} onClick={() => void decide(true, true)}>Allow all</button>}
       {error && (
         <p role="alert" className="error">
           {error}
@@ -86,7 +75,7 @@ export function AutomaticAccess({ activity }: { activity: Activity }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const allowed = (['browser', 'mcp', 'fileRead', 'fileCreate'] as const).filter(capability => activity.permissions?.[capability] === true);
-  if (!allowed.length) return null;
+  if (!allowed.length || activity.allowAllApprovals) return null;
   async function askNextTime(capability: Approval['capability']) {
     setBusy(true);
     setError('');
@@ -102,4 +91,17 @@ export function AutomaticAccess({ activity }: { activity: Activity }) {
     </div>)}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;
+}
+
+export function SessionApprovals({ activity }: { activity: Activity }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return <div className="session-approvals">
+    <select aria-label="Session approvals" value={activity.allowAllApprovals ? 'allow' : 'ask'} disabled={busy || !!activity.approval} title="Applies to this session. Fused token creation still requires approval." onChange={async event => {
+      const allow = event.target.value === 'allow'; setBusy(true); setError('');
+      try { await window.dextana.setSessionApprovals(activity.id, allow); }
+      catch (failure) { setError((failure as Error).message); } finally { setBusy(false); }
+    }}><option value="ask">Ask for approval</option><option value="allow">Allow all in this session</option></select>
+    {error && <span role="alert">{error}</span>}
+  </div>;
 }

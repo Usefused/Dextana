@@ -1,0 +1,13 @@
+# Plan mode
+
+Choose **Plan** beside the model picker before sending a request. Dextana drafts a plan with steps and an explicit list of websites, work documents, and enabled integration tools. The owner can approve the plan, decline it, or send a follow-up in Plan mode to request a revision. Every version stays with its original message in the chat.
+
+**Approve plan and start** saves the decision before starting work. One approval covers the listed resources for this execution and its delegated workers. It does not change chat-wide permissions or the tools' saved approval policies. Browser actions are scoped to exact origins, reads and creates to exact canonical document paths and destination-folder identities, and integration permissions to the selected connection revision and tool fingerprint. Browser cookie resets and new Fused credential setup retain their own gates. Disabled or changed tools remain unavailable. Unlisted resources use the ordinary action gate, subject to any automatic access the owner already enabled separately.
+
+The browser checks top-level redirects during plan-authorized navigation; websites may still load their ordinary third-party resources. A plan is an authorization for operations on the resources displayed, not an automated semantic proof that every action follows the wording of a step. The agent is instructed to follow the approved steps, and actions continue to appear in the activity log.
+
+While drafting, the desktop blocks every work tool—including file reads, browser actions, integration execution, and delegation—even if the model ignores its instructions or the chat already permits automatic actions. The only discovery allowed is the locally saved MCP/Fused catalog. The managed Harnest `propose_plan` client tool submits the plan, never approves it. Dynamic MCP approvals still pass through Harnest and only matching approved plan scopes are resolved automatically.
+
+Pending plans survive app restarts without keeping a live agent invocation suspended. Approval starts a fresh execution using the saved plan and conversation context. Finishing, cancellation, failure, or app restart invalidates execution grants. Interrupted plans remain visible and require a new Plan mode request before retrying; earlier work is not replayed automatically. Later chat requests in Plan mode create a new plan rather than reusing the old approval.
+
+Verification: `tests/e2e/plan.spec.ts` uses the shared Electron workspace with separate chats for persistence, grouped browser/document access, decline/revision history, scoped multi-agent MCP execution, and cross-origin redirect permission. `tests/unit/plans.test.ts` covers work blocking, invalid scopes, atomic approval, cancellation, and restart recovery.

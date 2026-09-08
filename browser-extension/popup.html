@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dextana Login Transfer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>Use your website login</h1>
+    <p>
+      Keep the signed-in website tab selected. Copy a connection code from Dextana’s “Use login from
+      my browser” option.
+    </p>
+    <label>Connection code<input id="code" autocomplete="off" spellcheck="false" /></label
+    ><button id="connect">Connect to Dextana</button>
+    <section id="request" hidden>
+      <p id="destination"></p>
+      <button id="open-requested">Open requested website</button>
+    </section>
+    <section id="approval" hidden>
+      <p id="source"></p>
+      <label id="source-switch" hidden
+        ><input id="open-source-site" type="checkbox" /><span id="source-switch-label"></span
+      ></label>
+      <label
+        ><input id="cookies" type="checkbox" checked /> Cookies (including sign-in cookies)</label
+      >
+      <label><input id="localStorage" type="checkbox" /> Local storage</label>
+      <label><input id="sessionStorage" type="checkbox" /> Session storage (this tab)</label>
+      <p>
+        Only selected data is read after approval. Storage may include application data. Matching
+        destination keys are replaced. The destination tab reloads; cookies and local storage are
+        shared across its chat. Your source login stays unchanged.
+      </p>
+      <button id="approve">Approve and transfer</button><button id="cancel">Cancel</button>
+    </section>
+    <p id="status" role="status" aria-live="polite"></p>
+    <script src="transfer.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,3 +1,4 @@
+import { UIReference, ReferenceText } from './UIReference';
 import { type ReactNode } from 'react';
 import { boundValue, parseA2UI, type UISurface } from './a2ui';
 
@@ -35,9 +36,15 @@ function renderSurface(surface: UISurface) {
             : 'body';
         return (
           <p key={id} className={`ui-text ui-${variant}`}>
-            {String(text ?? '')}
+            <ReferenceText text={String(text ?? '')} />
           </p>
         );
+      }
+      case 'Reference': {
+        const target = boundValue(component.target, surface.data);
+        const label = boundValue(component.label, surface.data);
+        if (typeof target !== 'string' || target.length > 4096 || (label !== undefined && typeof label !== 'string')) throw new Error('Invalid reference.');
+        return <UIReference key={id} target={target} label={label as string | undefined} />;
       }
       case 'Row':
       case 'Column':

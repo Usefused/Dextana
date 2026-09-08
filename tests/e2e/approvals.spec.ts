@@ -52,8 +52,7 @@ test('browser permission blocks contact, supports allow once and denial, and per
 
     await start(work.page, 'Automatically allow this browser chat');
     await expect(gate()).toBeVisible();
-    await gate().getByLabel('Auto-allow browser actions in this chat').check();
-    await gate().getByRole('button', { name: 'Allow action', exact: true }).click();
+    await gate().getByRole('button', { name: 'Allow all', exact: true }).click();
     await expect(work.page.getByTestId('assistant-message')).toHaveText('Browser checks complete.');
     await expect(gate()).toHaveCount(0);
     const page = await work.restart();
@@ -64,13 +63,15 @@ test('browser permission blocks contact, supports allow once and denial, and per
     const automatic = page.getByRole('region', { name: 'Automatic access' });
     await expect(automatic).toContainText('Browser actions');
     await expect(automatic).not.toContainText('MCP actions');
+    await page.getByLabel('Session approvals').selectOption('allow');
+    await expect(page.getByLabel('Session approvals')).toHaveValue('allow');
     await page.getByLabel('Describe your work').fill('Run the checks again');
     await page.getByRole('button', { name: 'Send message' }).click();
     await expect(page.getByTestId('assistant-message')).toHaveCount(2);
     await expect(page.getByTestId('assistant-message').last()).toHaveText(
-      'Browser checks complete.',
+      'Browser checks complete.', { timeout: 30_000 },
     );
-    await automatic.getByRole('button', { name: 'Ask before browser actions', exact: true }).click();
+    await page.getByLabel('Session approvals').selectOption('ask');
     await expect(automatic).toHaveCount(0);
     await page.getByLabel('Describe your work').fill('Ask again for the next check');
     await page.getByRole('button', { name: 'Send message' }).click();

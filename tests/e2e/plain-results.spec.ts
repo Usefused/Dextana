@@ -63,6 +63,8 @@ test('structured model replies appear as readable results during streaming and a
     await expect(result()).toContainText('Total cost');
     await expect(result()).not.toContainText('{');
     await start(work.page, 'Create my budget');
+    // Restart also cold-starts the bundled agent runtime on its next request.
+    await expect(work.page.getByTestId('activity-status')).toHaveText('Completed', { timeout: 60_000 });
     await expect(result()).toContainText('Budget.xlsx');
     await expect(result()).toContainText('Created');
     await expect(result()).not.toContainText('"path"');

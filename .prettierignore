@@ -4,3 +4,7 @@ test-results
 playwright-report
 agent
 package-lock.json
+
+.build
+release
+assets

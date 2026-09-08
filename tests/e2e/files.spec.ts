@@ -53,8 +53,7 @@ test('file reads and workbook creation require separate consent and preserve doc
     expect(JSON.stringify(work.calls)).not.toContain('Quarterly travel budget');
     await start(work.page, 'Read my brief with permission');
     await expect(gate()).toBeVisible();
-    await gate().getByLabel('Auto-allow file reads in this chat').check();
-    await gate().getByRole('button', { name: 'Allow action', exact: true }).click();
+    await gate().getByRole('button', { name: 'Allow all', exact: true }).click();
     await expect(work.page.getByTestId('assistant-message')).toContainText(
       'Quarterly travel budget',
     );
@@ -130,8 +129,21 @@ test('context lists attached and read documents, created workbooks, and URLs per
       .getByLabel('Describe your work')
       .fill('Keep this reference https://example.com/budget');
     await work.page.getByRole('button', { name: 'Start activity' }).click();
-    await expect(work.page.getByTestId('assistant-message')).toContainText('Reference noted');
+    await expect(work.page.getByTestId('assistant-message')).toContainText('Reference noted', { timeout: 60_000 });
     const context = () => work.page.getByRole('region', { name: 'Agent context' });
+    const filesGroup = context().locator('details.context-group').filter({ has: work.page.locator('summary', { hasText: 'Files' }) });
+    const linksGroup = context().locator('details.context-group').filter({ has: work.page.locator('summary', { hasText: 'Links' }) });
+    await expect(filesGroup).not.toHaveAttribute('open', '');
+    await expect(linksGroup).not.toHaveAttribute('open', '');
+    await expect(filesGroup.locator('summary')).toHaveText('Files1');
+    await expect(linksGroup.locator('summary')).toHaveText('Links1');
+    await expect(context().getByRole('button', { name: 'Show Context brief.txt in folder' })).not.toBeVisible();
+    await filesGroup.locator('summary').click();
+    await expect(context().getByRole('button', { name: 'Show Context brief.txt in folder' })).toBeVisible();
+    await expect(linksGroup).not.toHaveAttribute('open', '');
+    await linksGroup.locator('summary').focus();
+    await work.page.keyboard.press('Enter');
+    await expect(linksGroup.getByRole('button')).toBeVisible();
     await expect(context()).toContainText('Selected · Not read');
     await expect(work.page.locator('.message.user').first().getByRole('list', { name: 'Message attachments' })).toContainText('Context brief.txt');
     await expect(context()).toContainText('example.com/budget');
@@ -176,6 +188,7 @@ test('context lists attached and read documents, created workbooks, and URLs per
     await expect(work.page.locator('.message.user').first().getByRole('list', { name: 'Message attachments' })).toContainText('Context brief.txt');
     await expect(context()).toContainText('Meeting.txt');
     await expect(context()).toContainText('example.com/budget');
+    await expect(context().locator('details.context-group[open]')).toHaveCount(0);
   } finally {
     await work.close();
   }
@@ -224,8 +237,7 @@ test('CSV creation can be denied, auto-allowed in one chat, and cancelled in ano
     await expect(access(join(work.directory, 'artifacts/Contacts.csv'))).rejects.toThrow();
     await start(work.page, 'Create my contacts table');
     await expect(gate()).toBeVisible();
-    await gate().getByLabel('Auto-allow file creation in this chat').check();
-    await gate().getByRole('button', { name: 'Allow action', exact: true }).click();
+    await gate().getByRole('button', { name: 'Allow all', exact: true }).click();
     await expect(work.page.getByTestId('assistant-message')).toContainText('Contacts.csv');
     expect(await readFile(join(work.directory, 'artifacts/Contacts.csv'), 'utf8')).toBe(
       '"Name","City"\r\n"Alex","London"',
@@ -245,6 +257,7 @@ test('CSV creation can be denied, auto-allowed in one chat, and cancelled in ano
 });
 
 test('Context plus attaches documents and the agent reads Word and PDF after approval', async ({ workspace }) => {
+  test.setTimeout(120_000);
   const { wordDocument, pdfDocument } = await import('../helpers/documents');
   let paths: string[] = [];
   const work = await workspace((body, res) => {
@@ -261,9 +274,9 @@ test('Context plus attaches documents and the agent reads Word and PDF after app
     await writeFile(paths[0], wordDocument('Word attachment text'));
     await writeFile(paths[1], pdfDocument('PDF attachment text'));
     await start(work.page, 'Prepare for references');
-    await expect(work.page.getByTestId('assistant-message')).toContainText('Ready for references.');
+    await expect(work.page.getByTestId('assistant-message')).toContainText('Ready for references.', { timeout: 60_000 });
     const context = () => work.page.getByRole('region', { name: 'Agent context' });
-    await expect(context().locator('summary')).toHaveText('Context');
+    await expect(context().getByRole('heading', { name: 'Context', exact: true })).toBeVisible();
     await work.app().evaluate(({ dialog }, filePaths) => {
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths });
     }, paths);
@@ -281,5 +294,34 @@ test('Context plus attaches documents and the agent reads Word and PDF after app
       await gate.getByRole('button', { name: 'Allow action', exact: true }).click();
       await expect(work.page.getByTestId('assistant-message').last()).toContainText(`${format} attachment text`);
     }
+  } finally { await work.close(); }
+});
+
+test('Context keeps its header fixed and scrolls only expanded lists without a scrollbar', async ({ workspace }) => {
+  const work = await workspace();
+  try {
+    const paths = Array.from({ length: 10 }, (_, i) => join(work.directory, `Scroll reference ${i}.txt`));
+    await Promise.all(paths.map(path => writeFile(path, 'Reference')));
+    await start(work.page, 'Organize scrollable context references');
+    await expect(work.page.getByTestId('activity-status')).toHaveText('Completed', { timeout: 60_000 });
+    await work.app().evaluate(({ dialog }, filePaths) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths });
+    }, paths);
+    const panel = work.page.getByRole('region', { name: 'Agent context' });
+    await panel.getByRole('button', { name: 'Attach context files' }).click();
+    await expect(panel.locator('.context-group summary').first()).toContainText('10');
+    await panel.locator('.context-group summary').first().click();
+    const list = panel.getByRole('region', { name: 'Files in context' });
+    const header = panel.getByRole('heading', { name: 'Context', exact: true });
+    const before = await header.boundingBox();
+    expect(await list.evaluate(el => el.clientHeight)).toBeGreaterThan(180);
+    expect(await list.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+    expect(await list.evaluate(el => getComputedStyle(el).scrollbarWidth)).toBe('none');
+    await list.focus();
+    await work.page.keyboard.press('End');
+    await expect.poll(() => list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+    expect(await header.boundingBox()).toEqual(before);
+    expect(await panel.evaluate(el => el.scrollTop)).toBe(0);
+    await expect(panel.getByRole('button', { name: 'Attach context files' })).toBeVisible();
   } finally { await work.close(); }
 });

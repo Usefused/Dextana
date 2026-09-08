@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { displayTitle } from '../shared/titles';
 import { MessageContent } from './MessageContent';
 import { Thought } from './Thought';
-import { ActionApproval, AutomaticAccess } from './ActionApproval';
+import { WorkPlan } from './WorkPlan';
+import { ActionApproval, AutomaticAccess, SessionApprovals } from './ActionApproval';
 import type { Activity } from '../shared/types';
 export function ActivityView({ activity }: { activity: Activity }) {
   const [openingBrowser, setOpeningBrowser] = useState(false);
@@ -15,8 +16,9 @@ export function ActivityView({ activity }: { activity: Activity }) {
           <div className="eyebrow">{activity.parentId ? 'Delegated activity' : 'ACTIVITY'}</div>
           <h1>{displayTitle(activity.title)}</h1>
         </div>
+        <SessionApprovals key={activity.id} activity={activity} />
         <span className={`status ${activity.status}`} data-testid="activity-status">
-          {activity.approval ? 'Needs approval' : activity.status[0].toUpperCase() + activity.status.slice(1)}
+          {activity.approval ? 'Needs approval' : activity.status === 'awaiting_plan' ? 'Plan ready' : activity.status[0].toUpperCase() + activity.status.slice(1)}
         </span>
       </div>
       {activity.browser && (
@@ -58,9 +60,10 @@ export function ActivityView({ activity }: { activity: Activity }) {
               )}
             </div>
             {message.role === 'assistant' && message.id === activity.messages.at(-1)?.id && activity.approval && <ActionApproval key={activity.approval.id} activityId={activity.id} approval={activity.approval} />}
+            {activity.plans?.filter(plan => plan.messageId === message.id).map(plan => <WorkPlan key={plan.id} plan={plan} activity={activity} />)}
             {message.role === 'assistant' && message.content && (
               <div className="message-model" aria-label="Response model">
-                {displayTitle(message.model)}
+                {displayTitle(message.model || activity.model)}
               </div>
             )}
             {!!message.files?.length && (

@@ -12,9 +12,12 @@ test('A2UI reply renders a bound card and survives a workspace restart', async (
         surfaceId: 'report',
         components: [
           { id: 'root', component: 'Card', child: 'body' },
-          { id: 'body', component: 'Column', children: ['title', 'status'] },
+          { id: 'body', component: 'Column', children: ['title', 'status', 'document', 'website', 'references'] },
           { id: 'title', component: 'Text', text: 'Release overview', variant: 'h2' },
           { id: 'status', component: 'Text', text: { path: '/release/status' } },
+          { id: 'document', component: 'Reference', target: '/documents/Budget.xlsx', label: 'Budget' },
+          { id: 'website', component: 'Reference', target: 'https://example.com/report', label: 'Source report' },
+          { id: 'references', component: 'Text', text: 'See [Brief](brief.pdf) and https://example.com. [Unsafe](javascript:alert)' },
         ],
       },
     },
@@ -37,6 +40,10 @@ test('A2UI reply renders a bound card and survives a workspace restart', async (
     const card = work.page.getByTestId('assistant-message').locator('.ui-card');
     await expect(card).toContainText('Release overview');
     await expect(card).toContainText('Ready to review');
+    await expect(card.getByRole('img', { name: 'XLSX file', exact: true })).toBeVisible();
+    await expect(card.getByRole('img', { name: 'PDF file', exact: true })).toBeVisible();
+    await expect(card.getByRole('link', { name: 'Website Source report' })).toHaveAttribute('href', 'https://example.com/report');
+    await expect(card.locator('a[href^="javascript:"]')).toHaveCount(0);
     await expect(work.page.getByTestId('assistant-message').locator('pre')).toBeHidden();
     const page = await work.restart();
     await page
@@ -45,6 +52,7 @@ test('A2UI reply renders a bound card and survives a workspace restart', async (
     await expect(page.getByTestId('assistant-message').locator('.ui-card')).toContainText(
       'Ready to review',
     );
+    await expect(page.getByRole('img', { name: 'XLSX file', exact: true })).toBeVisible();
     await expect(page.getByText('UI source', { exact: true })).toHaveCount(0);
     await expect(page.getByTestId('assistant-message')).not.toContainText('updateDataModel');
   } finally {

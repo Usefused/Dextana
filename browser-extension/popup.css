@@ -1,0 +1,34 @@
+body {
+  width: 360px;
+  padding: 16px;
+  font: 14px/1.5 system-ui;
+  color: #26392e;
+  background: #faf9f6;
+}
+h1 {
+  font-size: 20px;
+}
+label {
+  display: block;
+  margin: 12px 0;
+}
+#code {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+}
+button {
+  border: 1px solid #bacabc;
+  border-radius: 6px;
+  padding: 9px;
+  background: #e5eee6;
+  color: #26392e;
+  cursor: pointer;
+  margin: 4px 0;
+}
+button:disabled {
+  opacity: 0.5;
+}
+[hidden] {
+  display: none !important;
+}

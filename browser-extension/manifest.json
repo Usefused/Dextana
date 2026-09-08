@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Dextana Login Transfer",
+  "version": "0.2.0",
+  "description": "Transfer an approved website login into your local Dextana browser.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_permissions": ["cookies"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Dextana Login Transfer"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkRoqepjyV8moTST/IYU7JhCPN/UrcV6/4m9Lv0qFhJFVq5erXyFX/r8AsgnSifyqTpF2/lWLhsBffeFUSUTstXxVXiB2oBxxEWx7gQ34gvCsuKVRtSojKfmYHiqDisa8UqpFSzMmAMdszaMT3Mgg0P4jgMq/TmiVzyjjk4gVVDoJ1ETdscMoB+Zgt1SKV5LTxvAKz5TeuSiI2uSzOOi/c3ygdg8GLmTWDLqq8Px7piF3LxgUd/0HNQi3zj8elE99TgyvtV+q0B/w+rNpUnFocHeiAt6IoDsA2M+KTPaF6UGUVDIDFSG82jxGrkJ5gGrey9zqtHJfvxikxuxNkGczTwIDAQAB"
+}

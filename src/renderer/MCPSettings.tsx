@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { FusedWorkspace } from './FusedWorkspace';
 import { AccountConnection } from './FusedSettings';
-import type { FusedAccount, MCPConnection, MCPConnectionInput, MCPToolPolicy } from '../shared/types';
+import type { FusedWorkspace as Workspace, FusedAccount, MCPConnection, MCPConnectionInput, MCPToolPolicy } from '../shared/types';
 
 const blank: MCPConnectionInput = {
   name: '',
@@ -10,7 +11,8 @@ const blank: MCPConnectionInput = {
   args: [],
   enabled: true,
 };
-export function MCPSettings({ connections, account, saved }: { connections: MCPConnection[]; account?: FusedAccount; saved: () => Promise<void> }) {
+export function MCPSettings({ connections, account, saved, workspace }: { connections: MCPConnection[]; account?: FusedAccount; workspace?: Workspace; saved: () => Promise<void> }) {
+  const [manual, setManual] = useState(false);
   const [preset, setPreset] = useState<'custom' | 'fused'>('custom');
   const [editorOpen, setEditorOpen] = useState(false);
   const [draft, setDraft] = useState<MCPConnectionInput>(blank);
@@ -69,6 +71,7 @@ export function MCPSettings({ connections, account, saved }: { connections: MCPC
         Connect your tools, test the connection, and choose which tools Dextana may use. New and
         changed tools start disabled.
       </p>
+      {account && <details><summary>Previously connected Fused account</summary><AccountConnection key={account.connectedAt} account={account} saved={saved} /></details>}
       {connections.map((connection) => (
         <Connection
           key={connection.id}
@@ -85,15 +88,12 @@ export function MCPSettings({ connections, account, saved }: { connections: MCPC
 
         <h3>{draft.id ? 'Edit connection' : 'Add a connection'}</h3>
         {!draft.id && <div className="mcp-presets" role="group" aria-label="MCP setup options">
-          <button type="button" aria-pressed={preset === 'fused'} onClick={() => { setPreset('fused'); setDraft({ ...blank, name: 'Fused' }); setToken(''); }}>Fused<span>Guided setup</span></button>
-          <button type="button" aria-pressed={preset === 'custom'} onClick={() => { setPreset('custom'); setDraft(blank); setToken(''); }}>Custom MCP<span>Any MCP server</span></button>
+          <button type="button" aria-pressed={preset === 'fused'} onClick={() => { setPreset('fused'); setEditorOpen(true); setDraft({ ...blank, name: 'Fused' }); setToken(''); }}>Fused</button>
+          <button type="button" aria-pressed={preset === 'custom'} onClick={() => { setPreset('custom'); setDraft(blank); setToken(''); }}>Custom MCP</button>
         </div>}
-        {preset === 'fused' && <div className="fused-onboarding">
-          <p>Copy your MCP endpoint and execution token from Fused. Add the connection, test it to discover tools, then choose which tools to enable.</p>
-          <details><summary>Connect your own Fused account (optional)</summary>
-            <AccountConnection key={account?.connectedAt ?? 'new'} account={account} saved={saved} />
-          </details>
-        </div>}
+        {preset === 'fused' && <FusedWorkspace key={workspace?.url ?? 'new'} workspace={workspace} connections={connections} />}
+        {preset === 'fused' && <button className="secondary" onClick={() => setManual(!manual)}>{manual ? 'Hide manual setup' : 'Connect with an existing execution token'}</button>}
+        {(preset !== 'fused' || manual) && <>
         <label>
           MCP connection name
           <input
@@ -194,6 +194,7 @@ export function MCPSettings({ connections, account, saved }: { connections: MCPC
             {error}
           </p>
         )}
+      </>}
       </div>}
 
     </div>
@@ -275,6 +276,7 @@ function Connection({
           Remove connection
         </button>
       </div>
+      {connection.fusedNative && <p className="muted">Fused · Version {connection.fusedNative.server.version} · {connection.fusedNative.autoToken ? 'Approval required at first use' : 'Automatic tokens off'}</p>}
       {connection.testedAt && (
         <p className={connection.enabled ? 'success' : 'muted'}>{connection.enabled ? 'Connected' : 'Inactive'} · {connection.tools.length} tools</p>
       )}

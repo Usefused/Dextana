@@ -1,9 +1,11 @@
+import { CronView } from './CronView';
+import { BrowserPanel } from './BrowserPanel';
 import { ContextPanel } from './ContextPanel';
 import { ActivityFolders, FolderPicker } from './ActivityFolders';
 import { displayTitle } from '../shared/titles';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { Settings, Snapshot } from '../shared/types';
+import type { ActivityMode, Settings, Snapshot } from '../shared/types';
 import './style.css';
 import { Transcript } from './Transcript';
 import { ActivityView } from './ActivityView';
@@ -23,15 +25,21 @@ function App() {
     const timer = window.setTimeout(() => setNotice(undefined), 8000);
     return () => window.clearTimeout(timer);
   }, [notice, archiving]);
+  const [workspaceView, setWorkspaceView] = useState<'activities' | 'cron'>('activities');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsPage, setSettingsPage] = useState<keyof typeof settingsPages>('models');
   const [draft, setDraft] = useState<Settings>();
   const [model, setModel] = useState('');
+  const [mode, setMode] = useState<ActivityMode>('work');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [connected, setConnected] = useState(false);
   const [draftFolderId, setDraftFolderId] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
+  useLayoutEffect(() => {
+    // The rendered session is authoritative, including a fresh welcome screen.
+    void window.dextana.selectActivity(settingsOpen || workspaceView === 'cron' ? undefined : selectedId);
+  }, [selectedId, settingsOpen, workspaceView]);
   const currentSelection = useRef(selectedId);
   currentSelection.current = selectedId;
   const [prompt, setPrompt] = useState('');
@@ -45,10 +53,13 @@ function App() {
     input.current.style.height = `${Math.min(input.current.scrollHeight, 160)}px`;
   }, [prompt, selectedId, settingsOpen]);
   const activity = snapshot?.activities.find((a) => a.id === selectedId);
+  useEffect(() => { setMode(activity?.mode ?? 'work'); }, [selectedId, activity?.mode]);
   const visibleActivities = snapshot?.activities.filter(item => !item.archived) ?? [];
   const running = activity && ['starting', 'running'].includes(activity.status);
   useEffect(() => window.dextana.subscribe(setSnapshot), []);
   const newActivity = (folderId?: string) => {
+    setWorkspaceView('activities');
+    setMode('work');
     setDraftFolderId(folderId);
     void window.dextana.selectActivity();
     setSelectedId(undefined);
@@ -101,7 +112,7 @@ function App() {
     setFollowRequest(value => value + 1);
     setError('');
     try {
-      const id = await window.dextana.start({ prompt, model, files: attachments, activityId: selectedId, folderId: selectedId ? undefined : draftFolderId });
+      const id = await window.dextana.start({ mode, prompt, model, files: attachments, activityId: selectedId, folderId: selectedId ? undefined : draftFolderId });
       setSelectedId(id);
       setPrompt('');
     setAttachments([]);
@@ -134,6 +145,10 @@ function App() {
         placeholder="Describe the work you want to get done…"
       />
       <div className="composer-footer">
+        <select className="activity-mode" aria-label="Activity mode" value={mode} onChange={event => setMode(event.target.value as ActivityMode)} disabled={sending}>
+          <option value="work">Work</option>
+          <option value="plan">Plan</option>
+        </select>
         <button className="attach-files" aria-label="Attach files" title="Attach Excel, Word, PDF or text documents" disabled={sending} onClick={async () => {
           try { const paths = await window.dextana.pickFiles(); setAttachments(items => [...new Set([...items, ...paths])].slice(0, 20)); }
           catch (error) { setError((error as Error).message); }
@@ -165,6 +180,7 @@ function App() {
           </svg>
         </button>
       </div>
+      {mode === 'plan' && <p className="plan-mode-hint">{running && activity?.activePlanId ? 'Your approved plan is running. A follow-up will draft a new plan.' : 'Dextana will propose a plan and wait for your approval.'}</p>}
     </div>
   );
   useEffect(() => {
@@ -177,6 +193,7 @@ function App() {
       .catch((e) => setError(e.message));
   }, []);
   const openSettings = () => {
+    if (settingsOpen) return;
     void window.dextana.selectActivity();
     setDraft(snapshot?.settings);
     setSettingsOpen(true);
@@ -184,6 +201,7 @@ function App() {
     setError('');
     setConnected(false);
   };
+  useEffect(() => window.dextana.onOpenSettings?.(openSettings), [snapshot, settingsOpen]);
   async function connect() {
     if (!draft) return;
     setBusy(true);
@@ -215,7 +233,7 @@ function App() {
     }
   }
   return (
-    <div className={snapshot?.browser ? 'shell with-browser' : 'shell'}>
+    <div className={snapshot?.browser && activity && !settingsOpen && workspaceView === 'activities' ? 'shell with-browser' : 'shell'}>
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">d</span>
@@ -241,13 +259,14 @@ function App() {
         <button aria-label="New activity" className="new-work" onClick={() => newActivity()}>
           <span>＋</span> New activity <kbd>⌘ N</kbd>
         </button>
-        <ActivityFolders newChat={newActivity} activities={visibleActivities} folders={snapshot?.folders ?? []} changed={folderChanged} failed={setError} renderActivity={a => (
+        <ActivityFolders view={workspaceView} onViewChange={setWorkspaceView} newChat={newActivity} activities={visibleActivities} folders={snapshot?.folders ?? []} changed={folderChanged} failed={setError} renderActivity={a => (
 <div className="activity-row" key={a.id}>
               <button
                 aria-label={displayTitle(a.title)}
                 className={a.id === selectedId && !settingsOpen ? 'activity-select active' : 'activity-select'}
                 onClick={() => {
                   void window.dextana.selectActivity(a.id);
+                  setWorkspaceView('activities');
                   setSelectedId(a.id);
                   setSettingsOpen(false);
                   setModel(a.model);
@@ -277,21 +296,21 @@ function App() {
         </div>
         </>}
       </aside>
-      <main className={activity && !settingsOpen ? 'conversation-main' : undefined}>
+      <main className={settingsOpen ? 'settings-main' : workspaceView === 'cron' ? 'cron-main' : activity ? 'conversation-main' : undefined}>
         <header>
           <span>
             Workspace <span className="slash">/</span>{' '}
-            {settingsOpen ? `Settings / ${settingsPages[settingsPage].title}` : (activity ? displayTitle(activity.title) : draftFolderId ? `New chat · ${snapshot?.folders?.find(folder => folder.id === draftFolderId)?.name ?? 'Workspace'}` : 'New activity')}
+            {settingsOpen ? `Settings / ${settingsPages[settingsPage].title}` : workspaceView === 'cron' ? 'Cron jobs' : (activity ? displayTitle(activity.title) : draftFolderId ? `New chat · ${snapshot?.folders?.find(folder => folder.id === draftFolderId)?.name ?? 'Workspace'}` : 'New activity')}
           </span>
-          {activity && !settingsOpen ? <FolderPicker key={activity.id} activity={activity} folders={snapshot?.folders ?? []} changed={folderChanged} failed={setError}/> : <span className="privacy">◉ &nbsp; Yours by design</span>}
+          {activity && !settingsOpen && workspaceView === 'activities' ? <FolderPicker key={activity.id} activity={activity} folders={snapshot?.folders ?? []} changed={folderChanged} failed={setError}/> : <span className="privacy">◉ &nbsp; Yours by design</span>}
         </header>
         {error && (
           <div role="alert" className="error">
             {error}
           </div>
         )}
-        {settingsOpen && draft ? (
-          <section className="settings-panel">
+        {workspaceView === 'cron' && !settingsOpen && snapshot ? <CronView snapshot={snapshot} openActivity={id => { setSelectedId(id); setWorkspaceView('activities'); const run = snapshot.activities.find(a => a.id === id); if (run) setModel(run.model); setPrompt(''); setAttachments([]); }}/> : settingsOpen && draft ? (
+          <div className="settings-scroll"><section className="settings-panel">
             <div className="eyebrow">SETTINGS</div>
             <h1>{settingsPages[settingsPage].title}</h1>
             <p className="muted">{settingsPages[settingsPage].description}</p>
@@ -339,7 +358,7 @@ function App() {
             </div>
             </div>
             <div hidden={settingsPage !== 'mcp'}>
-              {snapshot && <MCPSettings connections={snapshot.mcpConnections ?? []} account={snapshot.fusedAccount} saved={async () => setSnapshot(await window.dextana.snapshot())} />}
+              {snapshot && <MCPSettings workspace={snapshot.fusedWorkspace} connections={snapshot.mcpConnections ?? []} account={snapshot.fusedAccount} saved={async () => setSnapshot(await window.dextana.snapshot())} />}
             {!!snapshot?.fusedIntegrations?.length && (
               <FusedSettings
                 integrations={snapshot.fusedIntegrations ?? []}
@@ -349,7 +368,7 @@ function App() {
               />
             )}
             </div>
-          </section>
+          </section></div>
         ) : activity ? (
           <div className="conversation-layout"><div className="work-area">
             <Transcript key={activity.id} followRequest={followRequest}>
@@ -401,23 +420,7 @@ function App() {
           <span>Built to do the work.</span>
         </footer>
       </main>
-      {snapshot?.browser && (
-        <aside className="browser-pane">
-          <div className="browser-pane-title">
-            <span>◉ Activity browser</span>
-            <button
-              aria-label="Close browser pane"
-              onClick={() => {
-                void window.dextana.hideBrowser();
-              }}
-            >
-              ×
-            </button>
-          </div>
-          <input aria-label="Activity browser address" readOnly value={snapshot.browser.url} />
-          <div className="browser-surface" />
-        </aside>
-      )}
+      {snapshot?.browser && activity && !settingsOpen && workspaceView === 'activities' && <BrowserPanel browser={snapshot.browser} activities={snapshot.activities} />}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { FUSED_TOKEN_LIFETIME } from '../shared/fused-token';
+import type { FusedCLI, FusedToken } from './fused-cli';
 import { randomUUID, createHash } from 'node:crypto';
 import { readFile, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -36,10 +38,28 @@ type Plan = {
   tool: MCPTool;
   args: Record<string, unknown>;
   approved: boolean;
+  sessionAllowed?: boolean;
   expires: number;
 };
 
+const nativeConnectTool: MCPTool = { name: 'connect', description: 'Request approval for a scoped 24-hour Fused token, then discover tools. Enable discovered tools in Settings before calling them.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, policy: 'ask', fingerprint: 'fused-native-connect-v1' };
 export class MCPConnections {
+  private tokens = new Map<string, { value: FusedToken; scope: string }>();
+  private expiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  async revokeFused(id?: string) {
+    for (const [key, lease] of this.tokens) {
+      if (id && !key.startsWith(id + ':')) continue;
+      this.tokens.delete(key); clearTimeout(this.expiryTimers.get(key)); this.expiryTimers.delete(key);
+      const client = this.clients.get(key); this.clients.delete(key);
+      await client?.then(value => value.close()).catch(() => {});
+      await this.fusedCLI?.revoke(lease.value).catch(() => {});
+    }
+  }
+  private nativeScope(connection: MCPConnection) { return JSON.stringify([connection.fusedNative, this.store.state.fusedWorkspace?.connectedAt]); }
+  private lease(connection: MCPConnection, activityId: string) {
+    const lease = this.tokens.get(`${connection.id}:${activityId}`);
+    return lease && lease.value.expiresAt > Date.now() + 1000 && lease.scope === this.nativeScope(connection) ? lease.value : undefined;
+  }
   private clients = new Map<string, Promise<Client>>();
   private plans = new Map<string, Plan>();
   private busy = new Set<string>();
@@ -47,6 +67,7 @@ export class MCPConnections {
     private store: Store,
     private directory: string,
     private publish: () => void,
+    private fusedCLI?: Pick<FusedCLI, 'issue' | 'revoke'>,
   ) {}
   private find(id: string) {
     const value = this.store.state.mcpConnections?.find((connection) => connection.id === id);
@@ -73,6 +94,21 @@ export class MCPConnections {
       throw error;
     }
     this.publish();
+  }
+  async selectFused(id: string, autoToken: boolean, operations: string[]) {
+    const workspace = this.store.state.fusedWorkspace;
+    const server = workspace?.servers.find(item => item.id === id);
+    if (!workspace || !server) throw new Error('Refresh Fused and select a discovered MCP version.');
+    if (typeof autoToken !== 'boolean' || !Array.isArray(operations) || operations.length > 100 || operations.some(value => typeof value !== 'string' || !value.trim() || value.length > 300 || value.includes('*'))) throw new Error('Choose exact operation IDs, without wildcards.');
+    if (autoToken && !operations.length) throw new Error('Enter the exact operation IDs the agent may use.');
+    const previous = this.store.state.mcpConnections?.find(item => item.fusedNative?.engine === workspace.url && item.fusedNative.server.id === id);
+    const connectionId = previous?.id ?? randomUUID();
+    await this.exclusive(connectionId, async () => {
+      const tool = nativeConnectTool;
+      await this.commit({ id: connectionId, name: `${server.name} · ${server.version}`, transport: 'http', url: server.url, command: '', args: [], enabled: true, revision: randomUUID(), tools: [tool], fusedNative: { engine: workspace.url, server, autoToken, operations: [...new Set(operations.map(value => value.trim()))] } });
+      await this.closeConnection(connectionId);
+      await this.revokeFused(connectionId);
+    });
   }
   async save(input: MCPConnectionInput) {
     if (
@@ -155,6 +191,7 @@ export class MCPConnections {
         revision: randomUUID(),
         tools: sameTarget && !replacingSecret ? previous!.tools : [],
         testedAt: sameTarget && !replacingSecret ? previous!.testedAt : undefined,
+        fusedNative: sameTarget ? previous?.fusedNative : undefined,
       };
       try {
         await this.commit(value);
@@ -164,14 +201,16 @@ export class MCPConnections {
         throw error;
       }
       await this.closeConnection(id);
+      if (previous?.fusedNative) await this.revokeFused(id);
       if (previous?.secretId && previous.secretId !== secretId)
         await rm(join(this.directory, `mcp-${previous.secretId}.enc`), { force: true });
       return id;
     });
   }
-  private async open(connection: MCPConnection, signal: AbortSignal) {
+  private async open(connection: MCPConnection, signal: AbortSignal, nativeToken?: string) {
+    if (connection.fusedNative && !nativeToken) throw new Error('Request connection approval from the agent before testing this Fused MCP.');
     signal.throwIfAborted();
-    const secret = connection.secretId
+    const secret = nativeToken ? { token: nativeToken, environment: {} } : connection.secretId
       ? JSON.parse(
           safeStorage.decryptString(
             await readFile(join(this.directory, `mcp-${connection.secretId}.enc`)),
@@ -316,17 +355,18 @@ export class MCPConnections {
       }
       this.publish();
       await this.closeConnection(id);
+      await this.revokeFused(id);
       if (connection.secretId)
         await rm(join(this.directory, `mcp-${connection.secretId}.enc`), { force: true });
     });
   }
-  catalog() {
+  catalog(activityId = '') {
     return (this.store.state.mcpConnections ?? [])
-      .filter((connection) => connection.enabled)
+      .filter((connection) => connection.enabled && (!connection.fusedNative || (connection.fusedNative.autoToken && this.store.state.fusedWorkspace?.url === connection.fusedNative.engine)))
       .map((connection) => ({
         id: connection.id,
         name: connection.name,
-        tools: connection.tools
+        tools: (connection.fusedNative && !this.lease(connection, activityId) ? [nativeConnectTool] : connection.tools)
           .filter((tool) => tool.policy !== 'disabled')
           .map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
       }))
@@ -340,7 +380,10 @@ export class MCPConnections {
     argumentsJson: string,
   ) {
     const connection = this.find(serverId);
-    const tool = connection.tools.find((item) => item.name === toolName);
+    if (connection.fusedNative && (!connection.fusedNative.autoToken || this.store.state.fusedWorkspace?.url !== connection.fusedNative.engine)) throw new Error('Enable automatic tokens for this MCP in your connected Fused workspace first.');
+    const connecting = !!connection.fusedNative && toolName === 'connect';
+    if (connection.fusedNative && !connecting && !this.lease(connection, activityId)) throw new Error('Fused token expired or unavailable. List MCPs and request connect approval again.');
+    const tool = connecting ? nativeConnectTool : connection.tools.find((item) => item.name === toolName);
     if (!connection.enabled || !tool || tool.policy === 'disabled' || this.busy.has(serverId))
       throw new Error('This MCP tool is not enabled. Review its permissions in Settings.');
     if (typeof argumentsJson !== 'string' || argumentsJson.length > 128000)
@@ -354,6 +397,8 @@ export class MCPConnections {
       )
     )
       throw new Error('An MCP action is already pending for this call.');
+    const sessionAllows = this.store.state.activities.find(activity => activity.id === activityId)?.allowAllApprovals === true;
+    const automatic = !connecting && (tool.policy === 'auto' || sessionAllows);
     const ticket = randomUUID();
     this.plans.set(ticket, {
       ticket,
@@ -362,14 +407,15 @@ export class MCPConnections {
       connection,
       tool,
       args,
-      approved: tool.policy === 'auto',
+      approved: automatic,
+      sessionAllowed: sessionAllows && !connecting && tool.policy !== 'auto',
       expires: Date.now() + 300000,
     });
     return {
       ticket,
-      requiresApproval: tool.policy === 'ask',
-      message: `${connection.name} · ${tool.name}`,
-      arguments: { ticket, serverId, revision: connection.revision, toolName, args },
+      requiresApproval: !automatic,
+      message: connecting ? `${connection.name} · Create agent token and connect` : `${connection.name} · ${tool.name}`,
+      arguments: { ticket, serverId, revision: connection.revision, toolName, args, ...(connecting && connection.fusedNative ? { token: { mcpId: connection.fusedNative.server.mcpId, version: connection.fusedNative.server.version, endpoint: connection.url, operations: connection.fusedNative.operations, expiresIn: FUSED_TOKEN_LIFETIME, scope: 'Token applies to these operations across MCP versions; Dext pins this endpoint.', purpose: 'Create a scoped token and discover tools; no service action will run.' } } : {}) },
     };
   }
   pending(activityId: string, callId: string) {
@@ -396,10 +442,48 @@ export class MCPConnections {
         throw new Error('MCP connection or tool permissions changed. Request the action again.');
     };
     valid();
+    if (plan.sessionAllowed && !this.store.state.activities.find(activity => activity.id === activityId)?.allowAllApprovals) throw new Error('Session approval setting changed. Request the action again.');
+    if (plan.connection.fusedNative) {
+      if (this.store.state.fusedWorkspace?.url !== plan.connection.fusedNative.engine) throw new Error('Fused workspace disconnected. Connect again in Settings.');
+      if (plan.tool.name === 'connect') {
+        if (!this.fusedCLI) throw new Error('Fused CLI token service is unavailable. No token was created.');
+        const native = plan.connection.fusedNative;
+        const scope = this.nativeScope(plan.connection);
+        const issued = await this.fusedCLI.issue(native.engine, native.server.mcpId, native.operations, signal);
+        let client: Client | undefined;
+        try {
+          valid();
+          if (scope !== this.nativeScope(this.find(plan.connection.id))) throw new Error('Fused account changed.');
+          client = await this.open(plan.connection, signal, issued.token);
+          const tools = (await this.discover(client, signal)).map(tool => ({ ...tool, description: tool.description ?? '', fingerprint: toolFingerprint(tool), policy: plan.connection.tools.find(previous => previous.name === tool.name && previous.fingerprint === toolFingerprint(tool))?.policy ?? 'disabled' as const }));
+          valid();
+          const previous = this.tokens.get(`${plan.connection.id}:${activityId}`);
+          await this.commit({ ...plan.connection, revision: randomUUID(), testedAt: new Date().toISOString(), tools });
+          await this.closeConnection(plan.connection.id);
+          const tokenKey = `${plan.connection.id}:${activityId}`;
+          this.tokens.set(tokenKey, { value: issued, scope });
+          clearTimeout(this.expiryTimers.get(tokenKey));
+          const timer = setTimeout(() => {
+            if (this.tokens.get(tokenKey)?.value !== issued) return;
+            this.tokens.delete(tokenKey); this.expiryTimers.delete(tokenKey);
+            const pending = this.clients.get(tokenKey); this.clients.delete(tokenKey);
+            void pending?.then(value => value.close()).catch(() => {});
+            void this.fusedCLI?.revoke(issued).catch(() => {});
+          }, Math.max(1, issued.expiresAt - Date.now()));
+          timer.unref(); this.expiryTimers.set(tokenKey, timer);
+          if (previous) void this.fusedCLI.revoke(previous.value).catch(() => {});
+          return { connected: true, server: plan.connection.name, expiresAt: new Date(issued.expiresAt).toISOString(), message: 'MCP tools discovered. Enable the tools you want in Settings before using them. No service action was executed.' };
+        } catch {
+          await this.fusedCLI.revoke(issued).catch(() => {});
+          throw new Error('Fused connection setup failed. Token revocation was attempted; no service action was executed.');
+        } finally { await client?.close().catch(() => {}); }
+      }
+      if (!this.lease(plan.connection, activityId)) throw new Error('Fused token expired. Request connect approval again.');
+    }
     const key = `${plan.connection.id}:${activityId}`;
     let pending = this.clients.get(key);
     if (!pending) {
-      pending = this.open(plan.connection, signal);
+      pending = this.open(plan.connection, signal, this.lease(plan.connection, activityId)?.token);
       this.clients.set(key, pending);
       pending.catch(() => {
         if (this.clients.get(key) === pending) this.clients.delete(key);
@@ -410,6 +494,7 @@ export class MCPConnections {
     if (!live || toolFingerprint(live) !== plan.tool.fingerprint)
       throw new Error('MCP tool changed. Test the connection and review its permissions again.');
     valid();
+    if (plan.connection.fusedNative && !this.lease(plan.connection, activityId)) throw new Error('Fused token expired. Request connect approval again.');
     try {
       const result = await client.callTool(
         { name: plan.tool.name, arguments: plan.args },
@@ -417,7 +502,8 @@ export class MCPConnections {
         { signal, timeout: 60000 },
       );
       if (JSON.stringify(result).length > 1_000_000) throw new Error('Result too large.');
-      return result;
+      const token = this.lease(plan.connection, activityId)?.token;
+      return token ? JSON.parse(JSON.stringify(result).split(token).join('[redacted]')) : result;
     } catch {
       throw new Error(
         'MCP execution did not return a usable result. Its outcome may be unknown; do not automatically retry.',
@@ -434,6 +520,7 @@ export class MCPConnections {
     await Promise.allSettled(clients.map(async ([, client]) => (await client).close()));
   }
   async close() {
+    await this.revokeFused();
     const clients = [...this.clients.values()];
     this.clients.clear();
     this.plans.clear();

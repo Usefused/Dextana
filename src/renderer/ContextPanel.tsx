@@ -47,11 +47,8 @@ export function ContextPanel({
           <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
       </button>
-      <details open>
-        <summary>Context</summary>
-        <p className="context-help">
-          Files and links used in this chat. Reading a selected file still needs permission.
-        </p>
+      <h2 className="context-heading">Context</h2>
+      <div key={activity.id}>
         {message && (
           <p role="status" className="context-help">
             {message}
@@ -60,39 +57,57 @@ export function ContextPanel({
         {!items.length && (
           <p className="context-empty">Add work documents or share a link to get started.</p>
         )}
-        <div className="context-items">
-          {items.map((item) => (
-            <article key={item.id} className="context-item">
-              <div className="context-kind">
-                {item.kind === 'file' ? 'Document' : 'Web page'} · {labels[item.status]}
-              </div>
-              <strong title={item.location}>{item.name}</strong>
-              <p title={item.location}>{item.location}</p>
-              <button
-                className="context-open"
-                aria-label={
-                  item.kind === 'file' ? `Show ${item.name} in folder` : `Open ${item.name}`
-                }
-                onClick={() => {
-                  setError('');
-                  void (
-                    item.kind === 'file'
-                      ? window.dextana.revealFile(activity.id, item.id)
-                      : window.dextana.openLink(item.location)
-                  ).catch((e) => setError(e.message));
-                }}
+        {(['file', 'url'] as const).map((kind) => {
+          const group = items.filter((item) => item.kind === kind);
+          const title = kind === 'file' ? 'Files' : 'Links';
+          return (
+            <details className="context-group" key={kind}>
+              <summary>
+                {title}
+                <span>{group.length}</span>
+              </summary>
+              {!group.length && <p className="context-empty">No {title.toLowerCase()} yet.</p>}
+              <div
+                className="context-items"
+                role="region"
+                aria-label={`${title} in context`}
+                tabIndex={0}
               >
-                {item.kind === 'file' ? 'Show in folder ↗' : 'Open link ↗'}
-              </button>
-            </article>
-          ))}
-        </div>
+                {group.map((item) => (
+                  <article key={item.id} className="context-item">
+                    <div className="context-kind">
+                      {item.kind === 'file' ? 'Document' : 'Web page'} · {labels[item.status]}
+                    </div>
+                    <strong title={item.location}>{item.name}</strong>
+                    <p title={item.location}>{item.location}</p>
+                    <button
+                      className="context-open"
+                      aria-label={
+                        item.kind === 'file' ? `Show ${item.name} in folder` : `Open ${item.name}`
+                      }
+                      onClick={() => {
+                        setError('');
+                        void (
+                          item.kind === 'file'
+                            ? window.dextana.revealFile(activity.id, item.id)
+                            : window.dextana.openLink(item.location)
+                        ).catch((e) => setError(e.message));
+                      }}
+                    >
+                      {item.kind === 'file' ? 'Show in folder ↗' : 'Open link ↗'}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </details>
+          );
+        })}
         {error && (
           <p role="alert" className="error">
             {error}
           </p>
         )}
-      </details>
+      </div>
     </aside>
   );
 }

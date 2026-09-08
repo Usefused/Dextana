@@ -133,8 +133,7 @@ test('multiple Fused integrations keep routing, credentials and approvals isolat
     await gate.getByRole('button', { name: 'Allow action', exact: true }).click();
     await expect(gate).toContainText('MCP · execute', { timeout: 30_000 });
     expect(executions).toBe(0);
-    await gate.getByLabel('Auto-allow MCP actions in this chat').check();
-    await gate.getByRole('button', { name: 'Allow action', exact: true }).click();
+    await gate.getByRole('button', { name: 'Allow all', exact: true }).click();
     await expect(work.page.getByTestId('assistant-message').last()).toContainText(
       'unified report operation is complete',
       { timeout: 30_000 },

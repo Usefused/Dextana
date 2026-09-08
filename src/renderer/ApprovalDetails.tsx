@@ -18,5 +18,5 @@ export function ApprovalDetails({ arguments: raw }: { arguments: string }) {
   }
   let value: unknown;
   try { value = JSON.parse(raw); } catch { value = 'The action details could not be displayed. Deny this request and ask Dextana to try again.'; }
-  return <div className="approval-details">{fields(value)}</div>;
+  return <div className={raw.length <= 250 ? "approval-details compact" : "approval-details"}>{fields(value)}</div>;
 }

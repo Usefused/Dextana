@@ -166,6 +166,8 @@ test('renders Markdown and streamed results without exposing display payloads', 
   await page.goto(server.resolvedUrls!.local[0]);
   await page.getByRole('button', { name: 'Rich responses', exact: true }).click();
   const reply = page.getByTestId('assistant-message');
+  // Older saved messages predate per-response model labels.
+  await expect(page.getByLabel('Response model')).toHaveText('Test');
   await expect(reply.getByRole('heading', { name: 'Project report' })).toBeVisible();
   await expect(reply.getByRole('table')).toContainText('Review');
   await expect(reply.getByRole('checkbox').first()).toBeChecked();
