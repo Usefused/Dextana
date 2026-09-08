@@ -1,21 +1,45 @@
-MIT License
+Dextana No-Resale License 1.0
 
-Copyright (c) 2026 Dextana contributors
+Copyright (c) 2026 Dextana contributors.
+Dextana is owned by Fused (https://usefused.com).
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Permission to use
+Permission is granted, free of charge, to use, copy, modify, merge, and
+redistribute copies of the Dextana software and associated documentation
+(the "Software"), subject to the conditions below. You may use the Software
+for personal work, internal business work, and work performed for clients.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+2. No resale
+Without prior written permission from Fused, you may not sell, resell, rent,
+lease, or sublicense the Software for a fee or other compensation. This
+restriction also applies to modified versions, repackaged installers, and
+bundles or subscriptions that charge for a copy of or access to the Software.
+You may not remove this restriction when redistributing the Software.
 
+This restriction does not prohibit charging for your own work or services
+performed using the Software, or selling outputs you create with it, provided
+you are not selling or charging for access to the Software itself.
+
+3. Notices and redistribution
+Redistribution must be free of charge and must include this license and the
+copyright notices. Modified versions must clearly identify that they have
+been modified. This license does not grant permission to use Fused or Dextana
+names, logos, or trademarks to imply endorsement.
+
+4. Third-party components and earlier versions
+Third-party components remain subject to their own licenses. This license
+does not override rights granted by those licenses. It applies only to copies
+of Dextana distributed under this license. It does not revoke permissions
+already granted for copies previously distributed under the MIT License or
+another license. This is not an open-source license.
+
+5. Disclaimer
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. TO THE EXTENT PERMITTED
+BY APPLICABLE LAW, IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For separate resale permission, contact Fused at https://usefused.com.

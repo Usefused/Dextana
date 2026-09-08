@@ -13,6 +13,8 @@ files:
   - assets/icon.png
   - package.json
 extraResources:
+  - from: LICENSE
+    to: LICENSE
   - from: browser-extension
     to: browser-extension
     filter: [manifest.json, popup.html, popup.css, popup.js, transfer.js]
