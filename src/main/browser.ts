@@ -213,6 +213,8 @@ export class Browsers {
           webSecurity: true,
         },
       });
+      // A tab stays detached and hidden until it is explicitly presented.
+      window.setVisible(false);
       window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       const session = window.webContents.session;
       if (!this.configuredSessions.has(session)) {
@@ -348,8 +350,12 @@ export class Browsers {
         'This tab is working. Wait for the action to finish or stop its activity before closing it.',
       );
     const wasActive = this.activeId === id;
-    if (wasActive) this.hide();
     const view = this.windows.get(id);
+    if (wasActive) this.viewRequest++;
+    if (view) {
+      if (!view.webContents.isDestroyed()) view.setVisible(false);
+      if (this.host().contentView.children.includes(view)) this.host().contentView.removeChildView(view);
+    }
     if (view && !view.webContents.isDestroyed()) view.webContents.close();
     this.windows.delete(id);
     this.tabs.delete(id);
@@ -360,11 +366,14 @@ export class Browsers {
       if (next) this.defaults.set(tab.activityId, next.id);
       else this.defaults.delete(tab.activityId);
     }
-    this.persist(tab.activityId);
     const next =
       this.owned(tab.activityId).find((t) => this.windows.has(t.id)) ??
       [...this.tabs.values()].find((t) => this.windows.has(t.id));
-    if (wasActive && next) this.show(next.id);
+    if (wasActive) {
+      if (next) this.show(next.id);
+      else this.hide();
+    }
+    this.persist(tab.activityId);
   }
   prepare(activityId: string, args: Record<string, unknown>) {
     // Freeze implicit targets before the approval wait. Closing a tab must never
@@ -488,15 +497,24 @@ export class Browsers {
     const view = this.windows.get(id);
     if (!view || view.webContents.isDestroyed())
       throw new Error('This activity has no open browser.');
-    if (this.active === view) return;
-    this.hide();
+    const host = this.host();
+    if (this.active !== view) this.loginOffer.close();
+    // Swap native surfaces without publishing a closed pane. Calling hide() here
+    // unmounts the renderer pane and races its resize/visibility cleanup against
+    // the new tab. Reattach even the current tab to repair native stacking order.
+    for (const owned of this.windows.values()) {
+      if (!owned.webContents.isDestroyed()) owned.setVisible(false);
+      if (host.contentView.children.includes(owned)) host.contentView.removeChildView(owned);
+    }
     this.active = view;
-    view.setVisible(!this.transferOverlay);
     this.activeId = id;
-    this.host().contentView.addChildView(view);
+    host.contentView.addChildView(view);
     this.resize();
-    this.host().on('resize', this.resize);
-    this.host().on('move', this.positionLogin);
+    view.setVisible(!this.transferOverlay);
+    host.removeListener('resize', this.resize);
+    host.removeListener('move', this.positionLogin);
+    host.on('resize', this.resize);
+    host.on('move', this.positionLogin);
     this.notify();
   }
   select(id?: string) {
