@@ -50,6 +50,19 @@ test('tab selection swaps the native page without closing the pane or stacking o
     await visiblePage('/blue', 'blue');
     const events = await work.page.evaluate(() => { (window as any).__stopTabViews(); return (window as any).__tabViews; });
     expect(events).not.toContain(null);
+    // A stopped external connection must not block the owner's saved in-app tabs.
+    const activityId = await work.page.evaluate(async () => {
+      const state = await window.dextana.snapshot();
+      const id = state.browser!.activityId;
+      await window.dextana.beginUserBrowser(id);
+      await window.dextana.stopUserBrowser(id);
+      await window.dextana.hideBrowser();
+      return id;
+    });
+    await work.page.getByRole('button', { name: 'Show browser', exact: true }).click();
+    await visiblePage('/blue', 'blue');
+    const connection = await work.page.evaluate(async id => (await window.dextana.snapshot()).userBrowsers?.find(state => state.activityId === id), activityId);
+    expect(connection?.state).toBe('stopped');
   } finally {
     await work.close(); site.closeAllConnections();
     await new Promise<void>(resolve => site.close(() => resolve()));

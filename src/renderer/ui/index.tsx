@@ -1,4 +1,5 @@
 import { createElement, useId, type ComponentProps, type ReactNode } from 'react';
+import { Icon } from './Icon';
 
 const cx = (...names: (string | undefined | false)[]) => names.filter(Boolean).join(' ');
 type Tone = 'neutral' | 'success' | 'warning' | 'danger';
@@ -15,7 +16,7 @@ export function Button({
   endIcon,
   ...props
 }: ComponentProps<'button'> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'layout';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'plain' | 'danger' | 'layout';
   size?: 'small' | 'medium';
   busy?: boolean;
   icon?: ReactNode;
@@ -65,6 +66,46 @@ export function TextArea({ className, ...props }: ComponentProps<'textarea'>) {
       data-autofocus={props.autoFocus || undefined}
       className={cx('dx-input', className)}
     />
+  );
+}
+
+export function SearchInput({
+  label,
+  value,
+  onChange,
+  onSearch,
+  placeholder = 'Search…',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSearch: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <form
+      role="search"
+      aria-label={label}
+      className="dx-search-input"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSearch(value.trim());
+      }}
+    >
+      <div className="dx-search-input-control">
+        <Icon name="search" />
+        <TextInput
+          type="search"
+          aria-label={label}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+      <Button type="submit" variant="primary">
+        Search
+      </Button>
+    </form>
   );
 }
 export function Select({ className, ...props }: ComponentProps<'select'>) {
@@ -280,18 +321,20 @@ export function CheckboxCard({
   actions,
   accessory,
   selection = 'checkbox',
+  compact = false,
   ...props
 }: ComponentProps<typeof CheckboxField> & {
   icon?: ReactNode;
   actions?: ReactNode;
   accessory?: ReactNode;
   selection?: 'checkbox' | 'switch';
+  compact?: boolean;
 }) {
   const id = useId();
   const Control = selection === 'switch' ? Switch : Checkbox;
   return (
     <section
-      className={cx('dx-checkbox-card', className)}
+      className={cx('dx-checkbox-card', compact && 'dx-checkbox-card--compact', className)}
       aria-labelledby={`${id}-title`}
       data-disabled={props.disabled || undefined}
     >

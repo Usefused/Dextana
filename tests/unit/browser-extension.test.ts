@@ -35,3 +35,15 @@ it('extracts the shipped extension without needing a source checkout and keeps i
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it('ships every extension runtime dependency in the packaged app', async () => {
+  const builder = await readFile('electron-builder.yml', 'utf8');
+  const resource = builder.slice(
+    builder.indexOf('to: browser-extension'),
+    builder.indexOf('from: .build/backend'),
+  );
+  for (const file of extensionFiles) {
+    expect(resource).toContain(file);
+    expect((await readFile(join('browser-extension', file))).length).toBeGreaterThan(0);
+  }
+});

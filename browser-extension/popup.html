@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Dextana Login Transfer</title>
+    <title>Dextana Browser</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <h1>Use your website login</h1>
+    <h1>Connect your browser</h1>
     <details id="pairing" open>
       <summary>Connection to Dextana</summary>
       <label for="code">Paste the code from Dextana</label>
@@ -19,12 +19,17 @@
     </section>
     <section id="approval" hidden>
       <p id="source"></p>
-      <label id="source-switch" hidden
-        ><input id="open-source-site" type="checkbox" /><span id="source-switch-label"></span
-      ></label>
+      <p id="source-switch" hidden></p>
+      <p class="hint">
+        Want a different account? Switch accounts on this website, then reopen this extension.
+      </p>
       <label><input id="cookies" type="checkbox" checked /> Sign-in cookies</label>
-      <label><input id="localStorage" type="checkbox" /> Local storage</label>
-      <label><input id="sessionStorage" type="checkbox" /> Session storage (this tab)</label>
+      <p id="cookie-scope" class="hint"></p>
+      <details class="more">
+        <summary>More data (optional)</summary>
+        <label><input id="localStorage" type="checkbox" /> Local storage</label>
+        <label><input id="sessionStorage" type="checkbox" /> Session storage (this tab)</label>
+      </details>
       <p class="hint">
         Only selected data is copied after approval. Your source login stays unchanged.
       </p>
@@ -39,8 +44,29 @@
         </p>
       </details>
     </section>
+    <section id="browser-control" hidden>
+      <p id="control-detail"></p>
+      <label id="control-granular-option"
+        ><input id="control-granular" type="checkbox" /> Granular control · choose specific
+        tabs</label
+      >
+      <div id="control-selection" hidden>
+        <div class="actions">
+          <button id="control-select-all" type="button">Select all</button>
+          <button id="control-clear-selection" type="button">Deselect all</button>
+        </div>
+        <p id="control-selection-count" class="hint" role="status" aria-live="polite"></p>
+      </div>
+      <div id="control-tabs" aria-label="Tabs to connect"></div>
+      <button id="control-approve">Activate browser access</button>
+      <button id="control-stop" hidden>Stop browser control</button>
+    </section>
     <p id="status" role="status" aria-live="polite"></p>
+    <button id="reload-extension" hidden>Open extension settings</button>
     <script src="transfer.js"></script>
+    <script src="site-scope.js"></script>
+    <script src="runtime.js"></script>
+    <script src="control-popup.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

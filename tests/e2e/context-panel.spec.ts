@@ -22,7 +22,13 @@ test('context stays compact in a narrow conversation and can be minimized and re
     await work.app().evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1000, 760));
     const panel = work.page.getByRole('region', { name: 'Agent context', exact: true });
     await expect(panel).toBeVisible();
-    await expect(panel.getByRole('button', { name: 'Minimize context' })).toHaveCount(0);
+    await panel.hover();
+    await panel.getByRole('button', { name: 'Minimize context' }).click();
+    await expect(panel).toBeHidden();
+    await work.page.getByRole('button', { name: 'Chat settings', exact: true }).click();
+    await work.page.getByRole('switch', { name: 'Show context' }).click();
+    await work.page.keyboard.press('Escape');
+    await expect(panel).toBeVisible();
     await panel.locator('summary').filter({ hasText: 'Links' }).click();
     const settings = work.page.getByRole('button', { name: 'Chat settings', exact: true });
     await settings.click();
@@ -51,8 +57,40 @@ test('context stays compact in a narrow conversation and can be minimized and re
       const transcript = await work.page.locator('.transcript-shell').boundingBox();
       return !!box && !!layout && !!transcript && box.width <= 262 && box.width < layout.width - 30 && box.height >= 300;
     }).toBe(true);
+    await work.page.keyboard.press('Escape');
+    const nativeVisible = () => work.app().evaluate(({ BrowserWindow }) => {
+      const views = BrowserWindow.getAllWindows()[0].contentView.children;
+      return views.some((view: any) => view.webContents?.getURL().includes('/api/tags') && view.getVisible());
+    });
+    await expect.poll(nativeVisible).toBe(true);
+    const modelPicker = work.page.getByRole('button', { name: 'Model and reasoning', exact: true });
+    await work.app().evaluate(async ({ BrowserWindow }) => {
+      const view = BrowserWindow.getAllWindows()[0].contentView.children.find((view: any) => view.webContents?.getURL().includes('/api/tags')) as any;
+      await view.webContents.executeJavaScript('window.__modelSelectionMarker = true');
+    });
+    await modelPicker.click();
+    await expect.poll(nativeVisible).toBe(true);
+    await work.page.getByRole('combobox', { name: 'Activity model', exact: true }).click();
+    await work.page.getByRole('listbox', { name: 'Activity model options', exact: true }).getByRole('option').first().click();
+    await expect.poll(nativeVisible).toBe(true);
+    expect(await work.app().evaluate(async ({ BrowserWindow }) => {
+      const view = BrowserWindow.getAllWindows()[0].contentView.children.find((view: any) => view.webContents?.getURL().includes('/api/tags')) as any;
+      return view.webContents.executeJavaScript('window.__modelSelectionMarker');
+    })).toBe(true);
+    await expect(work.page.locator('.selected-model')).toHaveCSS('white-space', 'nowrap');
+    await work.page.keyboard.press('Escape');
+    await expect.poll(nativeVisible).toBe(true);
+    await settings.click();
+    await expect.poll(nativeVisible).toBe(false);
+    await work.page.keyboard.press('Escape');
+    await expect.poll(nativeVisible).toBe(true);
     await work.page.screenshot({ path: '/private/tmp/dextana-context-compact.png' });
-    await work.page.getByRole('button', { name: 'Use login from my browser', exact: true }).click();
+    await work.page.getByRole('button', { name: 'Browser options', exact: true }).click();
+    await work.page.getByRole('menuitem', { name: 'Downloads', exact: true }).click();
+    await expect(work.page.getByRole('dialog', { name: 'Downloads', exact: true })).toBeVisible();
+    await work.page.getByRole('button', { name: 'Close downloads', exact: true }).click();
+    await work.page.getByRole('button', { name: 'Browser options', exact: true }).click();
+    await work.page.getByRole('menuitem', { name: 'Use login from my browser', exact: true }).click();
     const dialog = work.page.getByRole('dialog', { name: 'Use login from my browser' });
     await expect(dialog).toBeVisible();
     // Hit testing verifies the modal shields the floating Context card, not just its centre.

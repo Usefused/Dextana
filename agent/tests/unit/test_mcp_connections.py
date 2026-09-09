@@ -144,3 +144,35 @@ def test_connection_diagnostics_distinguish_timeout_protocol_and_unknown_failure
     assert '-32601' in message
     assert 'private-token' not in message
     assert 'credentials' not in module.connection_error(RuntimeError('private-token'))
+
+
+def test_multiple_custom_headers_and_body_preserve_mcp_requests(agent):
+    import asyncio
+    import json
+    import httpx
+    import pytest
+    from harnest.lib.mcp_connections import authentication, credential_values, redact
+    fields = dict(headers={'X-Key': 'header-secret', 'X-Tenant': 'tenant-secret'}, body={'credentials': {'token': 'body-secret'}})
+    auth = authentication({'auth': {'type': 'custom'}, 'customAuth': fields}, '')
+    seen = []
+    async def run():
+        def remote(request):
+            seen.append(request)
+            return httpx.Response(200, json={})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(remote), auth=auth) as client:
+            await client.post('https://example.test/mcp', json={'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'arguments': {'title': 'Keep'}}})
+            await client.get('https://example.test/mcp')
+    asyncio.run(run())
+    payload = json.loads(seen[0].content)
+    assert payload['params']['arguments'] == {'title': 'Keep'}
+    assert payload['credentials']['token'] == 'body-secret'
+    assert all(req.headers['x-key'] == 'header-secret' and req.headers['x-tenant'] == 'tenant-secret' and 'authorization' not in req.headers for req in seen)
+    assert not seen[1].content
+    assert int(seen[0].headers['content-length']) == len(seen[0].content)
+    text = 'header-secret tenant-secret body-secret'
+    for secret in credential_values(fields):
+        text = redact(text, secret)
+    assert text == '[redacted] [redacted] [redacted]'
+    for invalid in ({'headers': {'Mcp-Session-Id': 'secret'}, 'body': {}}, {'headers': {}, 'body': {'params': {}}}):
+        with pytest.raises(ValueError):
+            authentication({'auth': {'type': 'custom'}, 'customAuth': invalid}, '')

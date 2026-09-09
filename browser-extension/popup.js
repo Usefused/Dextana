@@ -1,21 +1,26 @@
 const ui = (id) => document.getElementById(id);
 const transfer = globalThis.DextanaTransfer;
+const runtime = globalThis.DextanaRuntime;
 let pending;
 let busy = false;
 
 function showTransfer(result) {
   if (!result) return;
-  busy = result.state === 'transferring';
+  busy = ['awaiting-access', 'transferring'].includes(result.state);
   for (const name of ['approve', 'connect', 'cancel', 'open-requested']) ui(name).disabled = busy;
   ui('pairing').hidden = busy;
   ui('request').hidden = true;
   ui('approval').hidden = true;
   pending = undefined;
-  ui('status').textContent = busy
-    ? 'Transferring… You can return to Dextana.'
-    : result.state === 'completed'
-      ? 'Transferred. Check the website in Dextana to confirm you’re signed in.'
-      : result.error || 'Transfer was interrupted. Check Dextana before starting a new connection.';
+  ui('status').textContent =
+    result.state === 'awaiting-access'
+      ? 'Finish approving access in Chrome. The transfer will continue even if this popup closes.'
+      : busy
+        ? 'Transferring… You can return to Dextana.'
+        : result.state === 'completed'
+          ? 'Transferred. Check the website in Dextana to confirm you’re signed in.'
+          : result.error ||
+            'Transfer was interrupted. Check Dextana before starting a new connection.';
 }
 
 async function connect() {
@@ -26,10 +31,15 @@ async function connect() {
   ui('request').hidden = true;
   ui('connect').disabled = true;
   try {
+    await runtime.ready();
     const code = ui('code').value.trim();
     const target = transfer.connection(code);
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const info = await transfer.request(target, '/request');
+    if (info.mode === 'browser-control') {
+      await globalThis.DextanaControlUI.connect(code, info, tab);
+      return;
+    }
     const requested = new URL(info.origin);
     if (!['http:', 'https:'].includes(requested.protocol) || requested.origin !== info.origin)
       throw new Error('Invalid requested website.');
@@ -51,10 +61,17 @@ async function connect() {
       throw new Error('Update Dextana to use a different signed-in website.');
     pending = { target, tab, info, code, differentSite };
     ui('source').textContent = `From ${sourceOrigin}${tab.incognito ? ' (private window)' : ''}`;
+    const cookieHosts = globalThis.DextanaSites.loginAccess(tab.url, ['cookies']).origins.map(
+      (pattern) => pattern.replace(/^[^:]+:\/\//, '').replace(/\/\*$/, ''),
+    );
+    ui('cookie-scope').textContent =
+      `Includes shared sign-in cookies for ${cookieHosts.join(' and ')}. Only cookies used by this page are copied.`;
     ui('source-switch').hidden = !differentSite;
-    ui('open-source-site').checked = false;
-    ui('source-switch-label').textContent =
-      ` Open ${sourceOrigin} in Dextana and use its login instead.`;
+    ui('source-switch').textContent =
+      `Chrome is on a different website from the requested sign-in page. Transferring will open ${sourceOrigin} in Dextana using this tab’s login.`;
+    ui('approve').textContent = differentSite
+      ? 'Transfer login and open this site'
+      : 'Approve and transfer';
     ui('approval').hidden = false;
   } catch (error) {
     pending = undefined;
@@ -64,10 +81,13 @@ async function connect() {
       error.message ||
       'Could not connect to Dextana. Keep the connection dialog open and try again.';
   } finally {
-    ui('connect').disabled = false;
+    ui('connect').disabled = !ui('reload-extension').hidden;
   }
 }
 ui('connect').onclick = connect;
+ui('cookies').onchange = () => {
+  ui('cookie-scope').hidden = !ui('cookies').checked;
+};
 ui('code').onkeydown = (event) => {
   if (event.key === 'Enter') void connect();
 };
@@ -80,35 +100,34 @@ ui('approve').onclick = async () => {
     return;
   }
   const { tab, code, differentSite } = pending;
-  if (differentSite && !ui('open-source-site').checked) {
-    ui('status').textContent =
-      'Approve opening the signed-in website, or use Open requested website.';
-    return;
-  }
   busy = true;
   ui('approve').disabled = true;
+  // Hand off before Chrome's permission prompt can destroy this popup. The
+  // worker waits for Chrome to grant access and never reads data beforehand.
+  const completion = runtime.send({
+    action: 'transfer',
+    code,
+    tab,
+    selected,
+    openSourceSite: differentSite,
+    awaitAccess: true,
+  });
+  void completion
+    .then(showTransfer)
+    .catch((error) => showTransfer({ state: 'failed', error: error.message }));
+  showTransfer({ state: 'awaiting-access' });
   try {
     // This optional permission request stays in the explicit approval gesture.
-    const allowed = await chrome.permissions.request({
-      permissions: selected.includes('cookies') ? ['cookies'] : [],
-      origins: [new URL(tab.url).origin + '/*'],
-    });
-    if (!allowed) throw new Error('Browser access was declined. Nothing was transferred.');
-    const completion = chrome.runtime.sendMessage({
-      action: 'transfer',
-      code,
-      tab,
-      selected,
-      openSourceSite: differentSite,
-    });
-    showTransfer({ state: 'transferring' });
-    showTransfer(await completion);
+    const allowed = await chrome.permissions.request(
+      globalThis.DextanaSites.loginAccess(tab.url, selected),
+    );
+    if (!allowed) await runtime.send({ action: 'cancel-access' });
   } catch (error) {
-    if (pending) {
-      busy = false;
-      ui('approve').disabled = false;
-      ui('status').textContent = error.message || 'Check Dextana before trying again.';
-    } else showTransfer({ state: 'failed', error: error.message });
+    await runtime.send({ action: 'cancel-access' }).catch(() => {});
+    showTransfer({
+      state: 'failed',
+      error: 'Browser access could not be approved. Nothing was transferred.',
+    });
   }
 };
 ui('cancel').onclick = async () => {
@@ -138,9 +157,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
 void chrome.storage.session
   .get(['connectionCode', 'transferStatus'])
   .then(async (saved) => {
-    if (ui('code').value) return;
+    if (typeof saved.connectionCode === 'string') ui('code').value = saved.connectionCode;
+    await runtime.ready();
+    await globalThis.DextanaControlUI.restore();
     if (saved.transferStatus) {
-      showTransfer(await chrome.runtime.sendMessage({ action: 'status' }));
+      showTransfer(await runtime.send({ action: 'status' }));
       return;
     }
     if (typeof saved.connectionCode === 'string') {
@@ -149,5 +170,6 @@ void chrome.storage.session
     }
   })
   .catch(() => {
-    ui('status').textContent = 'Paste your connection code to continue.';
+    if (ui('reload-extension').hidden)
+      ui('status').textContent = 'Paste your connection code to continue.';
   });

@@ -10,9 +10,9 @@ description: Read selected context files or create spreadsheets, CSV tables, and
   read. Ask the files tool to read it and wait for the desktop approval. Never infer
   its contents from its name. Read/create permissions are separate and chat-specific.
 - PNG, JPEG, GIF and WebP images are supported for reading through the same approved
-  files tool. Harnest delivers them as typed image media to a vision-capable model.
+  files tool. Harnest delivers them to the configured image interpreter, or as typed image media to the chat model when no interpreter is configured.
   If the selected model cannot process images, report that and ask the owner to
-  select a vision-capable model; do not invent a description from the filename.
+  configure an Image interpreter in Settings → Models or select a vision-capable chat model; do not invent a description from the filename.
 - Create Excel/CSV from structured sheets_json tables with headers and scalar values.
   Compute requested totals yourself and store their values; no formula execution is
   supported. Reading a workbook returns values and cached formula results, not styling.

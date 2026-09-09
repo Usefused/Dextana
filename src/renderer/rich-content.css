@@ -338,3 +338,18 @@
     width: 100%;
   }
 }
+.ui-question-card form { display: grid; gap: 18px; min-width: 0; }
+.ui-question-card h3 { margin: 0; font-size: 16px; }
+.ui-question-card fieldset { display: grid; gap: 10px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.ui-question-card legend { padding: 0; margin-bottom: 10px; font-weight: 600; }
+.ui-question-card .ui-question-options { display: grid; gap: 8px; }
+.ui-question-card form > .dx-button { justify-self: start; }
+.ui-question-card legend .settings-caption { display: inline; font-size: 12px; font-weight: 400; }
+:root .ui-question-card textarea.dx-input.dx-input { min-height: 64px; }
+.live-agent-question { margin: 16px 0; min-width: 0; }
+.live-question-answer { margin-top: 10px; padding: 12px; background: var(--dx-accent-soft); border-radius: var(--dx-radius-md); }
+.live-question-answer p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-progress { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dx-muted); }
+.agent-progress-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: agent-progress-pulse 1.4s ease-in-out infinite; }
+@keyframes agent-progress-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .agent-progress-dot { animation: none; } }

@@ -3,7 +3,7 @@ import type { Runtime } from './runtime';
 import type { MCPAuth } from '../shared/types';
 
 type ConnectionConfig =
-  | { transport: 'http'; url: string; token: string; auth?: MCPAuth }
+  | { transport: 'http'; url: string; token: string; auth?: MCPAuth; customAuth?: { headers: Record<string, string>; body: Record<string, unknown> } }
   | { transport: 'stdio'; command: string; args: string[]; environment: Record<string, string> };
 
 /** Harnest owns both transports; Electron carries settings and local grants. */

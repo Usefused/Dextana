@@ -20,6 +20,9 @@ export function rememberURL(activity: Activity, value: unknown, status: 'referen
       status,
     });
 }
+export function rememberDesktop(activity: Activity, name: string, desktop: NonNullable<ContextItem['desktop']>) {
+  remember(activity, { kind: 'desktop', name, location: `desktop:${desktop.work}:${desktop.resourceId}`, desktop, status: 'referenced' });
+}
 export function rememberReferences(activity: Activity, text: string) {
   for (const match of text.matchAll(/https?:\/\/[^\s<>"`]+/g))
     rememberURL(activity, match[0].replace(/[.,;!?\])}]+$/, ''), 'referenced');
@@ -30,9 +33,14 @@ function remember(activity: Activity, item: Omit<ContextItem, 'id'>) {
     (entry) => entry.kind === item.kind && entry.location === item.location,
   );
   if (existing) {
+    if (item.kind === 'desktop') { existing.name = item.name; existing.desktop = item.desktop; }
     if (item.status !== 'selected' && item.status !== 'referenced') existing.status = item.status;
   } else {
     items.push({ id: randomUUID(), ...item });
     if (items.length > 100) items.shift();
   }
+}
+
+export function findDesktopContext(activities: Activity[], activityId: string, itemId: string) {
+  return activities.find(activity => activity.id === activityId)?.context?.find(item => item.id === itemId && item.kind === 'desktop');
 }

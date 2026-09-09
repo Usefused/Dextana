@@ -10,6 +10,7 @@ import { Store } from './store';
 import { endpoint } from './settings';
 
 export class Fused {
+  managedCredentials?: () => Promise<{ token: string; tokenId: string; url: string }>;
   private clients = new Map<string, { integrationId: string; pending: Promise<Client> }>();
   private saving = Promise.resolve();
   constructor(
@@ -161,7 +162,11 @@ export class Fused {
         await rm(this.path(integration.secretId), { force: true }).catch(() => {});
     });
   }
-  private async connect(settings: FusedIntegration) {
+  private async connect(settings: FusedIntegration, managed?: { token: string; url: string }) {
+    if (managed) {
+      if (!this.runtime) throw new Error('The MCP backend is unavailable.');
+      return backendMCP(this.runtime, { transport: 'http', url: managed.url, token: managed.token });
+    }
     if (!settings.secretId) throw new Error('Save an execution token for this integration.');
     const token = safeStorage.decryptString(await readFile(this.path(settings.secretId)));
     if (!this.runtime) throw new Error('The MCP backend is unavailable.');
@@ -186,10 +191,13 @@ export class Fused {
     const args = JSON.parse(argumentsJson || '{}');
     if (!args || typeof args !== 'object' || Array.isArray(args))
       throw new Error('Fused arguments must be a JSON object.');
-    const key = JSON.stringify([activityId, settings.id, settings.revision]);
+    const managed = settings.managed === 'dext' ? await this.managedCredentials?.() : undefined;
+    if (settings.managed === 'dext' && !managed) throw new Error('Open Settings → Integrations to reconnect.');
+    if (this.resolve(settings.id).revision !== settings.revision) throw new Error('Integrations changed. Request permission again.');
+    const key = JSON.stringify([activityId, settings.id, settings.revision, managed?.tokenId]);
     let entry = this.clients.get(key);
     if (!entry) {
-      const pending = this.connect(settings);
+      const pending = this.connect(settings, managed);
       entry = { integrationId: settings.id, pending };
       this.clients.set(key, entry);
       pending.catch(() => this.clients.delete(key));

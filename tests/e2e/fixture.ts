@@ -16,6 +16,7 @@ export type Responder = (body: any, response: ServerResponse) => boolean;
 // provider responder and creates new chats through start(); transcripts are not erased.
 async function launchDesktop() {
   let responder: Responder | undefined;
+  let contextWindow: number | undefined = 32768;
   const calls: any[] = [];
   const responses = new Set<ServerResponse>();
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -28,7 +29,7 @@ async function launchDesktop() {
     const body = JSON.parse(data || '{}');
     if (req.url === '/api/show')
       return res.end(
-        JSON.stringify({ capabilities: ['completion', 'tools', 'thinking', ...(body.model === 'qwen3:8b' ? ['vision'] : [])], model_info: {}, template: '' }),
+        JSON.stringify({ capabilities: ['completion', 'tools', 'thinking', ...(body.model === 'qwen3:8b' ? ['vision'] : [])], model_info: {}, ...(contextWindow === undefined ? {} : { parameters: `num_ctx ${contextWindow}` }), template: '' }),
       );
     if (req.url !== '/api/chat') {
       res.writeHead(404);
@@ -93,6 +94,9 @@ async function launchDesktop() {
     app: () => app,
     setResponder: (value?: Responder) => {
       responder = value;
+    },
+    setContextWindow: (value: number | undefined) => {
+      contextWindow = value;
     },
     stopResponses: () => {
       for (const response of responses) response.destroy();

@@ -1,7 +1,7 @@
 import { realpath } from 'node:fs/promises';
 import { basename, dirname, join, isAbsolute, extname } from 'node:path';
 import { documentExtensions } from './files';
-import { rememberFile, rememberURL } from './context';
+import { rememberFile, rememberURL, rememberDesktop } from './context';
 import type { Activity, DesktopAPI } from '../shared/types';
 import { Store, localActivity } from './store';
 import { Runtime } from './runtime';
@@ -9,6 +9,7 @@ import type { Browsers } from './browser';
 import type { Fused } from './fused';
 import type { MCPConnections } from './mcp';
 import type { WorkFiles } from './files';
+import type { DesktopGateway } from './desktop/gateway';
 import { LocalCapabilities, ActionDenied } from './local-capabilities';
 
 type LocalRequest = { id: string; activityId: string; kind: string; payload: any };
@@ -22,8 +23,8 @@ export class Activities {
   private revision = -1;
   private localVersion = '';
   private pending = new Map<string, { controller: AbortController; activityId: string; events: number }>();
-  constructor(private store: Store, private runtime: Runtime, private publish: () => void, browsers: Browsers, fused: Fused, mcp?: MCPConnections, files?: WorkFiles, private notifyReminder: (text: string) => void = () => {}) {
-    this.local = new LocalCapabilities(store, publish, browsers, fused, mcp, files, activity => this.receipt(activity));
+  constructor(private store: Store, private runtime: Runtime, private publish: () => void, browsers: Browsers, fused: Fused, mcp?: MCPConnections, files?: WorkFiles, desktop?: DesktopGateway, private onActivities?: (activities: Activity[]) => void) {
+    this.local = new LocalCapabilities(store, publish, browsers, fused, mcp, files, activity => this.receipt(activity), desktop);
   }
   private async request(path: string, data?: unknown) {
     const response = await this.runtime.request('/dextana/activity' + path, { ...(data === undefined ? {} : { method: 'POST', body: JSON.stringify(data) }), signal: AbortSignal.timeout(30_000) });
@@ -44,14 +45,6 @@ export class Activities {
   }
   private apply(data: BackendState) {
     if (data.revision < this.revision) return;
-    if (this.revision >= 0) {
-      const previous = new Set(this.store.state.activities.flatMap(activity => activity.messages.filter(message => message.reminder).map(message => message.id)));
-      for (const activity of data.activities) for (const message of activity.messages) {
-        if (message.reminder && !previous.has(message.id)) {
-          try { this.notifyReminder(message.content); } catch { /* Chat delivery remains available if desktop notifications are disabled. */ }
-        }
-      }
-    }
     this.revision = data.revision;
     const requests = new Set(data.requests.map(request => request.id));
     for (const [id, pending] of this.pending) if (!requests.has(id)) { pending.controller.abort(); this.pending.delete(id); }
@@ -67,6 +60,7 @@ export class Activities {
       Object.assign(activity, incoming, local);
       for (const item of incoming.context ?? []) {
         if (item.kind === 'file') rememberFile(activity, item.location, item.status as any);
+        else if (item.kind === 'desktop' && item.desktop) rememberDesktop(activity, item.name, item.desktop);
         else rememberURL(activity, item.location, item.status as any);
       }
       if ([...this.pending.values()].some(value => value.activityId === activity.id)) activity.events = events;
@@ -79,6 +73,7 @@ export class Activities {
       this.localVersion = localVersion;
       void this.store.save().catch(() => { this.localVersion = ''; });
     }
+    this.onActivities?.(this.store.state.activities);
     this.publish();
     for (const request of data.requests) if (!this.pending.has(request.id)) {
       const activity = this.store.state.activities.find(a => a.id === request.activityId);
@@ -155,12 +150,23 @@ export class Activities {
   }
   selectModel(activityId: string, model: string, reasoning: string) { return this.command('model', { activityId, model, reasoning }); }
   syncSettings() { return this.command('initialize'); }
+  answerQuestions(input: Parameters<DesktopAPI['answerQuestions']>[0]) {
+    return this.command('answer_questions', input) as Promise<void>;
+  }
   resume(activityId: string) { return this.command('resume', { activityId }); }
   steer(activityId: string, messageId: string) { return this.command('steer', { activityId, messageId }); }
+  updateQueuedMessage(input: Parameters<DesktopAPI['updateQueuedMessage']>[0]) {
+    return this.command('update_queued_message', input) as Promise<void>;
+  }
+  editMessage(input: Parameters<DesktopAPI['editMessage']>[0]) {
+    if (!input || typeof input.activityId !== 'string' || typeof input.messageId !== 'string' || typeof input.prompt !== 'string' || !input.prompt.trim() || input.prompt.length > 32_000) throw new Error('Enter a message up to 32,000 characters.');
+    return this.command('edit_message', { activityId: input.activityId, messageId: input.messageId, prompt: input.prompt }) as Promise<string>;
+  }
   decidePlan(input: Parameters<DesktopAPI['decidePlan']>[0]) { return this.command('plan', input); }
   attachContext(id: string, paths: string[]) { return this.local.attachContext(id, paths); }
   archive(id: string, archived: boolean) { return this.local.archive(id, archived); }
   setSessionApprovals(id: string, allowAll: boolean) { return this.local.setSessionApprovals(id, allowAll); }
+  setBrowserPreferences(input: Parameters<DesktopAPI['setBrowserPreferences']>[0]) { return this.local.setBrowserPreferences(input); }
   setPermission(input: Parameters<DesktopAPI['setPermission']>[0]) { return this.local.setPermission(input); }
   approve(input: Parameters<DesktopAPI['approve']>[0]) { return this.local.approve(input); }
   stopAll() { this.stopped = true; for (const pending of this.pending.values()) pending.controller.abort(); }

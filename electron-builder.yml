@@ -2,6 +2,9 @@ appId: com.dextana.desktop
 productName: Dextana
 executableName: Dextana
 asar: true
+asarUnpack:
+  - node_modules/@trycua/**
+  - node_modules/@ubjs/**
 beforePack: packaging/before-pack.cjs
 npmRebuild: false
 artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
@@ -17,7 +20,7 @@ extraResources:
     to: LICENSE
   - from: browser-extension
     to: browser-extension
-    filter: [manifest.json, popup.html, popup.css, popup.js, transfer.js, background.js]
+    filter: [manifest.json, popup.html, popup.css, popup.js, transfer.js, runtime.js, site-scope.js, site-scope.LICENSE, background.js, control-worker.js, control-session.js, control-tabs.js, control-actions.js, control-page.js, page-semantics.js, control-popup.js]
   - from: .build/backend
     to: backend
 mac:

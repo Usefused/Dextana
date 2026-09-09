@@ -53,6 +53,9 @@ test('agent opens custom mail rows without clicking nested actions and receives 
     return true;
   });
   try {
+    // Keep this scripted interaction fixture independent of model compaction.
+    work.setContextWindow(1_048_576);
+    await work.restart();
     await start(work.page, 'Read the two fixture emails');
     await allowBrowser(work.page);
     const answer = work.page.getByTestId('assistant-message').last();
@@ -66,6 +69,8 @@ test('agent opens custom mail rows without clicking nested actions and receives 
     expect(observed[3]).toContain('Element is stale');
     expect(observed.join(' ')).not.toContain('Script failed to execute');
   } finally {
+    work.setContextWindow(32768);
+    await work.restart();
     await work.close(); site.closeAllConnections();
     await new Promise<void>(resolve => site.close(() => resolve()));
   }

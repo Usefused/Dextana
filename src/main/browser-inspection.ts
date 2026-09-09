@@ -58,7 +58,13 @@ export class BrowserInspection {
           for (const child of tree.childFrames ?? []) walk(child, item.id);
         };
         walk(frameTree);
-      } catch (error) { if (!session) throw error; }
+      } catch (error) {
+        if (!session) throw error;
+        // PDF viewer targets can disappear before their detach event arrives.
+        // Do not pass a dead child session to the subsequent DOM inspection.
+        this.sessions.delete(session);
+        this.roots.delete(session);
+      }
     }
     for (const id of this.frames.keys()) if (!seen.has(id)) this.frames.delete(id);
   }
@@ -121,7 +127,7 @@ export class BrowserInspection {
   async snapshot(code: string, args: Record<string, unknown>) {
     await this.refresh();
     const roots = await this.shadowRoots();
-    const elements: any[] = [], overlays: any[] = [], frames: any[] = [], texts: string[] = [];
+    const elements: any[] = [], forms: any[] = [], overlays: any[] = [], frames: any[] = [], texts: string[] = [];
     let focused: string | null = null;
     for (const frame of this.frames.values()) {
       try {
@@ -142,7 +148,8 @@ export class BrowserInspection {
         }
         const page = await this.run(frame, code);
         const prefix = (ref: string) => frame.key ? `${frame.key}:${ref}` : ref;
-        elements.push(...page.elements.map((element: any) => ({ ...element, ref: prefix(element.ref), frame: frame.key || 'main' })));
+        elements.push(...page.elements.map((element: any) => ({ ...element, ref: prefix(element.ref), ...(element.form_ref ? { form_ref: prefix(element.form_ref) } : {}), frame: frame.key || 'main' })));
+        forms.push(...page.forms.map((form: any) => ({ ...form, ref: prefix(form.ref), fields: form.fields.map(prefix), submit_refs: form.submit_refs.map(prefix), frame: frame.key || 'main' })));
         overlays.push(...page.overlays.map((overlay: any) => ({ ...overlay, ref: prefix(overlay.ref) })));
         if (page.focused_ref) focused = prefix(page.focused_ref);
         frames.push({ id: frame.key || 'main', url: frame.url, title: page.title, viewport: page.viewport });
@@ -151,8 +158,9 @@ export class BrowserInspection {
         frames.push({ id: frame.key || 'main', url: frame.url, error: (error as Error).message });
       }
     }
-    const offset = this.integer(args.offset, 0), limit = this.integer(args.limit, 250, 1000);
+    const offset = this.integer(args.offset, 0), limit = this.integer(args.limit, 100, 1000);
     const textOffset = this.integer(args.text_offset, 0);
+    elements.sort((a, b) => Number(!(a.in_viewport && a.actions?.length)) - Number(!(b.in_viewport && b.actions?.length)));
     const text = texts.join('\n');
     return {
       title: this.contents.getTitle(), url: this.contents.getURL(),
@@ -160,7 +168,7 @@ export class BrowserInspection {
       text_total: text.length, next_text_offset: textOffset + 24000 < text.length ? textOffset + 24000 : null,
       elements: elements.slice(offset, offset + limit), total_elements: elements.length,
       offset, next_offset: offset + limit < elements.length ? offset + limit : null,
-      frames, overlays, focused_ref: focused,
+      frames, forms, overlays, focused_ref: focused,
     };
   }
   private integer(value: unknown, fallback: number, max = Number.MAX_SAFE_INTEGER) {

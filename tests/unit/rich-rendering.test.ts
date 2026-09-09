@@ -67,3 +67,17 @@ test('charts produce finite geometry for zero, negative, tiny and single-categor
     expect(html).not.toMatch(/NaN|Infinity/);
   }
 });
+
+test('generic renderers preserve business data even when its columns resemble download metadata', async () => {
+  const { downloadDisplays } = await import('../helpers/download-display');
+  const id = 'c0e89bca-d4ee-4cd5-b224-4e5e5080beb4';
+  const record = { id, activityId: 'invoice-import', tabId: 'ledger', filename: 'receipt.pdf',
+    state: 'completed', receivedBytes: 601, totalBytes: 601, path: '/Downloads/receipt.pdf' };
+  for (const content of downloadDisplays([record])) {
+    const html = renderToStaticMarkup(createElement(MessageContent, { content }));
+    expect(html).toContain(id);
+    expect(html).toContain('invoice-import');
+    expect(html).toContain('ledger');
+    expect(html).toContain('receipt.pdf');
+  }
+});

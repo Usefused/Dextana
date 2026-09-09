@@ -15,8 +15,9 @@
     "start": "npm run backend:build && npm run build && electron .",
     "test": "vitest run",
     "test:backend": "node scripts/test-backend.mjs",
+    "eval:compaction": "node scripts/eval-compaction.mjs",
     "test:e2e": "npm run backend:build && npm run build && playwright test",
-    "check": "npm run test && npm run test:e2e",
+    "check": "npm run check:desktop && npm run test && npm run test:e2e",
     "icons": "node scripts/generate-icons.mjs",
     "installer:artwork": "node scripts/generate-installer-artwork.mjs",
     "backend:build": "node scripts/build-backend.mjs",
@@ -25,10 +26,13 @@
     "dist:signed": "node scripts/check-native-signing.mjs && npm run backend:build && npm run build && electron-builder --config electron-builder.signed.cjs --publish never && node scripts/verify-native-signing.mjs",
     "verify:artifacts": "node scripts/artifact-integrity.mjs verify",
     "test:packaged": "node scripts/test-packaged.mjs",
-    "test:mac-installers": "node scripts/verify-macos-packaging.mjs"
+    "test:mac-installers": "node scripts/verify-macos-packaging.mjs",
+    "check:desktop": "node --test scripts/check-desktop-complexity.test.mjs && node scripts/check-desktop-complexity.mjs && python3 -m unittest discover -s scripts -p test_desktop_complexity.py && python3 scripts/check-desktop-complexity.py && prettier --check \"src/main/desktop/*.ts\" \"src/shared/desktop*.ts\" \"src/renderer/Desktop*.tsx\" \"src/renderer/desktop-*.css\" \"src/main/user-browser/*.ts\" \"src/shared/user-browser.ts\" \"src/renderer/UserBrowser.tsx\" \"browser-extension/control-*.js\"",
+    "eval:browser-use": "npm run backend:build && npm run build && tsc -p evals/browser-use/tsconfig.json && playwright test -c evals/browser-use/playwright.config.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@trycua/cua-driver": "0.25.0",
     "adm-zip": "^0.6.0",
     "exceljs": "^4.4.0",
     "mammoth": "^1.12.2",
@@ -38,9 +42,12 @@
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "tldts": "^7.4.12",
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@babel/parser": "^7.29.8",
+    "@babel/traverse": "^7.29.8",
     "@playwright/test": "^1.63.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/adm-zip": "^0.5.8",

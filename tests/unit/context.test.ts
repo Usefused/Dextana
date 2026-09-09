@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { Activity } from '../../src/shared/types';
-import { rememberFile, rememberReferences, rememberURL } from '../../src/main/context';
+import { rememberFile, rememberReferences, rememberURL, rememberDesktop } from '../../src/main/context';
 
 test('context tracks provenance without duplicating or downgrading already-read files and visited links', () => {
   const activity = { id: 'one' } as Activity;
@@ -18,4 +18,14 @@ test('context tracks provenance without duplicating or downgrading already-read 
     { kind: 'url', location: 'https://example.com/budget', status: 'visited' },
   ]);
   expect(({ id: 'two' } as Activity).context).toBeUndefined();
+});
+
+
+test('desktop context keeps a stable handle as its timer state changes', () => {
+  const activity = { id: 'one' } as Activity;
+  rememberDesktop(activity, 'Tea', { work: 'time', resourceId: 'timer-1', operation: 'timer', state: 'running' });
+  const id = activity.context![0].id;
+  rememberDesktop(activity, 'Tea', { work: 'time', resourceId: 'timer-1', operation: 'timer', state: 'ringing' });
+  expect(activity.context).toHaveLength(1);
+  expect(activity.context![0]).toMatchObject({ id, kind: 'desktop', desktop: { resourceId: 'timer-1', state: 'ringing' } });
 });

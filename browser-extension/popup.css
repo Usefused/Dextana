@@ -72,3 +72,7 @@ summary {
 [hidden] {
   display: none !important;
 }
+#control-tabs { max-height: 240px; overflow: auto; }
+#control-tabs label { display: flex; align-items: start; gap: 8px; padding: 6px; border: 1px solid #bacabc; border-radius: 6px; }
+#control-tabs span { min-width: 0; overflow-wrap: anywhere; }
+#control-tabs input { flex: 0 0 auto; accent-color: #426849; }

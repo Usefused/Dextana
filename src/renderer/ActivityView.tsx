@@ -4,8 +4,17 @@ import { Thought } from './Thought';
 import { WorkPlan } from './WorkPlan';
 import { ActionApproval } from './ActionApproval';
 import type { Activity } from '../shared/types';
-export function ActivityView({ activity }: { activity: Activity }) {
+import { useState } from 'react';
+import { IconButton } from './ui';
+import { EditMessage } from './EditMessage';
+import { LiveQuestions } from './LiveQuestions';
+export function ActivityView({ activity, edited }: { activity: Activity; edited: () => void }) {
   const running = ['starting', 'running'].includes(activity.status);
+  const [editing, setEditing] = useState<string>();
+  const lastUser = activity.messages.findLast(message => message.role === 'user' && !message.generated);
+  const ownerChat = !activity.parentId && !activity.archived;
+  const editable = ownerChat && !running && !activity.approval && !activity.queue?.length;
+  const awaitingAnswer = activity.questions?.some(question => question.status === 'pending');
   return (
     <section className="activity-view">
       <div className="activity-heading">
@@ -19,25 +28,35 @@ export function ActivityView({ activity }: { activity: Activity }) {
       </div>
       {activity.browser?.saveError && <p role="alert" className="error">{activity.browser.saveError}</p>}
       <div className="messages">
-        {activity.messages.map((message) => (
-          <article key={message.id} className={`message ${message.role}`}>
-            {message.role === 'user' && <div className="message-author">You</div>}
+        {activity.messages.map((message, index) => (
+          <article key={message.id} className={`message ${message.role}${editing === message.id ? ' message-editing' : ''}`}>
+            <div className="message-bubble">
+            {message.role === 'user' && <div className="message-author"><span>{message.generated ? 'Dextana' : 'You'}{message.editedAt && ' · Edited'}</span>
+            </div>}
             {message.thought?.text && <Thought thought={message.thought} pending={running && message.id === activity.messages.at(-1)?.id && !message.content} />}
-            <div data-testid={message.role === 'assistant' ? 'assistant-message' : undefined}>
+            {editing === message.id ? <EditMessage activityId={activity.id} message={message} available={!!editable && lastUser?.id === message.id} cancel={() => setEditing(undefined)} saved={() => { setEditing(undefined); edited(); }} /> : <div data-testid={message.role === 'assistant' ? 'assistant-message' : undefined}>
               {message.role === 'assistant' && message.content ? (
                 <MessageContent
                   content={message.content}
                   streaming={!!running && message.id === activity.messages.at(-1)?.id}
+                  reply={{
+                    answered: activity.messages.some(item => item.replyToMessageId === message.id),
+                    closed: activity.messages.slice(index + 1).some(item => item.role === 'user' && !item.generated) ? 'continued' : undefined,
+                    send: editable && activity.status === 'completed' && message.id === activity.messages.at(-1)?.id ? async prompt => {
+                      await window.dextana.start({ activityId: activity.id, prompt,
+                        replyToMessageId: message.id,
+                        model: activity.modelSelection?.model ?? activity.model,
+                        reasoning: activity.modelSelection?.reasoning ?? activity.reasoning,
+                        mode: activity.mode });
+                      edited();
+                    } : undefined,
+                  }}
                 />
               ) : (
                 message.content ||
-                (message.thought?.runningSince !== undefined
-                  ? ''
-                  : running
-                    ? activity.approval ? 'Waiting for your permission…' : 'Working…'
-                    : 'No response received.')
+                (running ? '' : 'No response received.')
               )}
-            </div>
+            </div>}
             {message.role === 'assistant' && message.id === activity.messages.at(-1)?.id && activity.approval && <ActionApproval key={activity.approval.id} activityId={activity.id} approval={activity.approval} />}
             {activity.plans?.filter(plan => plan.messageId === message.id).map(plan => <WorkPlan key={plan.id} plan={plan} activity={activity} />)}
             {message.role === 'assistant' && message.content && (
@@ -55,8 +74,15 @@ export function ActivityView({ activity }: { activity: Activity }) {
                 ))}
               </ul>
             )}
+            </div>
+            {ownerChat && message.id === lastUser?.id && !message.generated && editing !== message.id && <div className="message-hover-actions"><IconButton variant="plain" icon="edit" label="Edit last message" title={editable ? 'Edit last message' : 'Stop the current run and finish queued messages to edit'} disabled={!editable} onClick={() => setEditing(message.id)} /></div>}
           </article>
         ))}
+        <LiveQuestions activity={activity} replied={edited} />
+        {running && <p className="agent-progress" role="status" aria-label="Agent progress">
+          <span className="agent-progress-dot" aria-hidden="true" />
+          {activity.approval ? 'Waiting for your permission…' : awaitingAnswer ? 'Waiting for your answer…' : 'Working…'}
+        </p>}
       </div>
       {activity.events.length > 0 && (
         <details className="activity-events">

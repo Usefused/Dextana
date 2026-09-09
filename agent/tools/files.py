@@ -9,7 +9,7 @@ def files(action: Literal["read", "create"], path: str, content: str = "", sheet
 
     action: read returns UTF-8 text, extracted PDF/DOCX text, or Excel worksheet values. create produces a new
         document, never overwriting an existing file. Read: .xlsx, .csv, .txt, .md, .docx, .pdf, .png, .jpg, .jpeg, .gif, .webp. Create: .xlsx, .csv, .txt, .md.
-        Images are delivered as image media for visual analysis, not encoded text. Use a vision-capable model.
+        Images are handled by the configured image interpreter, or delivered directly to the chat model when no interpreter is configured. They are not encoded text.
         Scanned PDFs without a text layer require OCR and cannot be read by this tool.
         No shell commands, source-code editing, macros, or formula execution.
     path: Absolute path to read. For creation use a simple filename to save in the

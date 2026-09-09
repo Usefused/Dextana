@@ -1,14 +1,16 @@
 import { Card } from './ui';
 import { UIReference } from './UIReference';
-import { createElement, type ReactNode } from 'react';
+import { createElement, useContext, type ReactNode } from 'react';
 import { boundValue, parseA2UI, type UISurface } from './a2ui';
 import { MarkdownContent } from './MarkdownContent';
 import { RichTable } from './RichTable';
 import { RichChart } from './RichChart';
 import { RichImage } from './RichImage';
 import { Diagram } from './Diagram';
+import { A2UIQuestions, QuestionReplyContext, type UIReply } from './A2UIQuestions';
+import { questionForm } from './a2ui-questions';
 
-function renderSurface(surface: UISurface) {
+function renderSurface(surface: UISurface, reply?: UIReply) {
   let count = 0;
   function render(id: unknown, ancestors: string[] = []): ReactNode {
     try {
@@ -39,6 +41,8 @@ function renderSurface(surface: UISurface) {
       return component.children.map((child) => render(child, branch));
     };
     switch (component.component) {
+      case 'QuestionForm':
+        return <A2UIQuestions key={`${id}:${JSON.stringify(component)}`} form={questionForm(component)} reply={reply} />;
       case 'Text': {
         const text = boundValue(component.text, surface.data);
         if (
@@ -147,12 +151,15 @@ function renderSurface(surface: UISurface) {
     </div>
   );
 }
-export function A2UIView({ source, streaming = false }: { source: string; streaming?: boolean }) {
+export function A2UIView({ source, streaming = false, reply }: { source: string; streaming?: boolean; reply?: UIReply }) {
+  const inheritedReply = useContext(QuestionReplyContext);
+  reply ??= inheritedReply;
   const result = parseA2UI(source);
   let content: ReactNode;
   let error = result?.error;
   try {
-    if (!error) content = result?.surfaces.map(renderSurface);
+    if (!error) content = result?.surfaces.map(surface => renderSurface(surface,
+      streaming || result.pending ? { ...reply, send: undefined } : reply));
   } catch (failure) {
     error = (failure as Error).message;
   }

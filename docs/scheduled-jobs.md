@@ -1,6 +1,8 @@
 # Scheduled jobs
 
-Use the dropdown beside the Workspace + to switch to Cron jobs. Create a job with instructions, a model, a five-field cron expression and an IANA time zone. Daily, weekday and hourly presets are available. Jobs can be edited, paused, resumed, run immediately or deleted; recent runs link to their activities. Deleting a job preserves its activities.
+Use the dropdown beside the Workspace + to switch to Scheduled jobs. Deferred tasks run once at a future date and time, including one-time reminders created in chat. Recurring jobs repeat using a five-field cron expression and an IANA time zone, with daily, weekday and hourly presets. Each has its own tab and creation button; the editor's Job type selects a one-time date or a recurring schedule. Jobs can be edited, paused, resumed, run immediately or deleted; recent runs link to their activities. Deleting a job preserves its activities.
+
+One-time jobs are removed automatically after their scheduled reminder is delivered or their activity completes successfully. Their chat messages and activities remain available. Recurring jobs stay for future runs, including when paused. Pending, running, failed, cancelled, and missed one-time jobs remain visible; a manual run does not remove a job that still has a scheduled run ahead.
 
 The Harnest backend owns schedule validation, time-zone evaluation, the timer, and durable job/run records in `schedules.sqlite` under `DEXTANA_SCHEDULER_DIRECTORY`. Its authenticated `/dextana/jobs` routes provide CRUD, manual enqueue, atomic claim and outcome reporting. No renderer or Electron timer decides when jobs are due. The Electron adapter only polls for dispatches and reports activity outcomes.
 
@@ -9,3 +11,5 @@ The current local backend starts and stops with Dextana. An isolated backend can
 Schedules missed while the server is stopped or asleep are skipped. Restart marks uncertain in-flight runs interrupted, without automatic replay. Claims commit before execution; an ambiguous claim or dispatch must be reviewed rather than retried. Each job keeps 20 recent records. A job with an active/queued run skips its next occurrence. Runs use normal activity approval rules, with no automatic permission grants.
 
 Backend tests cover time zones, concurrent claims, persistence, overlap prevention and restart behavior. Electron tests exercise management, manual execution through Harnest, persistence across restart, and automatic due-time dispatch.
+
+The agent-facing schedule tool returns an explicit set of reminder/job details rather than stored job records. Database IDs, activity ownership, native task IDs and run records stay out of create/list/remove receipts. Stable references such as `Schedule 1` let the agent cancel duplicate-named jobs precisely; SQLite persists the mapping across restarts and never reuses references. Existing jobs acquire references when listed without changing their due times, and older saved tool calls using UUIDs remain accepted. Chat confirmations should use the reminder's name and time. Previously saved chat text is not rewritten.

@@ -1,0 +1,16 @@
+name: Dextana compaction evaluation
+description: Synthetic quality evaluations for Dextana's production summarizer.
+version: 0.1.0
+supportedInterfaces:
+  - url: http://127.0.0.1:8080
+    protocolBinding: HTTP+JSON
+    protocolVersion: "1.0"
+capabilities:
+  streaming: false
+defaultInputModes: [text/plain]
+defaultOutputModes: [text/plain]
+skills:
+  - id: compact
+    name: Compact synthetic history
+    description: Runs the production compactor on synthetic records.
+    tags: [evaluation]

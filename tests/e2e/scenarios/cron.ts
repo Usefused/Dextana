@@ -11,7 +11,8 @@ export async function* scheduledJobs(
   try {
     const page = work.page;
     await page.getByLabel('Workspace view').selectOption('cron');
-    await page.getByRole('button', { name: 'New job', exact: true }).click();
+    await page.getByRole('tab', { name: 'Recurring jobs', exact: true }).click();
+    await page.getByRole('button', { name: 'New recurring job', exact: true }).click();
     await page.getByLabel('Job name').fill('Daily notes');
     await page.getByLabel('Job instructions').fill('Prepare my scheduled notes');
     await page.getByRole('button', { name: 'Save job' }).click();
@@ -30,6 +31,7 @@ export async function* scheduledJobs(
     yield;
     const restored = work.page;
     await restored.getByLabel('Workspace view').selectOption('cron');
+    await restored.getByRole('tab', { name: 'Recurring jobs', exact: true }).click();
     const saved = restored.getByRole('article', { name: 'Daily notes', exact: true });
     await expect(saved).toContainText('Paused');
     await saved.getByRole('button', { name: 'Resume', exact: true }).click();

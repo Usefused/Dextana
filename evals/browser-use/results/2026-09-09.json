@@ -1,0 +1,614 @@
+{
+  "date": "2026-09-09",
+  "model": "qwen3.5:cloud",
+  "samples": [
+    {
+      "scenario": "fresh_my_browser",
+      "repetition": 1,
+      "started": "2026-09-09T14:37:03.139Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": [
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud"
+      ],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": true,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "dextana"
+          }
+        },
+        {
+          "index": 0,
+          "name": "list_skills",
+          "arguments": {
+            "query": "browser external Chrome Edge connect"
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b60c9b8ce24baad456db652cf12a2b98f4174eb75f145"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "read",
+            "tab_id": "Tab 1"
+          }
+        }
+      ],
+      "final": "I'll connect to your external browser to access Zoho.\n\nGreat! Your external browser is connected and I can see you already have a Zoho Mail tab open. Let me read the current page to see what's there.\n\nConnected to your external browser with Zoho Mail open. You're signed in as `synthetic-owner@example.test` and there's an email in the inbox:\n\n**September planning review**\n- From: synthetic-colleague@example.test\n- Received: Today, 09:05\n- Content: \"The planning review is on Friday at 10:00.\"\n\nWhat would you like to do in Zoho?",
+      "requests": 6,
+      "inputTokens": 43551,
+      "outputTokens": 500,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-37-03.139Z-fresh_my_browser-1.json",
+      "lookupRecoveries": 1,
+      "passed": true
+    },
+    {
+      "scenario": "fresh_my_browser",
+      "repetition": 2,
+      "started": "2026-09-09T14:37:29.514Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": [
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud"
+      ],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": false,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "dextana"
+          }
+        },
+        {
+          "index": 0,
+          "name": "list_skills",
+          "arguments": {
+            "query": "browser external Chrome Edge"
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b60c9b8ce24baad456db652cf12a2b98f4174eb75f145"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        }
+      ],
+      "final": "I'll connect to your external browser to access Zoho.\n\nConnected to your external browser. I can see you have a Zoho Mail tab open. What would you like me to do in Zoho?",
+      "requests": 5,
+      "inputTokens": 33483,
+      "outputTokens": 337,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-37-29.514Z-fresh_my_browser-2.json",
+      "lookupRecoveries": 1,
+      "passed": true
+    },
+    {
+      "scenario": "existing_inapp",
+      "repetition": 1,
+      "started": "2026-09-09T14:37:42.732Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": [
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud"
+      ],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": false,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "dextana"
+          }
+        },
+        {
+          "index": 0,
+          "name": "list_skills",
+          "arguments": {
+            "query": "browser connect external Chrome Edge",
+            "source": ""
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b607c9b8ce24baad456db652cf12a2b98f4174eb75f145"
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b60c9b8ce24baad456db652cf12a2b98f4174eb75f145"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "read",
+            "tab_id": "Tab 2"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "open",
+            "tab_id": "Tab 2",
+            "url": "http://127.0.0.1:63052/marketing"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "read",
+            "tab_id": "Tab 2"
+          }
+        }
+      ],
+      "final": "Done \u2014 the page is now open in your external browser. The page title is **\"Zoho Mail \u2014 Inbox\"**.",
+      "requests": 11,
+      "inputTokens": 103935,
+      "outputTokens": 1145,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-37-42.732Z-existing_inapp-1.json",
+      "lookupRecoveries": 2,
+      "passed": true
+    },
+    {
+      "scenario": "existing_inapp",
+      "repetition": 2,
+      "started": "2026-09-09T14:38:15.596Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": [
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud"
+      ],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": false,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "list_skills",
+          "arguments": {
+            "query": "browser external Chrome Edge connect"
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b60c9b8ce24baad456db652cf12a2b98f4174eb75f145"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        }
+      ],
+      "final": "Your external browser is now connected. I can see you have a Zoho Mail tab open. Would you like me to navigate to the marketing page (`http://127.0.0.1:63956/marketing`) in your external browser, or use the existing Zoho Mail tab?",
+      "requests": 6,
+      "inputTokens": 49019,
+      "outputTokens": 502,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-38-15.596Z-existing_inapp-2.json",
+      "lookupRecoveries": 0,
+      "passed": true
+    },
+    {
+      "scenario": "explicit_correction",
+      "repetition": 1,
+      "started": "2026-09-09T14:38:32.484Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": [
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud"
+      ],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": true,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "bundled",
+            "version": ""
+          }
+        },
+        {
+          "index": 0,
+          "name": "list_skills",
+          "arguments": {
+            "query": "browser connect external chrome",
+            "source": ""
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b60c9b8ce24baad456db652cf12a2b98f4174eb75f145"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "read",
+            "tab_id": "Tab 2"
+          }
+        }
+      ],
+      "final": "The newest email in your inbox has the subject: **\"September planning review\"**.",
+      "requests": 8,
+      "inputTokens": 69119,
+      "outputTokens": 732,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-38-32.484Z-explicit_correction-1.json",
+      "lookupRecoveries": 1,
+      "passed": true
+    },
+    {
+      "scenario": "explicit_correction",
+      "repetition": 2,
+      "started": "2026-09-09T14:38:55.715Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": [
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud",
+        "qwen3.5:cloud"
+      ],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": true,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "list_skills",
+          "arguments": {
+            "query": "browser external Chrome Edge connect_user"
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b607efb2baec62f58524991a0cdc19aa2b3819459f2bb897afeb5"
+          }
+        },
+        {
+          "index": 0,
+          "name": "load_skill",
+          "arguments": {
+            "name": "browser-work",
+            "source": "filesystem",
+            "version": "sha256:dc89cc25059f14eefb1b60c9b8ce24baad456db652cf12a2b98f4174eb75f145"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "read",
+            "tab_id": "Tab 2"
+          }
+        }
+      ],
+      "final": "The newest email has the subject: **\"September planning review\"**.",
+      "requests": 8,
+      "inputTokens": 69590,
+      "outputTokens": 791,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-38-55.715Z-explicit_correction-2.json",
+      "lookupRecoveries": 1,
+      "passed": true
+    },
+    {
+      "scenario": "autonomous_tab",
+      "repetition": 1,
+      "started": "2026-09-09T14:39:21.314Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": ["qwen3.5:cloud", "qwen3.5:cloud", "qwen3.5:cloud", "qwen3.5:cloud"],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": true,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "new_tab",
+            "url": "http://127.0.0.1:49447/inbox"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "read",
+            "tab_id": "Tab 1"
+          }
+        }
+      ],
+      "final": "The newest email in the Zoho Mail inbox has the subject: **September planning review**.",
+      "requests": 4,
+      "inputTokens": 26863,
+      "outputTokens": 315,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-39-21.314Z-autonomous_tab-1.json",
+      "lookupRecoveries": 0,
+      "passed": true
+    },
+    {
+      "scenario": "autonomous_tab",
+      "repetition": 2,
+      "started": "2026-09-09T14:39:33.835Z",
+      "model": "qwen3.5:cloud",
+      "actualModels": ["qwen3.5:cloud", "qwen3.5:cloud", "qwen3.5:cloud", "qwen3.5:cloud"],
+      "directExternalChoice": true,
+      "firstBrowserAction": "connect_user",
+      "connected": true,
+      "completed": true,
+      "subjectVerified": true,
+      "status": "completed",
+      "failure": "",
+      "calls": [
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "connect_user"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "new_tab",
+            "url": "http://127.0.0.1:49837/inbox"
+          }
+        },
+        {
+          "index": 0,
+          "name": "browser",
+          "arguments": {
+            "action": "read",
+            "tab_id": "Tab 1"
+          }
+        }
+      ],
+      "final": "The newest email in the Zoho Mail inbox has the subject: **September planning review**.",
+      "requests": 4,
+      "inputTokens": 26876,
+      "outputTokens": 279,
+      "sources": {
+        ".build/backend/build.json": "0165957654dcda161838d1a80acc6cac266837c1587cd274187fc30645fb17d6",
+        ".build/backend/agent/source/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/agent.py": "c7316460f13075e65e1ce759752d844745f1a851dea9efece5d6abaa55112039",
+        "agent/instructions.md": "95bd72a5287601abafe0adb0596367616a518c8c4a5c0daf5460724b077f8c96",
+        "agent/lifecycle/skill_sources.py": "89461c5c7ee52cd9ecdb43f5b7988e7902045e5965dced01049582823fbed80f",
+        "agent/tools/browser.py": "802849691c8543205658847572eacb67541c9f4ecdaf7275efc9331a66ff0e67",
+        "agent/skills/browser-work/SKILL.md": "2efbc2a64796ea60c39d6441c43b3102470c63cb45a944c09dc5f238d1954589",
+        "src/main/user-browser/routing.ts": "dd52e69493bcfd5a174d5c4f3558be07c729bfcb7199aa2da20191997189ca48",
+        "src/main/local-capabilities.ts": "afac175d4d99e1b00f0c45b6aeb981781f0fb7d46c730eb35101edf97123fce3"
+      },
+      "trace": ".build/eval-results/browser-use/2026-09-09T14-39-33.835Z-autonomous_tab-2.json",
+      "lookupRecoveries": 0,
+      "passed": true
+    }
+  ]
+}

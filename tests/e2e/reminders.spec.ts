@@ -29,22 +29,67 @@ test('the agent saves a timed reminder, shows its time in Scheduled jobs, and de
     expect(clockAvailable).toBe(true);
     expect(receipt).toContain('nextRunAt');
     expect(receipt).toContain('scheduled');
+    expect(receipt).not.toMatch(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/i);
+    await expect(work.page.getByTestId('assistant-message').last()).not.toContainText(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/i);
     await work.page.getByLabel('Workspace view').selectOption('cron');
     let job = work.page.getByRole('article', { name: 'Zoho email reminder', exact: true });
     await expect(job).toContainText('Once');
     await expect(job).toContainText('Next run');
+    await expect(work.page.getByRole('tabpanel', { name: 'Deferred tasks', exact: true }).getByRole('article', { name: 'Zoho email reminder', exact: true })).toHaveCount(1);
+    await expect(work.page.getByRole('tabpanel', { name: 'Recurring jobs', exact: true }).getByRole('article', { name: 'Zoho email reminder', exact: true })).toHaveCount(0);
     await work.restart();
     await work.page.getByLabel('Workspace view').selectOption('cron');
     job = work.page.getByRole('article', { name: 'Zoho email reminder', exact: true });
-    await expect(job.getByRole('button', { name: /completed/i })).toBeVisible({ timeout: 60_000 });
-    await expect(job).not.toContainText('Next run');
-    await job.getByRole('button', { name: /completed/i }).click();
-    await expect(work.page.getByTestId('assistant-message').filter({ hasText: /^Reminder: How to check my email in Zoho$/ })).toHaveCount(1);
+    await expect(job).toHaveCount(0, { timeout: 60_000 });
+    await work.page.getByRole('button', { name: 'Remind me about my Zoho email in 25 seconds', exact: true }).click();
+    await expect(work.page.getByTestId('assistant-message').filter({ hasText: /^Reminder: How to check my email in Zoho$/ })).toHaveCount(1, { timeout: 60_000 });
+    await work.page.getByLabel('Workspace view').selectOption('cron');
+    await expect(job).toHaveCount(0);
     await work.restart();
     await work.page.getByRole('button', { name: 'Remind me about my Zoho email in 25 seconds', exact: true }).click();
     await expect(work.page.getByTestId('assistant-message').filter({ hasText: /^Reminder: How to check my email in Zoho$/ })).toHaveCount(1);
     await work.page.getByLabel('Workspace view').selectOption('cron');
-    await work.page.getByRole('article', { name: 'Zoho email reminder', exact: true }).getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(work.page.getByRole('article', { name: 'Zoho email reminder', exact: true })).toHaveCount(0);
+  } finally { await work.close(); }
+});
+
+test('deferred tasks have a one-time editor and move to recurring jobs when their type changes', async ({ workspace }) => {
+  const work = await workspace();
+  try {
+    const page = work.page;
+    await page.getByLabel('Workspace view').selectOption('cron');
+    const deferredTab = page.getByRole('tab', { name: 'Deferred tasks', exact: true });
+    const recurringTab = page.getByRole('tab', { name: 'Recurring jobs', exact: true });
+    await expect(deferredTab).toHaveAttribute('aria-selected', 'true');
+    await deferredTab.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(recurringTab).toBeFocused();
+    await expect(recurringTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('button', { name: 'New recurring job', exact: true })).toBeVisible();
+    await page.keyboard.press('Home');
+    await expect(deferredTab).toBeFocused();
+    await page.getByRole('button', { name: 'New deferred task', exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Job type', exact: true })).toHaveValue('deferred');
+    await expect(page.getByLabel('Run at')).toBeVisible();
+    await expect(page.getByLabel('Cron expression')).toHaveCount(0);
+    await page.getByLabel('Job name').fill('Deferred report');
+    await page.getByLabel('Job instructions').fill('Prepare the report later');
+    await page.getByLabel('Enable this job').uncheck();
+    await page.getByRole('button', { name: 'Save job', exact: true }).click();
+    const deferred = page.getByRole('tabpanel', { name: 'Deferred tasks', exact: true });
+    const recurring = page.getByRole('tabpanel', { name: 'Recurring jobs', exact: true });
+    const job = deferred.getByRole('article', { name: 'Deferred report', exact: true });
+    await expect(job).toContainText('Paused');
+    await expect(recurring.getByRole('article', { name: 'Deferred report', exact: true })).toHaveCount(0);
+    await page.screenshot({ path: '/private/tmp/dextana-scheduled-groups.png' });
+    await job.getByRole('button', { name: 'Edit', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Job type', exact: true }).selectOption('recurring');
+    await expect(page.getByLabel('Run at')).toHaveCount(0);
+    await expect(page.getByLabel('Cron expression')).toBeVisible();
+    await page.getByRole('button', { name: 'Save job', exact: true }).click();
+    await expect(job).toHaveCount(0);
+    await expect(recurring.getByRole('article', { name: 'Deferred report', exact: true })).toContainText('Paused');
+    await recurring.getByRole('article', { name: 'Deferred report', exact: true }).getByRole('button', { name: 'Delete', exact: true }).click();
   } finally { await work.close(); }
 });
 
@@ -89,8 +134,9 @@ test('plan drafting cannot schedule work; approval creates a real job whose futu
     await job.getByRole('button', { name: /Needs approval/i }).click();
     const approval = work.page.getByRole('region', { name: 'Action approval' });
     await expect(approval).toBeVisible();
-    await approval.getByRole('button', { name: 'Deny action', exact: true }).click();
+    await approval.getByRole('button', { name: 'Allow action', exact: true }).click();
+    await expect(work.page.getByTestId('activity-status')).toHaveText('Completed', { timeout: 60_000 });
     await work.page.getByLabel('Workspace view').selectOption('cron');
-    await job.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(job).toHaveCount(0);
   } finally { await work.close(); await new Promise<void>(resolve => site.close(() => resolve())); }
 });

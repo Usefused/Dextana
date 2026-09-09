@@ -11,6 +11,7 @@ const capabilityLabel = {
   mcp: 'MCP actions',
   fileRead: 'file reads',
   fileCreate: 'file creation',
+  desktop: 'desktop actions',
 };
 
 export function ActionApproval({
@@ -29,6 +30,7 @@ export function ActionApproval({
     mcp: 'Connected service',
     fileRead: 'Read a file',
     fileCreate: 'Create a file',
+    desktop: 'Use your desktop',
   }[approval.capability];
   async function decide(approved: boolean, autoAllow = false) {
     setBusy(true);
@@ -102,7 +104,7 @@ export function ActionApproval({
       ) : ['fileRead', 'fileCreate'].includes(approval.capability) ? (
         <FileApprovalPreview arguments={approval.arguments} />
       ) : (
-        <ApprovalDetails arguments={approval.arguments} />
+        <ApprovalDetails arguments={approval.arguments} desktop={approval.capability === 'desktop'} />
       )}
     </PermissionCard>
   );
@@ -111,7 +113,7 @@ export function ActionApproval({
 export function AutomaticAccess({ activity }: { activity: Activity }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const allowed = (['browser', 'mcp', 'fileRead', 'fileCreate'] as const).filter(
+  const allowed = (['browser', 'mcp', 'fileRead', 'fileCreate', 'desktop'] as const).filter(
     (capability) => activity.permissions?.[capability] === true,
   );
   if (!allowed.length || activity.allowAllApprovals) return null;

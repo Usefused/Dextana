@@ -63,7 +63,7 @@
 .mcp-secret-field button { position: absolute; top: 4px; right: 4px; }
 .mcp-auth-note { display: flex; align-items: flex-start; gap: 8px; color: var(--mcp-muted); padding: 10px 12px; border-radius: var(--dx-radius-md); background: var(--mcp-soft); }
 .mcp-auth-note p, .mcp-field-help { font-size: 11px; line-height: 1.6; margin: 0; color: var(--mcp-muted); }
-.mcp-modal-footer { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 0 22px; background: var(--mcp-bg); border-top: 1px solid var(--mcp-line); margin-top: 4px; }
+.mcp-modal-footer { position: static; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 0 22px; background: var(--mcp-bg); border-top: 1px solid var(--mcp-line); margin-top: 4px; }
 .mcp-modal-footer>span { max-width: 240px; font-size: 10px; line-height: 1.6; color: var(--mcp-muted); }
 .mcp-modal-error { padding: 11px 13px; background: light-dark(#fff0ec, var(--dark-danger-bg)); color: light-dark(#973e2d, var(--dark-danger)); border: 1px solid light-dark(#ebcfc6, var(--dark-danger-border)); border-radius: var(--dx-radius-md); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .mcp-tool-toolbar { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }

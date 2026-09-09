@@ -15,7 +15,7 @@ test('compatible endpoint authenticates, filters embeddings, runs chat and retai
     res.setHeader('Content-Type', 'application/json');
     if (req.headers.authorization !== `Bearer ${key}`) { res.writeHead(401); res.end('{}'); return; }
     if (req.url === '/v1/models') return res.end(JSON.stringify({ data: [
-      { id: 'vendor/chat-model', architecture: { output_modalities: ['text'] } },
+      { id: 'vendor/chat-model', supported_parameters: ['reasoning_effort'], reasoning: { supported_efforts: ['high', 'low'], mandatory: true }, architecture: { output_modalities: ['text'] } },
       { id: 'text-embedding-3-small' }, { id: 'vendor/vector-only', task: 'feature-extraction' },
       { id: 'vendor/opaque-vector', architecture: { output_modalities: ['embeddings'] } },
     ] }));
@@ -38,6 +38,7 @@ test('compatible endpoint authenticates, filters embeddings, runs chat and retai
   let app = await launch();
   try {
     let page = await app.firstWindow();
+
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByLabel('Provider', { exact: true }).selectOption('openai');
     await page.getByLabel('Base URL').fill(base);
@@ -45,6 +46,14 @@ test('compatible endpoint authenticates, filters embeddings, runs chat and retai
     await page.getByRole('button', { name: 'Fetch models' }).click();
     await expect(page.getByText('1 models available')).toBeVisible();
     await page.getByRole('button', { name: 'Save settings' }).click();
+    await page.getByRole('button', { name: 'Model and reasoning', exact: true }).click();
+    const reasoning = page.getByLabel('Reasoning', { exact: true });
+    await expect(reasoning).toBeEnabled();
+    await expect(reasoning).toHaveAttribute('max', '2');
+    await expect(reasoning).toHaveAttribute('aria-valuetext', 'Default');
+    await reasoning.fill('2');
+    await expect(reasoning).toHaveAttribute('aria-valuetext', 'High');
+    await page.keyboard.press('Escape');
     await page.getByLabel('Describe your work').fill('Say hello.');
     await page.getByRole('button', { name: 'Start activity', exact: true }).click();
     await expect(page.getByText('Compatible endpoint connected.', { exact: true })).toBeVisible({ timeout: 90_000 });
@@ -52,6 +61,8 @@ test('compatible endpoint authenticates, filters embeddings, runs chat and retai
     expect(chat?.body.model).toBe('vendor/chat-model');
     expect(chat?.auth).toBe(`Bearer ${key}`);
     expect(chat?.body.think).toBeUndefined();
+    expect(chat?.body.reasoning_effort).toBe('high');
+    expect(requests.filter(r => r.url === '/v1/chat/completions').every(r => r.body.reasoning_effort === 'high')).toBe(true);
     expect(requests.some(r => r.body.messages?.some((m: any) => m.role === 'tool'))).toBe(true);
     const snapshot = await page.evaluate(() => window.dextana.snapshot());
     expect(snapshot.settings.models).toEqual(['vendor/chat-model']);

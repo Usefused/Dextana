@@ -7,7 +7,7 @@ export class CronJobs {
   private timer?: ReturnType<typeof setInterval>;
   private stopped = false;
   private pending: Promise<unknown> = Promise.resolve();
-  constructor(private store: Store, private publish: () => void, private runtime: Runtime) {}
+  constructor(private store: Store, private publish: () => void, private runtime: Runtime, private notifyError: (message: string) => void = () => {}) {}
   private serial<T>(action: () => Promise<T>): Promise<T> {
     const result = this.pending.then(() => { if (this.stopped) throw new Error('Scheduler is stopping.'); return action(); });
     this.pending = result.catch(() => {});
@@ -27,7 +27,13 @@ export class CronJobs {
     const poll = () => {
       if (polling || this.stopped) return;
       polling = true;
-      void this.sync().catch(error => { if (!this.stopped) { this.store.state.cronError = (error as Error).message; this.publish(); } }).finally(() => { polling = false; });
+      void this.sync().catch(error => {
+        if (this.stopped) return;
+        const message = (error as Error).message;
+        if (this.store.state.cronError !== message) this.notifyError(message);
+        this.store.state.cronError = message;
+        this.publish();
+      }).finally(() => { polling = false; });
     };
     this.timer = setInterval(poll, 3_000);
     this.timer.unref();

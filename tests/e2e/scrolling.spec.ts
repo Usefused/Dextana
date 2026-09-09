@@ -11,6 +11,44 @@ test.afterAll(async () => {
   );
 });
 
+test('browser reopening is shown only for a saved tab owned by this chat', async ({ page }) => {
+  await page.addInitScript(() => {
+    const snapshot: any = {
+      settings: { defaultModel: 'test', models: ['test'], ollamaUrl: '' },
+      fused: { enabled: false, url: '', hasToken: false },
+      activities: [{ id: 'chat', title: 'Chat without browsing', model: 'test', status: 'completed', events: [], messages: [] }],
+    };
+    let publish: (value: any) => void;
+    (window as any).dextana = {
+      snapshot: async () => structuredClone(snapshot),
+      subscribe: (callback: any) => { publish = callback; return () => {}; },
+      onOpenActivity: () => () => {},
+      onOpenDesktop: () => () => {},
+      selectActivity: async () => {},
+    };
+    (window as any).changeSavedBrowser = (browser: any) => {
+      snapshot.activities[0].browser = browser;
+      publish(structuredClone(snapshot));
+    };
+  });
+  await page.goto(server.resolvedUrls!.local[0]);
+  await page.getByRole('button', { name: 'Chat without browsing', exact: true }).click();
+  const button = page.getByRole('button', { name: /^(Reopen|Show) browser$/ });
+  await expect(button).toHaveCount(0);
+  const browser = { url: 'https://example.com', needsReopen: true };
+  await page.evaluate(browser => (window as any).changeSavedBrowser(browser), browser);
+  await expect(button).toHaveCount(0);
+  const tab = { id: 'tab', activityId: 'chat', url: browser.url, title: 'Example', needsReopen: true };
+  await page.evaluate(browser => (window as any).changeSavedBrowser(browser), { ...browser, tabs: [tab] });
+  await expect(button).toHaveText('Reopen browser');
+  await page.evaluate(browser => (window as any).changeSavedBrowser(browser), { ...browser, needsReopen: false, tabs: [tab] });
+  await expect(button).toHaveText('Show browser');
+  await page.evaluate(browser => (window as any).changeSavedBrowser(browser), { ...browser, tabs: [{ ...tab, activityId: 'other-chat' }] });
+  await expect(button).toHaveCount(0);
+  await page.evaluate(browser => (window as any).changeSavedBrowser(browser), { ...browser, tabs: [] });
+  await expect(button).toHaveCount(0);
+});
+
 test('keeps a new draft when the previous queued message finishes saving', async ({ page }) => {
   await page.addInitScript(() => {
     const snapshot = {
@@ -18,6 +56,7 @@ test('keeps a new draft when the previous queued message finishes saving', async
       fused: { enabled: false, url: '', hasToken: false },
       activities: [{
         id: 'draft', title: 'Draft preservation', model: 'test', status: 'running',
+        browser: { url: 'https://example.com', needsReopen: true, tabs: [{ id: 'saved-tab', activityId: 'draft', url: 'https://example.com', title: 'Example', needsReopen: true }] },
         queue: [] as any[], events: [], messages: [],
       }],
     };
@@ -25,6 +64,8 @@ test('keeps a new draft when the previous queued message finishes saving', async
     (window as any).dextana = {
       snapshot: async () => structuredClone(snapshot),
       subscribe: (callback: any) => { publish = callback; return () => {}; },
+      onOpenActivity: () => () => {},
+      onOpenDesktop: () => () => {},
       selectActivity: async () => {},
       start: (input: any) => new Promise<string>(resolve => {
         // Hold the acknowledgement so typing during a save is deterministic.
@@ -41,6 +82,8 @@ test('keeps a new draft when the previous queued message finishes saving', async
   });
   await page.goto(server.resolvedUrls!.local[0]);
   await page.getByRole('button', { name: 'Draft preservation', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Reopen browser', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Use my browser', exact: true })).toHaveCount(1);
   const input = page.getByLabel('Describe your work');
   const send = page.getByRole('button', { name: 'Send message', exact: true });
   await input.fill('Keep this queued');
@@ -94,6 +137,8 @@ test('stream follows content, respects manual scrolling, and resumes at latest',
         listener = callback;
         return () => {};
       },
+      onOpenActivity: () => () => {},
+      onOpenDesktop: () => () => {},
       selectActivity: async () => {},
       start: async (input: any) => {
         if (snapshot.activities[0].status === 'completed') {
@@ -128,6 +173,15 @@ test('stream follows content, respects manual scrolling, and resumes at latest',
   await append();
   await expect.poll(gap).toBeLessThan(3);
   await transcript.hover();
+  const jump = page.getByRole('button', { name: 'Jump to latest' });
+  await page.mouse.wheel(0, -40);
+  await expect.poll(gap).toBeGreaterThan(20);
+  await expect(jump).toBeHidden();
+  await page.mouse.wheel(0, -140);
+  await expect(jump).toBeVisible();
+  await page.mouse.wheel(0, 140);
+  await expect.poll(gap).toBeLessThan(64);
+  await expect(jump).toBeHidden();
   await page.mouse.wheel(0, -400);
   await expect.poll(gap).toBeGreaterThan(100);
   const top = await transcript.evaluate((el) => el.scrollTop);
@@ -206,6 +260,8 @@ test('renders Markdown and streamed results without exposing display payloads', 
         publish = callback;
         return () => {};
       },
+      onOpenActivity: () => () => {},
+      onOpenDesktop: () => () => {},
       selectActivity: async () => {},
       openLink: async (url: string) => {
         (window as any).openedLink = url;

@@ -1,6 +1,16 @@
+import { MessageQueue } from './MessageQueue';
+import { IntegrationsSettings } from './IntegrationsSettings';
+import { UserBrowserButton, UserBrowserStatus } from './UserBrowser';
+import { BrowserUseSettings } from './BrowserUseSettings';
+import { BackgroundServiceSettings } from './BackgroundServiceSettings';
+import { ComputerUseStatus, ComputerUseSettings } from './DesktopComputer';
 import { Button, Field, FormSection, PageHeader, Select, Tagline, TextInput, TextArea, Icon } from './ui';
 import { SkillsSettings } from './SkillsSettings';
 import { UsageSettings } from './UsageSettings';
+import { ImageInterpreterSettings } from './ImageInterpreterSettings';
+import { ModelAuthSettings, parsedAuth, type AuthDraft } from './ModelAuthSettings';
+import { MemorySettings } from './MemorySettings';
+import { NotificationCenter } from './NotificationCenter';
 import { SettingsIcon } from './SettingsIcon';
 import { isChatModel } from '../shared/chat-models';
 import { ShowBrowser } from './ShowBrowser';
@@ -8,6 +18,7 @@ import { SessionSettings } from './SessionSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { ModelSelector } from './ModelSelector';
 import { CronView } from './CronView';
+import { DesktopWorkspace, type DesktopView } from './DesktopWorkspace';
 import { BrowserPanel } from './BrowserPanel';
 import { ContextPanel } from './ContextPanel';
 import { ActivityFolders, FolderPicker } from './ActivityFolders';
@@ -25,12 +36,17 @@ import './review-cards.css';
 import './ui/components.css';
 import { Transcript } from './Transcript';
 import { ActivityView } from './ActivityView';
+import { CompactionStatus } from './CompactionStatus';
 import { FusedSettings } from './FusedSettings';
 import { MCPSettings } from './MCPSettings';
 
 const appLogo = new URL('../../assets/icon.svg', import.meta.url).href;
 
 const settingsPages = {
+  integrations: { title: 'Integrations', description: 'Explore supported apps, connect your accounts and manage your Dext Integrations subscription.' },
+  computer: { title: 'Computer use', description: 'Configure app control, system permissions and the window a chat can use.' },
+  browser: { title: 'Browser use', description: 'Set global browser defaults and individual chat overrides.' },
+  background: { title: 'Background service', description: 'Choose how Dextana runs when you close its window.' },
   appearance: { icon: 'M10 2a8 8 0 1 0 8 8c0-1.5-1.5-2-3-2h-2a2 2 0 0 1-2-2c0-1 1-2 1-3 0-.7-1-1-2-1Z M6 6h.01 M4.5 10h.01 M7 14h.01', title: 'Appearance', description: 'Make Dextana feel at home on your desktop.' },
   models: { icon: 'M6 5h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z M8 8h4v4H8Z M7 2v3m6-3v3M7 15v3m6-3v3M2 7h3m-3 6h3m10-6h3m-3 6h3', title: 'Models', description: 'Connect Ollama or an OpenAI-compatible model provider.' },
   usage: { title: 'Usage', description: 'Understand how your models are being used.' },
@@ -43,13 +59,15 @@ function App() {
     document.documentElement.dataset.theme = snapshot?.theme ?? 'system';
   }, [snapshot?.theme]);
   const [archiving, setArchiving] = useState(false);
-  const [notice, setNotice] = useState<{ text: string; archivedId?: string; reminderActivityId?: string }>();
+  const [notice, setNotice] = useState<{ text: string; archivedId?: string }>();
   useEffect(() => {
-    if (!notice || archiving || notice.reminderActivityId) return;
+    if (!notice || archiving) return;
     const timer = window.setTimeout(() => setNotice(undefined), 8000);
     return () => window.clearTimeout(timer);
   }, [notice, archiving]);
-  const [workspaceView, setWorkspaceView] = useState<'activities' | 'cron'>('activities');
+  const [selectedDesktopResource, setSelectedDesktopResource] = useState<string>();
+  const [workspaceView, setWorkspaceView] = useState<'activities' | 'cron' | 'desktop'>('activities');
+  const [desktopView, setDesktopView] = useState<DesktopView>('time');
   const [contextHidden, setContextHidden] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -57,6 +75,9 @@ function App() {
   const [draft, setDraft] = useState<Settings>();
   const [apiKey, setApiKey] = useState<string | undefined>();
   const [manualModel, setManualModel] = useState('');
+  const [embeddingModels, setEmbeddingModels] = useState<string[]>();
+  const [visionModels, setVisionModels] = useState<string[]>();
+  const [authDraft, setAuthDraft] = useState<AuthDraft>();
   const [model, setModel] = useState('');
   const [reasoning, setReasoning] = useState<Reasoning>('default');
   const [mode, setMode] = useState<ActivityMode>('work');
@@ -68,8 +89,23 @@ function App() {
   const [selectedId, setSelectedId] = useState<string>();
   useLayoutEffect(() => {
     // The rendered session is authoritative, including a fresh welcome screen.
-    void window.dextana.selectActivity(settingsOpen || workspaceView === 'cron' ? undefined : selectedId);
+    void window.dextana.selectActivity(settingsOpen || workspaceView !== 'activities' ? undefined : selectedId);
   }, [selectedId, settingsOpen, workspaceView]);
+  useLayoutEffect(() => {
+    const view = settingsOpen ? undefined : workspaceView === 'desktop'
+      ? { page: desktopView }
+      : workspaceView === 'activities'
+        ? { page: 'chat', target: selectedId ? { kind: 'activity' as const, activityId: selectedId } : undefined }
+        : { page: workspaceView };
+    void window.dextana.notification({ action: 'view', view }).catch(failure => setError(failure.message));
+  }, [selectedId, settingsOpen, workspaceView, desktopView]);
+  useEffect(() => window.dextana.onOpenActivity(id => {
+    setSelectedId(id); setWorkspaceView('activities'); setSettingsOpen(false);
+  }), []);
+  useEffect(() => window.dextana.onOpenDesktop(id => {
+    if (id && id === snapshot?.desktopComputer?.selection?.id) { openSettings('computer'); return; }
+    setSelectedDesktopResource(id); setWorkspaceView('desktop'); setSettingsOpen(false);
+  }), [snapshot, settingsOpen]);
   const currentSelection = useRef(selectedId);
   currentSelection.current = selectedId;
   const [prompt, setPrompt] = useState('');
@@ -88,15 +124,6 @@ function App() {
   const visibleActivities = snapshot?.activities.filter(item => !item.archived) ?? [];
   const running = activity && ['starting', 'running'].includes(activity.status);
   useEffect(() => window.dextana.subscribe(setSnapshot), []);
-  const seenReminders = useRef<Set<string> | undefined>(undefined);
-  useEffect(() => {
-    if (!snapshot) return;
-    const reminders = snapshot.activities.flatMap(activity => activity.messages.filter(message => message.reminder).map(message => ({ activityId: activity.id, message })));
-    if (seenReminders.current) for (const { activityId, message } of reminders) {
-      if (!seenReminders.current.has(message.id)) setNotice({ text: message.content, reminderActivityId: activityId });
-    }
-    seenReminders.current = new Set(reminders.map(item => item.message.id));
-  }, [snapshot]);
   const newActivity = (folderId?: string) => {
     setWorkspaceView('activities');
     setMode('work');
@@ -183,18 +210,18 @@ function App() {
   }
   const composer = (
     <div className="composer">
+      <CompactionStatus activity={activity} />
       {!!attachments.length && <div className="attachments" role="region" aria-label="Attached files">{attachments.map(path => <span key={path} title={path}>{path.split(/[\\/]/).at(-1)} <Button variant="layout" aria-label={`Remove attachment ${path.split(/[\\/]/).at(-1)}`} onClick={() => setAttachments(items => items.filter(item => item !== path))}>×</Button></span>)}</div>}
-      {!!activity?.queue?.length && <div className="message-queue" aria-label="Queued messages">
-        <div className="queue-label">{running ? 'Queued' : 'Queue paused'} · {activity.queue.length}</div>
-        {activity.queue.map((item, index) => <div className="queued-message" key={item.id}><span>{index + 1}.</span><p>{item.prompt}</p><Button variant="layout" className="queue-steer" disabled={steering || sending} title="Stop the current response and apply this message now" onClick={() => {
+      {activity && <MessageQueue key={activity.id} activityId={activity.id} items={activity.queue ?? []}
+        running={!!running} disabled={steering || sending || !!activity.archived || !!activity.parentId}
+        failed={setError} steer={messageId => {
           setSteering(true);
           setError('');
-          void window.dextana.steer(activity.id, item.id)
+          void window.dextana.steer(activity.id, messageId)
             .then(() => { setFollowRequest(value => value + 1); })
             .catch(error => setError(error.message))
             .finally(() => setSteering(false));
-        }}>Steer</Button></div>)}
-      </div>}
+        }} />}
       <TextArea
         ref={input}
         rows={1}
@@ -218,7 +245,7 @@ function App() {
           try { const paths = await window.dextana.pickFiles(); setAttachments(items => [...new Set([...items, ...paths])].slice(0, 20)); }
           catch (error) { setError((error as Error).message); }
         }}><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2.5h6l4 4v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"/><path d="M12 2.5v4h4M8 10h5M8 13h5"/></svg><span>Files</span></Button>
-        <ModelSelector models={snapshot?.settings.models ?? []} model={model} reasoning={reasoning} url={snapshot?.settings.ollamaUrl ?? ''} disabled={sending} changeModel={value => { setModel(value); setReasoning('default'); persistSelection(value, 'default'); }} changeReasoning={value => { setReasoning(value); persistSelection(model, value); }} />
+        <ModelSelector key={`${snapshot?.settings.provider}:${snapshot?.settings.connectionId}`} models={snapshot?.settings.models ?? []} model={model} reasoning={reasoning} url={snapshot?.settings.ollamaUrl ?? ''} disabled={sending} changeModel={value => { setModel(value); setReasoning('default'); persistSelection(value, 'default'); }} changeReasoning={value => { setReasoning(value); persistSelection(model, value); }} />
         <Button variant="layout"
           aria-label={canResume ? 'Resume activity' : running && !prompt.trim() ? 'Stop activity' : activity ? 'Send message' : 'Start activity'}
           className="send"
@@ -245,28 +272,35 @@ function App() {
       })
       .catch((e) => setError(e.message));
   }, []);
-  const openSettings = () => {
-    if (settingsOpen) return;
+  const openSettings = (page: keyof typeof settingsPages = 'models') => {
+    if (settingsOpen) { setSettingsPage(page); setSettingsSearch(''); return; }
     void window.dextana.selectActivity();
     setDraft(snapshot?.settings);
+    setEmbeddingModels(undefined); setVisionModels(undefined);
     setSettingsOpen(true);
-    setSettingsPage('models');
+    setSettingsPage(page);
     setSettingsSearch('');
     setApiKey(undefined);
+    setAuthDraft(undefined);
     setManualModel('');
     setError('');
     setConnected(false);
   };
-  useEffect(() => window.dextana.onOpenSettings?.(openSettings), [snapshot, settingsOpen]);
+  useEffect(() => window.dextana.onOpenSettings?.(() => openSettings()), [snapshot, settingsOpen]);
   async function connect() {
     if (!draft) return;
     setBusy(true);
     setError('');
     try {
-      const models = await window.dextana.models(draft, apiKey);
+      const catalog = await window.dextana.modelCatalog(draft, apiKey, parsedAuth(authDraft));
+      if (!Array.isArray(catalog.vision)) {
+        throw new Error('Restart Dextana to finish updating model discovery, then connect again to load image interpreter models.');
+      }
+      setEmbeddingModels(catalog.embedding);
+      setVisionModels(catalog.vision);
       setDraft({
         ...draft,
-        models,
+        models: catalog.chat,
       });
       setConnected(true);
     } catch (e) {
@@ -277,15 +311,21 @@ function App() {
   }
   async function save() {
     if (!draft) return;
+    setBusy(true);
     try {
-      await window.dextana.saveSettings(draft, apiKey);
-      setSnapshot(await window.dextana.snapshot());
+      await window.dextana.saveSettings(draft, apiKey, parsedAuth(authDraft));
+      const saved = await window.dextana.snapshot();
+      setSnapshot(saved);
+      setDraft(saved.settings);
       if (!draft.models.includes(model)) setModel(draft.models[0] ?? '');
-      setSettingsOpen(false);
+      if (!saved.settings.memoryError) setSettingsOpen(false);
       setApiKey(undefined);
+      setAuthDraft(undefined);
       setError('');
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setBusy(false);
     }
   }
   return (
@@ -304,7 +344,7 @@ function App() {
           }}>← Back to chats</Button>
           <TextInput className="settings-search" aria-label="Search settings" placeholder="Search settings" value={settingsSearch} onChange={event => setSettingsSearch(event.target.value)}/>
           <nav className="settings-nav" aria-label="Settings sections">
-            {([['Preferences', ['appearance', 'models', 'usage']], ['Customize', ['skills', 'mcp']]] as const).map(([group, ids]) => {
+            {([['Preferences', ['appearance', 'models', 'usage']], ['Customize', ['skills', 'integrations', 'mcp']], ['Automation', ['computer', 'browser', 'background']]] as const).map(([group, ids]) => {
               const matches = ids.filter(id => (settingsPages[id].title + ' ' + settingsPages[id].description).toLowerCase().includes(settingsSearch.toLowerCase()));
               return !!matches.length && <div className="settings-nav-group" key={group}><div className="settings-nav-title">{group}</div>{matches.map(id => <Button variant="layout" key={id} aria-current={settingsPage === id ? 'page' : undefined} onClick={() => { setSettingsPage(id); setError(''); }}><SettingsIcon name={id}/>{settingsPages[id].title}</Button>)}</div>;
             })}
@@ -344,31 +384,38 @@ function App() {
           <div className="local-status">
             <i /> Local workspace
           </div>
-          <Button variant="layout" aria-label="Settings" onClick={openSettings} className="settings-button">
+          <Button variant="layout" aria-label="Settings" onClick={() => openSettings()} className="settings-button">
             ⚙ <span>Settings</span>
             <span className="avatar">ME</span>
           </Button>
         </div>
         </>}
       </aside>
-      <main className={settingsOpen ? 'settings-main' : workspaceView === 'cron' ? 'cron-main' : activity ? 'conversation-main' : undefined}>
+      <main className={settingsOpen ? 'settings-main' : workspaceView !== 'activities' ? 'cron-main' : activity ? 'conversation-main' : undefined}>
         <header>
           <span className="session-heading"><span className="session-name">
             Workspace <span className="slash">/</span>{' '}
-            {settingsOpen ? `Settings / ${settingsPages[settingsPage].title}` : workspaceView === 'cron' ? 'Cron jobs' : (activity ? displayTitle(activity.title) : draftFolderId ? `New chat · ${snapshot?.folders?.find(folder => folder.id === draftFolderId)?.name ?? 'Workspace'}` : 'New activity')}
+            {settingsOpen ? `Settings / ${settingsPages[settingsPage].title}` : workspaceView === 'cron' ? 'Scheduled jobs' : workspaceView === 'desktop' ? 'Desktop' : (activity ? displayTitle(activity.title) : draftFolderId ? `New chat · ${snapshot?.folders?.find(folder => folder.id === draftFolderId)?.name ?? 'Workspace'}` : 'New activity')}
           </span>
           </span>
-          {activity && !settingsOpen && workspaceView === 'activities' ? <div className="chat-header-actions"><ShowBrowser key={activity.id} activity={activity} failed={setError} /><SessionSettings key={activity.id} activity={activity} showContext={!contextHidden} toggleContext={() => setContextHidden(value => !value)} folderControl={<FolderPicker activity={activity} folders={snapshot?.folders ?? []} changed={folderChanged} failed={setError}/>} /></div> : <span className="privacy">◉ &nbsp; Yours by design</span>}
+          {activity && !settingsOpen && workspaceView === 'activities' ? <div className="chat-header-actions"><UserBrowserButton key={`user-${activity.id}`} activityId={activity.id} state={snapshot?.userBrowsers?.find(state => state.activityId === activity.id)} failed={setError} /><ShowBrowser key={activity.id} activity={activity} failed={setError} /><SessionSettings key={activity.id} activity={activity} browserAutoAllow={snapshot?.browserPreferences?.autoAllow === true} showContext={!contextHidden} toggleContext={() => setContextHidden(value => !value)} folderControl={<FolderPicker activity={activity} folders={snapshot?.folders ?? []} changed={folderChanged} failed={setError}/>} /></div> : <span className="privacy">◉ &nbsp; Yours by design</span>}
+          <NotificationCenter items={snapshot?.notifications} />
           {settingsOpen && <Button variant="layout" className="settings-close" aria-label="Close settings" onClick={() => { setSettingsOpen(false); setApiKey(undefined); setError(''); }}>×</Button>}
         </header>
+        <UserBrowserStatus state={snapshot?.userBrowsers?.find(state => state.activityId === activity?.id)} failed={setError} />
+        <ComputerUseStatus snapshot={snapshot?.desktopComputer} failed={setError} />
         {error && (
           <div role="alert" className="error">
             {error}
           </div>
         )}
-        {workspaceView === 'cron' && !settingsOpen && snapshot ? <CronView snapshot={snapshot} openActivity={id => { setSelectedId(id); setWorkspaceView('activities'); const run = snapshot.activities.find(a => a.id === id); if (run) setModel(run.model); setPrompt(''); setAttachments([]); }}/> : settingsOpen && draft ? (
+        {workspaceView === 'desktop' && !settingsOpen && snapshot ? <DesktopWorkspace view={desktopView} setView={setDesktopView} close={() => setWorkspaceView('activities')} snapshot={snapshot} focusedResource={selectedDesktopResource} openActivity={id => { setSelectedId(id); setWorkspaceView('activities'); }} /> : workspaceView === 'cron' && !settingsOpen && snapshot ? <CronView snapshot={snapshot} openActivity={id => { setSelectedId(id); setWorkspaceView('activities'); const run = snapshot.activities.find(a => a.id === id); if (run) setModel(run.model); setPrompt(''); setAttachments([]); }}/> : settingsOpen && draft ? (
           <div className="settings-scroll"><section className="settings-panel">
             <PageHeader title={settingsPages[settingsPage].title} description={settingsPages[settingsPage].description} />
+            {settingsPage === 'computer' && snapshot && <ComputerUseSettings snapshot={snapshot.desktopComputer ?? { enabled: false }} activities={snapshot.activities} openActivity={id => { setSelectedId(id); setWorkspaceView('activities'); setSettingsOpen(false); }} />}
+            {settingsPage === 'integrations' && <IntegrationsSettings />}
+            {settingsPage === 'browser' && snapshot && <BrowserUseSettings defaultAutoAllow={snapshot.browserPreferences?.autoAllow === true} activities={snapshot.activities} selectedId={selectedId} openActivity={id => { setSelectedId(id); setWorkspaceView('activities'); setSettingsOpen(false); }} />}
+            {settingsPage === 'background' && <BackgroundServiceSettings enabled={snapshot?.desktopBackground !== false} />}
             {settingsPage === 'skills' && <SkillsSettings/>}
             {settingsPage === 'usage' && <UsageSettings/>}
             {settingsPage === 'appearance' && <AppearanceSettings theme={snapshot?.theme ?? 'system'} saved={async () => setSnapshot(await window.dextana.snapshot())} />}
@@ -378,7 +425,7 @@ function App() {
                 {props => <Select {...props} value={draft.provider ?? 'ollama'} disabled={busy} onChange={e => {
                   const provider = e.target.value as 'ollama' | 'openai';
                   setDraft({ provider, ollamaUrl: provider === 'ollama' ? 'http://127.0.0.1:11434' : 'https://openrouter.ai/api/v1', models: [] });
-                  setApiKey(undefined); setManualModel(''); setConnected(false);
+                  setApiKey(undefined); setAuthDraft(undefined); setManualModel(''); setConnected(false); setEmbeddingModels(undefined); setVisionModels(undefined);
                 }}>
                   <option value="ollama">Ollama</option>
                   <option value="openai">OpenAI-compatible</option>
@@ -386,15 +433,16 @@ function App() {
               </Field>
               <Field variant="card" label={draft.provider === 'openai' ? 'Base URL' : 'Ollama address'} hint="Where Dextana connects to your models.">
                 {props => <TextInput {...props} disabled={busy} value={draft.ollamaUrl} onChange={e => {
-                  setDraft({ ...draft, ollamaUrl: e.target.value, models: [] });
-                  setApiKey(undefined); setConnected(false);
+                  setDraft({ ...draft, ollamaUrl: e.target.value, models: [], imageInterpreterModel: undefined, embeddingModel: undefined, embeddingDimensions: undefined, memoryError: undefined, authMode: undefined, hasCustomAuth: undefined });
+                  setApiKey(undefined); setAuthDraft(undefined); setConnected(false); setEmbeddingModels(undefined); setVisionModels(undefined);
                 }} />}
               </Field>
               {draft.provider === 'openai' && <>
+                <ModelAuthSettings key={`auth:${draft.provider}:${draft.ollamaUrl}`} settings={draft} draft={authDraft} disabled={busy} change={value => { setAuthDraft(value); setConnected(false); setEmbeddingModels(undefined); setVisionModels(undefined); }} />
                 <Field label="API key">
                   {props => <TextInput {...props} type="password" autoComplete="off" disabled={busy} value={apiKey ?? ''}
                     placeholder={snapshot?.settings.hasApiKey && snapshot.settings.ollamaUrl === draft.ollamaUrl ? 'Saved securely — leave blank to keep' : 'Optional for endpoints without authentication'}
-                    onChange={e => setApiKey(e.target.value || undefined)} />}
+                    onChange={e => { setApiKey(e.target.value || undefined); setEmbeddingModels(undefined); setVisionModels(undefined); }} />}
                 </Field>
                 {snapshot?.settings.hasApiKey && <div className="dx-actions"><Button icon={<Icon name="trash" />} variant="ghost" size="small" disabled={busy} onClick={() => setApiKey('')}>{apiKey === '' ? 'Key will be removed on save' : 'Remove saved key'}</Button></div>}
               </>}
@@ -413,6 +461,8 @@ function App() {
                   setDraft({ ...draft, models: [...new Set([...draft.models, manualModel.trim()])] }); setManualModel(''); setConnected(true);
                 }}>Add model</Button>
               </div>}
+              <ImageInterpreterSettings key={`image:${draft.provider}:${draft.ollamaUrl}`} settings={draft} models={visionModels} disabled={busy} change={setDraft} />
+              <MemorySettings key={`${draft.provider}:${draft.ollamaUrl}`} settings={draft} models={embeddingModels} disabled={busy} change={setDraft} />
               <div className="dx-form-actions">
                 <Button icon={<Icon name="check" />} variant="primary" disabled={!draft.models.length || busy} onClick={save}>Save settings</Button>
               </div>
@@ -422,7 +472,7 @@ function App() {
               {snapshot && <MCPSettings workspace={snapshot.fusedWorkspace} connections={snapshot.mcpConnections ?? []} account={snapshot.fusedAccount} saved={async () => setSnapshot(await window.dextana.snapshot())} />}
             {!!snapshot?.fusedIntegrations?.length && (
               <FusedSettings
-                integrations={snapshot.fusedIntegrations ?? []}
+                integrations={(snapshot.fusedIntegrations ?? []).filter(integration => !integration.managed)}
                 saved={async () => {
                   setSnapshot(await window.dextana.snapshot());
                 }}
@@ -435,10 +485,11 @@ function App() {
             <Transcript key={activity.id} followRequest={followRequest}>
               <ActivityView
                 activity={activity}
+                edited={() => setFollowRequest(value => value + 1)}
               />
             </Transcript>
             {composer}
-          </div><ContextPanel key={activity.id} hidden={contextHidden} activity={activity} changed={async () => setSnapshot(await window.dextana.snapshot())} /></div>
+          </div><ContextPanel key={activity.id} minimize={() => setContextHidden(true)} hidden={contextHidden} activity={activity} changed={async () => setSnapshot(await window.dextana.snapshot())} /></div>
         ) : (
           <section className="welcome">
             <img className="intro-mark" src={appLogo} alt="Dext" />
@@ -447,7 +498,7 @@ function App() {
             <p className="muted">A little direction. A lot taken care of.</p>
             {composer}
             {!snapshot?.settings.models.length && (
-              <Button icon={<Icon name="plug" />} variant="layout" className="connect-prompt" onClick={openSettings}>
+              <Button icon={<Icon name="plug" />} variant="layout" className="connect-prompt" onClick={() => openSettings()}>
                 Connect a model to get started <span>↗</span>
               </Button>
             )}
@@ -473,7 +524,6 @@ function App() {
         )}
         {notice && <div className="action-notice" role="status">
           <span>{notice.text}</span>
-          {notice.reminderActivityId && <Button variant="layout" onClick={() => { setSelectedId(notice.reminderActivityId); setWorkspaceView('activities'); setSettingsOpen(false); setNotice(undefined); }}>View reminder</Button>}
           {notice.archivedId && <Button variant="layout" disabled={archiving} onClick={() => { void undoArchive(notice.archivedId!); }}>Undo</Button>}
           <Button variant="layout" aria-label="Dismiss notification" onClick={() => setNotice(undefined)}>×</Button>
         </div>}

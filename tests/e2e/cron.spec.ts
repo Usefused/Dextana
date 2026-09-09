@@ -9,13 +9,15 @@ test('backend automatically dispatches a due job without opening its activity', 
   try {
     const page = work.page;
     await page.getByLabel('Workspace view').selectOption('cron');
-    await page.getByRole('button', { name: 'New job', exact: true }).click();
+    await page.getByRole('tab', { name: 'Recurring jobs', exact: true }).click();
+    await page.getByRole('button', { name: 'New recurring job', exact: true }).click();
     await page.getByLabel('Job name').fill('Automatic check');
     await page.getByLabel('Job instructions').fill('Run my automatic scheduled check');
     await page.getByLabel('Cron expression').fill('* * * * *');
     await page.getByRole('button', { name: 'Save job' }).click();
     const job = page.getByRole('article', { name: 'Automatic check', exact: true });
     await expect(job.getByRole('button', { name: /completed/i })).toBeVisible({ timeout: 100_000 });
+    await expect(page.getByRole('tabpanel', { name: 'Recurring jobs', exact: true }).getByRole('article', { name: 'Automatic check', exact: true })).toHaveCount(1);
     const db = new DatabaseSync(join(work.directory, 'schedules.sqlite'), { readOnly: true });
     try {
       const runs = db.prepare("SELECT data FROM harnest_tasks WHERE application_id='dextana' AND status='completed'").all();
@@ -49,6 +51,7 @@ test('existing schedules and history migrate to Harnest and remain editable afte
     });
     let page = work.page;
     await page.getByLabel('Workspace view').selectOption('cron');
+    await page.getByRole('tab', { name: 'Recurring jobs', exact: true }).click();
     let job = page.getByRole('article', { name: 'Migrated notes', exact: true });
     await expect(job).toContainText('Paused');
     await expect(job).toContainText('Europe/London');
@@ -63,6 +66,7 @@ test('existing schedules and history migrate to Harnest and remain editable afte
     await work.restart();
     page = work.page;
     await page.getByLabel('Workspace view').selectOption('cron');
+    await page.getByRole('tab', { name: 'Recurring jobs', exact: true }).click();
     job = page.getByRole('article', { name: 'Migrated notes', exact: true });
     await expect(job).toContainText('30 10 * * 1-5');
     await expect(job).toContainText('Paused');

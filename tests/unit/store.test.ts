@@ -50,7 +50,7 @@ it('migrates the existing Fused connection and retains its encrypted token refer
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
-it('restores browser bookmarks as reopenable pages and migrates previous visible pages', async () => {
+it('restores actual browser bookmarks without inventing tabs from chat history', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'dextana-browser-bookmarks-'));
   try {
     const store = new Store(directory);
@@ -69,7 +69,7 @@ it('restores browser bookmarks as reopenable pages and migrates previous visible
     expect(restored.state.browser).toBeUndefined();
     expect(restored.state.activities.map(activity => activity.browser && ({ url: activity.browser.url, needsReopen: activity.browser.needsReopen }))).toEqual([
       { url: 'https://example.com/saved', needsReopen: true },
-      { url: 'https://example.com/visited', needsReopen: true },
+      undefined,
       undefined,
       { url: 'https://example.com/current', needsReopen: true },
     ]);

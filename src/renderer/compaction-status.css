@@ -1,0 +1,29 @@
+.compaction-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius);
+  background: light-dark(#f1f2f1, #2b302d);
+  color: var(--dx-text);
+  font-size: var(--dx-text-xs);
+}
+
+.compaction-status > div {
+  display: grid;
+  gap: 2px;
+}
+
+.compaction-status strong {
+  font-weight: 600;
+}
+
+.compaction-status > div > span {
+  color: var(--dx-muted);
+}
+
+.compaction-status .dx-spinner {
+  flex-shrink: 0;
+}

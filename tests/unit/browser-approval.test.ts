@@ -3,10 +3,10 @@ import { browserApprovalDetails } from '../../src/shared/browser-approval';
 
 test('browser approvals show the exact selected page without changing execution targets', () => {
   const args = { action: 'read', tab_id: 'opaque-id' };
-  expect(browserApprovalDetails(args, [{ id: 'opaque-id', activityId: 'chat', title: 'Project overview', url: 'https://example.com/project', needsReopen: false }])).toEqual({ action: 'read', page: { title: 'Project overview', address: 'https://example.com/project' } });
+  expect(browserApprovalDetails(args, [{ id: 'opaque-id', activityId: 'chat', title: 'Project overview', url: 'https://example.com/project', needsReopen: false }])).toEqual({ action: 'read', browser: 'in-app', page: { title: 'Project overview', address: 'https://example.com/project' } });
   expect(args.tab_id).toBe('opaque-id');
-  expect(browserApprovalDetails(args, [])).toEqual({ action: 'read', page: 'Unavailable browser tab' });
-  expect(browserApprovalDetails({ action: 'new_tab', url: 'https://example.com' }, [])).toEqual({ action: 'new_tab', url: 'https://example.com' });
+  expect(browserApprovalDetails(args, [])).toEqual({ action: 'read', browser: 'in-app', page: 'Unavailable browser tab' });
+  expect(browserApprovalDetails({ action: 'new_tab', url: 'https://example.com' }, [])).toEqual({ action: 'new_tab', browser: 'in-app', url: 'https://example.com' });
 });
 
 test('simple permissions are questions without hiding extra action inputs', async () => {

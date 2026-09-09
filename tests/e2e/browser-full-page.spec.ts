@@ -45,6 +45,7 @@ test('all page targets are reachable across pagination, closed shadow DOM, cross
     const results=body.messages.filter((m:any)=>m.role==='tool');
     if (!results.length) { reply(body,res,'',[{function:{name:'browser',arguments:{action:'open',url}}}]); return true; }
     const page=result(results.at(-1).content);
+    if (results.length === 1 && !page?.elements) throw new Error('Initial browser snapshot missing: ' + JSON.stringify(results[0].content).slice(0, 2000));
     outputs.push(page ?? results.at(-1).content);
     if (page?.elements) {
       for (const e of page.elements) collected.set(`${e.frame}:${e.tag}:${e.label}`,e);
@@ -77,6 +78,9 @@ test('all page targets are reachable across pagination, closed shadow DOM, cross
     return true;
   });
   try {
+    // This scripted browser fixture cannot answer compaction-model requests.
+    work.setContextWindow(1_048_576);
+    await work.restart();
     await start(work.page,'Interact with the complete test page');
     await allowBrowser(work.page);
     await expect(work.page.getByTestId('assistant-message').last()).toContainText('Whole-page interaction complete.',{timeout:120_000});
@@ -88,7 +92,7 @@ test('all page targets are reachable across pagination, closed shadow DOM, cross
     expect(outputs.some(p=>p?.screenshot_size?.width>0)).toBe(true);
     expect(work.calls.some(body=>body.messages.some((m:any)=>m.images?.length))).toBe(true);
     expect(outputs.flatMap(p=>p?.frames??[]).some(f=>f.url.includes('localhost') && !f.error)).toBe(true);
-  } finally { await work.close(); site.closeAllConnections(); await new Promise<void>(resolve=>site.close(()=>resolve())); }
+  } finally { work.setContextWindow(32768); await work.restart(); await work.close(); site.closeAllConnections(); await new Promise<void>(resolve=>site.close(()=>resolve())); }
 });
 
 test('hover reveals a target and wheel input scrolls the requested region', async ({ workspace }) => {

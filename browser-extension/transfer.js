@@ -20,10 +20,16 @@
       redirect: 'error',
       signal: AbortSignal.timeout(60000),
     });
-    if (!response.ok)
-      throw new Error(
-        'Dextana could not accept the transfer. Check the destination tab and start a new connection.',
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      const error = new Error(
+        detail.error === 'extension_update_required'
+          ? 'Reload the Dextana extension and reopen its popup. This extension version cannot confirm the requested browser access scope.'
+          : 'Dextana could not accept the transfer. Check the destination tab and start a new connection.',
       );
+      error.status = response.status;
+      throw error;
+    }
     return response.json();
   }
   async function current(chrome, expected) {

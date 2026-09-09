@@ -6,14 +6,21 @@ export function Transcript({ children, followRequest }: { children: ReactNode; f
   const content = useRef<HTMLDivElement>(null);
   const following = useRef(true);
   const lastScrollTop = useRef(0);
-  const [paused, setPaused] = useState(false);
+  const [showJump, setShowJump] = useState(false);
+  function updateJump() {
+    const element = viewport.current;
+    if (!element) return;
+    const gap = element.scrollHeight - element.scrollTop - element.clientHeight;
+    // Keep manual scrolling separate from the prompt, with a buffer to avoid flicker.
+    setShowJump(visible => !following.current && gap > (visible ? 64 : 120));
+  }
   function pause() {
     following.current = false;
-    setPaused(true);
+    updateJump();
   }
   function follow() {
     following.current = true;
-    setPaused(false);
+    setShowJump(false);
     const element = viewport.current;
     if (element) { element.scrollTop = element.scrollHeight; lastScrollTop.current = element.scrollTop; }
   }
@@ -25,6 +32,7 @@ export function Transcript({ children, followRequest }: { children: ReactNode; f
       viewport.current.scrollTop = viewport.current.scrollHeight;
       lastScrollTop.current = viewport.current.scrollTop;
     }
+    updateJump();
   });
   useLayoutEffect(() => {
     const observer = new ResizeObserver(() => {
@@ -32,6 +40,7 @@ export function Transcript({ children, followRequest }: { children: ReactNode; f
         viewport.current.scrollTop = viewport.current.scrollHeight;
         lastScrollTop.current = viewport.current.scrollTop;
       }
+      updateJump();
     });
     observer.observe(content.current!);
     observer.observe(viewport.current!);
@@ -63,11 +72,12 @@ export function Transcript({ children, followRequest }: { children: ReactNode; f
             element.scrollHeight - element.scrollTop - element.clientHeight <= 2
           )
             follow();
+          updateJump();
         }}
       >
         <div className="transcript-content" ref={content}>{children}</div>
       </div>
-      {paused && (
+      {showJump && (
         <Button variant="secondary" className="jump-latest secondary" onClick={follow}>
           Jump to latest ↓
         </Button>

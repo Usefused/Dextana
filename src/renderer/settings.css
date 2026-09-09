@@ -87,3 +87,14 @@
 .settings-panel .mcp-url-card { border: 0; padding: 0; background: transparent; box-shadow: none; }
 .settings-panel .mcp-url-card h2 { margin-top: 0; }
 @media (max-width: 620px) { .model-manual-entry { grid-template-columns: 1fr; } .model-manual-entry > button { justify-self: start; } }
+
+.automation-settings { display: grid; gap: var(--dx-space-4); }
+.automation-settings .dx-select { width: 100%; }
+.automation-settings .dx-card, .settings-panel .desktop-computer .dx-card { background: var(--dx-form-surface); }
+.automation-settings .dx-card > p, .settings-panel .desktop-computer .dx-card > p { color: var(--dx-muted); font-size: 13px; }
+.automation-settings .dx-card { display: grid; gap: var(--dx-space-3); }
+.automation-settings .dx-card > h2, .automation-settings .dx-card > p { margin: 0; }
+.automation-settings .dx-card > .dx-button, .settings-panel .desktop-computer > .dx-badge { justify-self: start; }
+.browser-approval-select { display: grid; gap: var(--dx-space-3); min-width: 0; }
+.browser-approval-select .dx-select { width: 100%; min-width: 0; }
+.dx-session-popover .browser-approval-select { margin-top: var(--dx-space-3); }

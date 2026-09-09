@@ -5,27 +5,29 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { test, start, reply } from './fixture';
 
+function connectionReference(value: any): string | undefined {
+  if (typeof value === 'string') { try { return connectionReference(JSON.parse(value)); } catch { return; } }
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value.connections)) return value.connections.find((item: any) => item.name === 'Local tools')?.id;
+  for (const item of Object.values(value)) { const ref = connectionReference(item); if (ref) return ref; }
+}
+
 test('a local stdio MCP client can be tested, selected, used, and removed', async ({
   workspace,
 }) => {
   test.setTimeout(90000);
   let id = '';
   const work = await workspace((body, res) => {
-    if (!body.messages.some((m: any) => m.role === 'tool'))
-      reply(body, res, '', [
-        {
-          function: {
-            name: 'mcp',
-            arguments: { action: 'call', server_id: id, tool_name: 'ping', arguments_json: '{}' },
-          },
-        },
-      ]);
-    else
-      reply(
-        body,
-        res,
-        'Local result: ' + body.messages.filter((m: any) => m.role === 'tool').at(-1).content,
-      );
+    const results = body.messages.filter((message: any) => message.role === 'tool');
+    if (!results.length) reply(body, res, '', [{ function: { name: 'mcp', arguments: { action: 'list' } } }]);
+    else if (results.length === 1) {
+      const reference = connectionReference(results[0].content);
+      expect(reference).toMatch(/^Connection \d+$/);
+      expect(String(results[0].content)).not.toContain(id);
+      reply(body, res, '', [{ function: { name: 'mcp', arguments: {
+        action: 'call', server_id: reference, tool_name: 'ping', arguments_json: '{}',
+      } } }]);
+    } else reply(body, res, 'Local result: ' + results.at(-1).content);
     return true;
   });
   const script = join(work.directory, 'local-mcp.mjs');

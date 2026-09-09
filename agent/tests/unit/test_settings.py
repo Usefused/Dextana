@@ -17,7 +17,13 @@ def test_personal_skills_are_durable_scoped_and_revocable(agent, monkeypatch, tm
     async def check():
         source = PersonalSkills()
         owner = SimpleNamespace(user_id='owner')
-        assert len((await source.list(owner, query='review')).items) == 1
+        listed = (await source.list(owner, query='review')).items
+        assert len(listed) == 1
+        public = listed[0]
+        assert public.id == 'personal/weekly-review'
+        assert public.version == item['updatedAt']
+        assert item['id'] not in str(public) and item['version'] not in str(public)
+        assert (await source.load(public.id, owner, version=public.version)).instructions == 'Start with completed work.'
         assert not (await source.list(SimpleNamespace(user_id='other'))).items
         assert (await source.load(item['id'], owner, version=item['version'])).instructions == 'Start with completed work.'
         disabled = save_skill(dict(item, enabled=False))
@@ -27,6 +33,8 @@ def test_personal_skills_are_durable_scoped_and_revocable(agent, monkeypatch, tm
         save_skill(dict(disabled, enabled=True, instructions='Updated instructions.'))
         with pytest.raises(SkillNotFoundError):
             await source.load(item['id'], owner, version=item['version'])
+        with pytest.raises(SkillNotFoundError):
+            await source.load(public.id, owner, version=public.version)
         assert (await source.load(item['id'], owner)).instructions == 'Updated instructions.'
     asyncio.run(check())
     delete_skill(item['id'])

@@ -11,7 +11,7 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { MCPConnection, MCPConnectionInput, MCPTool, MCPToolPolicy } from '../shared/types';
 import { Store } from './store';
 import { endpoint } from './settings';
-import { authFrom } from '../shared/mcp-auth';
+import { authFrom, customMCPAuth } from '../shared/mcp-auth';
 
 export function toolFingerprint(
   tool: Pick<Tool, 'name' | 'description' | 'inputSchema' | 'outputSchema' | 'annotations'>,
@@ -163,10 +163,12 @@ export class MCPConnections {
         JSON.stringify(previous.args) ===
           JSON.stringify(input.transport === 'stdio' ? input.args : []);
       const sameTarget = sameEndpoint && JSON.stringify(auth) === JSON.stringify(previous?.auth ?? (previous?.transport === 'http' ? { type: previous.secretId ? 'bearer' : 'none' } : undefined));
+      const customAuth = auth?.type === 'custom' && input.customAuth !== undefined ? customMCPAuth(input.customAuth) : undefined;
       const clearSecret = auth?.type === 'none';
-      const replacingSecret = !clearSecret && (input.token !== undefined || input.environment !== undefined);
-      let secretId = clearSecret ? undefined : sameEndpoint ? previous?.secretId : undefined;
-      if (auth && auth.type !== 'none' && !(input.token || (input.token === undefined && secretId))) throw new Error('Enter an auth token for this connection.');
+      const replacingSecret = !clearSecret && (input.token !== undefined || input.environment !== undefined || customAuth !== undefined);
+      let secretId = clearSecret ? undefined : sameTarget ? previous?.secretId : undefined;
+      if (auth?.type === 'custom' && !customAuth && !secretId) throw new Error('Enter custom authentication for this connection.');
+      if (auth && !['none', 'custom'].includes(auth.type) && !(input.token || (input.token === undefined && secretId))) throw new Error('Enter an auth token for this connection.');
       if (replacingSecret) {
         if (
           !safeStorage.isEncryptionAvailable() ||
@@ -177,7 +179,7 @@ export class MCPConnections {
         await writeFile(
           join(this.directory, `mcp-${secretId}.enc`),
           safeStorage.encryptString(
-            JSON.stringify({ token: input.token ?? '', environment: input.environment ?? {} }),
+            JSON.stringify({ token: auth?.type === 'custom' ? '' : input.token ?? '', environment: input.environment ?? {}, ...(customAuth ? { customAuth } : {}) }),
           ),
           { mode: 0o600 },
         );
@@ -223,7 +225,7 @@ export class MCPConnections {
       : { token: '', environment: {} };
     if (!this.runtime) throw new Error('The MCP backend is unavailable.');
     return backendMCP(this.runtime, connection.transport === 'http'
-      ? { transport: 'http', url: connection.url, token: secret.token, auth: nativeToken ? { type: 'bearer' } : connection.auth }
+      ? { transport: 'http', url: connection.url, token: secret.token, customAuth: secret.customAuth, auth: nativeToken ? { type: 'bearer' } : connection.auth }
       : { transport: 'stdio', command: connection.command, args: connection.args, environment: secret.environment }, signal);
   }
 

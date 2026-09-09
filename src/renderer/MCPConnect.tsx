@@ -1,6 +1,8 @@
 import { Button, Field, FormSection, Select, TextArea, TextInput, Icon } from './ui';
 import { useRef, useState } from 'react';
 import type { MCPAuth, MCPConnection } from '../shared/types';
+import { AuthenticationFields, parseAuthenticationFields, type AuthenticationDraft } from './AuthenticationFields';
+import { customMCPAuth } from '../shared/mcp-auth';
 import { MCPDialog } from './MCPDialog';
 
 export function MCPConnect({ url, local, connection, defaultName, connected, close, saved }: { url: string; local?: boolean; connection?: MCPConnection; defaultName?: string; connected: (id: string) => void; close: () => void; saved: () => Promise<void> }) {
@@ -9,6 +11,7 @@ export function MCPConnect({ url, local, connection, defaultName, connected, clo
   const [method, setMethod] = useState<MCPAuth['type']>(connection?.auth?.type ?? (connection ? connection.secretId ? 'bearer' : 'none' : 'bearer'));
   const [header, setHeader] = useState(connection?.auth?.type === 'header' ? connection.auth.name : 'X-API-KEY');
   const [field, setField] = useState(connection?.auth?.type === 'body' ? connection.auth.name : 'api_key');
+  const [customDraft, setCustomDraft] = useState<AuthenticationDraft>();
   const [token, setToken] = useState('');
   const [visible, setVisible] = useState(false);
   const [command, setCommand] = useState(connection?.command ?? '');
@@ -33,13 +36,13 @@ export function MCPConnect({ url, local, connection, defaultName, connected, clo
       const id = await window.dextana.saveMCP({
         id: pendingId.current, name, transport: local ? 'stdio' : 'http', url: address,
         command, args: local ? JSON.parse(args) : [], enabled: connection?.enabled ?? true,
-        ...(!local ? { auth, ...(method !== 'none' && token ? { token } : {}) } : {}),
+        ...(!local ? { auth, ...(!['none', 'custom'].includes(method) && token ? { token } : {}), ...(method === 'custom' && customDraft ? { customAuth: customMCPAuth(parseAuthenticationFields(customDraft)) } : {}) } : {}),
         ...(local && environment.trim() ? { environment: JSON.parse(environment) } : {}),
       });
       pendingId.current = id;
       await window.dextana.testMCP(id);
       await saved();
-      setToken(''); setEnvironment('');
+      setToken(''); setEnvironment(''); setCustomDraft(undefined);
       connected(id);
     } catch (failure) {
       setError(failure instanceof SyntaxError ? 'Check the arguments and environment format.' : (failure as Error).message);
@@ -58,13 +61,16 @@ export function MCPConnect({ url, local, connection, defaultName, connected, clo
           <Field variant="card" label="MCP environment (JSON object)">{props => <TextArea {...props} rows={2} value={environment} onChange={event => setEnvironment(event.target.value)} placeholder={connection?.secretId ? 'Leave blank to keep saved environment' : '{"API_KEY":"..."}'} disabled={busy}/>}</Field>
           <p className="mcp-field-help">Connecting starts this command with your account’s permissions. Environment values are stored encrypted.</p>
         </> : <>
-          <Field variant="card" label="Authentication method">{props => <Select {...props} value={method} disabled={busy} onChange={event => setMethod(event.target.value as MCPAuth['type'])}>
-            <option value="bearer">Bearer token</option><option value="header">Custom header · X-API-KEY</option><option value="body">Request body</option><option value="none">No authentication</option>
+          <Field variant="card" label="Authentication method">{props => <Select {...props} value={method} disabled={busy} onChange={event => { setMethod(event.target.value as MCPAuth['type']); setToken(''); }}>
+            <option value="bearer">Bearer token</option><option value="custom">Custom headers and body</option><option value="header">Custom header · X-API-KEY</option><option value="body">Request body</option><option value="none">No authentication</option>
           </Select>}</Field>
           {method === 'header' && <Field variant="card" label="Header name">{props => <TextInput {...props} value={header} onChange={event => setHeader(event.target.value)} placeholder="X-API-KEY" disabled={busy} required/>}</Field>}
           {method === 'body' && <Field variant="card" label="Body field name">{props => <TextInput {...props} value={field} onChange={event => setField(event.target.value)} placeholder="api_key" disabled={busy} required/>}</Field>}
-          {method !== 'none' && <Field variant="card" label="Auth token">{props => <div className="mcp-secret-field"><TextInput {...props} type={visible ? 'text' : 'password'} value={token} autoComplete="off" spellCheck={false} onChange={event => setToken(event.target.value)} placeholder={connection?.secretId || pendingId.current ? 'Leave blank to keep saved token' : 'Paste your token'} disabled={busy}/><Button variant="secondary" size="small" type="button" aria-label={visible ? 'Hide token' : 'Show token'} onClick={() => setVisible(!visible)}>{visible ? 'Hide' : 'Show'}</Button></div>}</Field>}
-          <div className="mcp-auth-note"><span aria-hidden="true">⌁</span><p>{method === 'bearer' ? 'Sent in the Authorization header as a Bearer token.' : method === 'header' ? `Sent as the value of your ${header || 'custom'} header.` : method === 'body' ? 'Added as a top-level field in each JSON request, for gateways that require body authentication.' : 'Connect without sending credentials.'}</p></div>
+          {!['none', 'custom'].includes(method) && <Field variant="card" label="Auth token">{props => <div className="mcp-secret-field"><TextInput {...props} type={visible ? 'text' : 'password'} value={token} autoComplete="off" spellCheck={false} onChange={event => setToken(event.target.value)} placeholder={connection?.secretId || pendingId.current ? 'Leave blank to keep saved token' : 'Paste your token'} disabled={busy}/><Button variant="secondary" size="small" type="button" aria-label={visible ? 'Hide token' : 'Show token'} onClick={() => setVisible(!visible)}>{visible ? 'Hide' : 'Show'}</Button></div>}</Field>}
+          {method === 'custom' && <AuthenticationFields draft={customDraft} change={setCustomDraft} saved={connection?.auth?.type === 'custom' && !!connection.secretId} disabled={busy}
+            bodyHint="For gateways that require it, adds fields to each MCP JSON POST request. Headers also accompany streaming and session requests. Tool arguments stay unchanged."
+            clear={() => { setCustomDraft(undefined); setToken(''); setMethod('none'); }} />}
+          <div className="mcp-auth-note"><span aria-hidden="true">⌁</span><p>{method === 'custom' ? 'Use the authentication fields supplied by your MCP service.' : method === 'bearer' ? 'Sent in the Authorization header as a Bearer token.' : method === 'header' ? `Sent as the value of your ${header || 'custom'} header.` : method === 'body' ? 'Added as a top-level field in each JSON request, for gateways that require body authentication.' : 'Connect without sending credentials.'}</p></div>
         </>}
         {error && <p className="mcp-modal-error" role="alert">{error}</p>}
       </FormSection>

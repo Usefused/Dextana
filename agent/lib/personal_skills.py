@@ -3,7 +3,9 @@ from harnest.lib.settings_store import skills
 
 
 def descriptor(item):
-    return SkillDescriptor(id=item['id'], name=item['name'], description=item['description'], version=item['version'])
+    # Names are unique and validated; the modification timestamp is a readable version.
+    return SkillDescriptor(id='personal/' + item['name'], name=item['name'],
+                           description=item['description'], version=item['updatedAt'])
 
 
 class PersonalSkills(SkillSource):
@@ -20,7 +22,7 @@ class PersonalSkills(SkillSource):
 
     async def load(self, skill_id, context, *, version=None):
         if context.user_id == 'owner':
-            item = next((item for item in skills() if item['id'] == skill_id and item['enabled'] and (version is None or item['version'] == version)), None)
+            item = next((item for item in skills() if skill_id in (item['id'], 'personal/' + item['name']) and item['enabled'] and (version is None or version in (item['version'], item['updatedAt']))), None)
             if item:
                 return SkillDocument(descriptor=descriptor(item), instructions=item['instructions'])
         raise SkillNotFoundError('This skill is disabled, changed, or unavailable. Refresh the skill list.')

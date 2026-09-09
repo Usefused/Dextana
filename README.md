@@ -8,13 +8,18 @@ Requirements: **Node.js 24 LTS** (22.12 or newer also supported), **Harnest 0.18
 
 The agent backend owns runs, queued messages, steering, delegation, plans and scheduled dispatch. Conversations and checkpoints persist locally in SQLite under the desktop's application-data directory. No separate database server is needed. Completed chats retain their Harnest history after restarting; interrupted actions are not replayed automatically.
 
-Ask the agent to remind you after a delay, at a specific date and time, or on a recurring schedule. The `schedule` tool saves the job and returns its next run time; approving a plan by itself does not schedule anything. Reminders appear in **Scheduled jobs** and post into the original chat, with an in-app notice and a desktop notification where available. Scheduled work starts a new activity and retains normal action approvals. Dextana must be open and the computer awake; missed runs are skipped.
+Ask the agent to remind you after a delay, at a specific date and time, or on a recurring schedule. The `schedule` tool saves the job and returns its next run time; approving a plan by itself does not schedule anything. Reminders appear in **Scheduled jobs** and post into the original chat, with an in-app notice and a desktop notification where available. Scheduled work starts a new activity and retains normal action approvals. Dextana must be running and awake for on-time alerts. Missed reminders appear overdue on return; missed agent work is skipped. Desktop timers also support pause, resume, snooze and dismiss. See [desktop capabilities](docs/desktop-capabilities.md).
 
 ```sh
 npm ci
 harnest env sync agent --profile runtime --frozen
 npm start
 ```
+
+Close Dex before rebuilding a changed backend. On macOS and Linux, the build refuses
+to replace a runtime that is still in use, which prevents compiled-skill version
+mismatches. After editing bundled skills, restart through `npm start`.
+
 
 Open **Settings** from the bottom of the chats panel or the app-name menu (⌘, on macOS; Ctrl+, elsewhere), choose Ollama or OpenAI-compatible, connect to your endpoint, and save. Choose a model with tool-calling support for browser and integration work. Embedding-only models cannot run activities. The model selector can also change the model for a new activity or a follow-up message.
 
@@ -26,13 +31,20 @@ Keys are encrypted with the system keychain and passed to the authenticated back
 
 Settings includes a searchable sidebar for **Appearance**, **Models**, **Usage**, **Skills**, and **Connectors**. Add reusable instructions in Skills or import a `SKILL.md`; changes are available through Harnest's dynamic catalog without rebuilding. Connectors is the home for MCP and Fused connections.
 
+For memory across chats, configure an **Embedding model** in Models and save to test it. A private worker creates summaries and personal memories together using the selected chat model; relevant facts are recalled automatically in later chats. Memory uses the existing local SQLite database. An unsupported embedding model disables memory while chat stays available. See [personal memory](docs/personal-memory.md) for sharing, persistence and component boundaries.
+
 **Usage** shows input, output, and total tokens by model over 7 days, 30 days, or all time. Counts come from Harnest's normalized provider metadata and persist in the backend, including chat, delegated, and scheduled runs. Tracking begins with this feature: missing provider counts and previous history are not estimated. These are recorded usage totals, not billing or account quota limits.
 
 Choose **Settings → Appearance → Color theme** for Light, Dark, or System. Changes apply immediately and persist across restarts, even before connecting Ollama. System follows your device’s appearance automatically.
 
+The header’s **Notifications** bell keeps service alerts in one inbox with unread counts, source links, and persistent read/dismiss controls. Timers, reminders, workflows and background-service errors share the same publishing API; OS alerts are optional. See [App notifications](docs/notifications.md).
+
 ## Workflows
 
 - Start an activity with a concrete assignment. Enter sends; Shift+Enter adds a line. Cmd/Ctrl+N starts a new activity.
+- Waiting messages have **Edit** and **Delete** controls. Edits preserve their queue position, model settings and attachments. Once a message starts running, use the normal cancel control to stop it; remaining messages stay queued.
+- Answer an agent question through its card or the regular chat composer. A composer answer resumes the waiting agent; if several workers need answers, use the relevant card. Closed cards become compact receipts, and the conversation shows whether the agent is waiting for your answer or working.
+- Choose **Edit** on your latest message to revise it, then **Save and resend** (Cmd/Ctrl+Enter). Escape cancels. Stop any current run and finish queued messages first. Earlier exchanges and attachments remain; the replaced response is regenerated, and completed actions are not undone. Edits persist after restarting.
 - Keep up to eight activities running concurrently, each with its own Harnest session and model selection.
 - Browser tools open an embedded browser pane automatically for the selected activity. A green Dextana cursor shows the element the agent is about to interact with. Background browsers remain isolated and do not steal the foreground pane. The tab bar shows pages from all chats and delegated workers, labelled with their owner. Select a tab to watch it without changing the agent’s target. Use **+** to open another page for the tab’s chat or **×** to close an idle tab. Agents can open, list, target, and close their own tabs; each activity supports up to 12. Tabs within one chat share storage, while different workers stay isolated.
 - Ask the agent to delegate independent assignments. It can start up to three workers per delegation, with at most two levels of delegation. Each worker appears as a separate activity and can use its own owner-selected model. Stopping the parent also stops its workers.
@@ -102,7 +114,7 @@ The extension ships with Dextana. Choose **Need the extension? → Open extensio
 
 The backend stores transcripts, action receipts, queues and plans in `agent-state/activities.sqlite`, and Harnest sessions/checkpoints in `agent-state/agent.sqlite`, inside the per-user application-data directory (`~/Library/Application Support/dextana` on macOS). Electron stores settings, browser bookmarks, chat permissions and UI metadata in `state.json`. Legacy transcripts are imported once after the backend commits them. The Fused token is in a separate encrypted file. `DEXTANA_USER_DATA` selects a different workspace for tests or development.
 
-Harnest uses its managed ADK mode and native `ollama_chat` provider. The desktop starts the compiled backend on loopback with a random owner token, using its bundled private Python runtime. Only the trusted top-level renderer has the narrowly scoped preload API. Embedded pages have Chromium sandboxing, no Node.js, no preload bridge, separate persistent browser storage for each chat, denied device permissions, blocked downloads, and blocked popups. Browser tools accept fixed actions, observed element references, or viewport coordinates. Full DOM inspection includes ordinary content, hidden/offscreen elements, frames, and open/closed shadow roots, with explicit pagination instead of discarding targets. Screenshots, hover, scrolling, and double-clicks support visual controls. The agent cannot execute arbitrary JavaScript.
+Harnest uses its managed ADK mode and native `ollama_chat` provider. The desktop starts the compiled backend on loopback with a random owner token, using its bundled private Python runtime. Only the trusted top-level renderer has the narrowly scoped preload API. Embedded pages have Chromium sandboxing, no Node.js, no preload bridge, separate persistent browser storage for each chat, denied device permissions, owner-confirmed downloads, and blocked popups. Browser tools accept fixed actions, observed element references, or viewport coordinates. Full DOM inspection includes ordinary content, hidden/offscreen elements, frames, and open/closed shadow roots, with explicit pagination instead of discarding targets. Screenshots, hover, scrolling, and double-clicks support visual controls. The agent cannot execute arbitrary JavaScript.
 
 Chats save all their browser tabs, including pages you navigate to yourself. Closed tabs remain closed after restart. After restarting Dextana, select the chat and click **Reopen browser** to restore a page, then select other saved tabs to reopen them. Each chat retains its own persistent cookies and local storage; sites may still require you to sign in again. Unsent forms and page history are not restored. Reopening loads the saved address without replaying previous clicks or submissions. Pages load only when you reopen them or approve a new browser action.
 
@@ -111,10 +123,10 @@ Browser isolation is Chromium process/session isolation, **not a VM or container
 ## Current limits
 
 - Native alpha installers include the compiled backend and private Python runtime. Code signing, notarization, and auto-updates are not yet configured. See [packaging and CI](docs/packaging.md).
-- Browser automation supports top-level page navigation, reading, filling, and clicking. Iframes, file uploads/downloads, and OS computer-use are not implemented.
+- Browser automation supports top-level page navigation, reading, filling, and clicking. Browser file uploads are not implemented. PDFs can be viewed inline and files downloaded through a native Save dialog; see [browser files](docs/browser-files.md).
 - SQLite storage supports one backend process per local workspace. Completed Harnest sessions persist across restarts. Interrupted executions receive a fresh session with historical context; uncertain actions are never replayed automatically.
 - Thinking is shown when the selected Ollama model emits it. It streams in an expanded grey panel, then collapses into “Thought for …” when the answer arrives. Text and thinking continue streaming after desktop tool actions; saved thoughts can be reopened after restart.
-- The backend enforces eight active runs, a five-minute run deadline, forty desktop actions per run, and bounded delegation. Actual parallel model inference depends on Ollama's configuration and available memory.
+- The backend enforces eight active runs, a fifteen-minute inactivity deadline renewed by execution progress, and bounded delegation. Progressing runs have no fixed desktop-action count limit. Actual parallel model inference depends on Ollama's configuration and available memory.
 - Fused operation authoring and dynamic connected-user selector configuration stay in Fused's tools for now.
 
 See [architecture](docs/architecture.md) for code boundaries and extension points. Licensed under the [Dextana No-Resale License](LICENSE). Personal and business use are allowed; selling or repackaging Dextana for resale requires written permission from [Fused](https://usefused.com).
@@ -123,11 +135,11 @@ See [architecture](docs/architecture.md) for code boundaries and extension point
 
 Use **Files** beside the message composer or **+** in Context to select Word (`.docx`), PDF, Excel (`.xlsx`), CSV, UTF-8 text/Markdown (`.txt`, `.md`), or PNG, JPEG, GIF and WebP images. Selecting a file shares its path, not its contents. Ask Dextana to read it; the desktop displays a permission request before the file is opened. The selected model receives approved document contents or typed image media. Images require a vision-capable model.
 
-Ask for a budget workbook, contact table, meeting notes, or another work deliverable. Creation shows the destination and a document/table preview before saving. A simple filename saves in **Documents/Dextana**; an absolute path can target an existing folder. Existing files are never overwritten. Use **Show in folder** in the top-right **Context** box to find the result.
+Ask for a budget workbook, contact table, meeting notes, or another work deliverable. Creation shows the destination and a document/table preview before saving. A simple filename saves in **Documents/Dextana**; an absolute path can target an existing folder. Existing files are never overwritten. Use **Open** in the top-right **Context** box to launch the result in its default installed app, or **Show in folder** to find it.
 
 Reads and creation have independent **Allow action**, **Deny action**, and chat-scoped **Auto-allow** choices. Revoke automatic access with **Ask next time** on its in-chat confirmation. Ordinary chat permissions do not transfer to other chats or delegated workers; an explicitly approved plan shares only its listed resources with its workers for that run. Cancelling or denying a pending request prevents that action.
 
-The searchable Context panel groups references into **Files** and **Links**, with counts and read/created statuses. Groups start collapsed; attaching context opens Files, and search reveals matching groups. It records up to 100 recent file/link references for the selected chat. These references survive restart; they are not a claim that a complete document remains in the model's token window. Opening a link uses your default browser. In a narrow split view, Context sits above the conversation without covering messages.
+The searchable Context panel groups references into **Files**, **Links**, and **Desktop**, with counts and read/created statuses. Groups start collapsed; attaching context opens Files, and search reveals matching groups. It records up to 100 recent file/link references for the selected chat. These references survive restart; they are not a claim that a complete document remains in the model's token window. Opening a link uses your default browser. In a narrow split view, Context sits above the conversation without covering messages.
 
 Excel outputs use formatted headers, frozen header rows, and table filters; formulas in existing workbooks return cached values without recalculation. Supported limits: 5 MB input files, 20 MB expanded workbook data, 20 sheets, 100 columns, 10,000 cells, and 500,000 text characters. CSV creation accepts one structured table and escapes formula-like text. Word and PDF support text extraction; scanned PDFs still require OCR. Creation supports XLSX, CSV, TXT and Markdown.
 

@@ -1,15 +1,18 @@
 import { Popover, Switch } from './ui';
 import { type ReactNode } from 'react';
 import type { Activity } from '../shared/types';
+import { BrowserApprovalSelect } from './BrowserApprovalSelect';
 import { SessionApprovals } from './ActionApproval';
 
 export function SessionSettings({
   activity,
+  browserAutoAllow,
   showContext,
   toggleContext,
   folderControl,
 }: {
   activity: Activity;
+  browserAutoAllow: boolean;
   showContext: boolean;
   toggleContext: () => void;
   folderControl: ReactNode;
@@ -35,6 +38,7 @@ export function SessionSettings({
         Approvals
       </div>
       <SessionApprovals activity={activity} />
+      <BrowserApprovalSelect activity={activity} defaultAutoAllow={browserAutoAllow} />
       <label className="chat-context-switch">
         <span className="settings-option-label">
           <svg

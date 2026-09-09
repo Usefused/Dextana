@@ -75,6 +75,12 @@ def activity_routes(agent):
             raise HTTPException(400, 'Invalid model connections') from None
         return {'ok': True}
 
+    @router.post('/memory/validate')
+    async def memory_validate(request: Request):
+        from harnest.lib.embeddings import validate
+        data = await request.json()
+        return await validate(data['settings'], data.get('apiKey', ''), data.get('auth'))
+
     @router.post('/command')
     async def command(request: Request):
         data = await request.json()
@@ -88,6 +94,12 @@ def activity_routes(agent):
                 result = backend.select_model(data['input'])
             elif action == 'start':
                 result = backend.start(data['input'])
+            elif action == 'edit_message':
+                result = backend.edit_message(data['input'])
+            elif action == 'update_queued_message':
+                result = backend.update_queued_message(data['input'])
+            elif action == 'answer_questions':
+                result = backend.questions.answer(data['input'])
             elif action in ('cancel', 'resume', 'steer', 'plan'):
                 result = await backend.control(action, data['input'])
             elif action != 'initialize':

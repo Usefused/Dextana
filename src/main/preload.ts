@@ -1,6 +1,34 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopAPI } from '../shared/types';
 const api: DesktopAPI = {
+  answerQuestions: input => ipcRenderer.invoke('activity:answer-questions', input),
+  notification: command => ipcRenderer.invoke('notifications', command),
+  onOpenNotifications: callback => {
+    const listener = () => callback();
+    ipcRenderer.on('notifications:open', listener);
+    return () => ipcRenderer.removeListener('notifications:open', listener);
+  },
+  userBrowserPairing: activityId => ipcRenderer.invoke('browser:user:pairing',activityId),
+  beginUserBrowser: activityId => ipcRenderer.invoke('browser:user:begin',activityId),
+  stopUserBrowser: activityId => ipcRenderer.invoke('browser:user:stop',activityId),
+  resetUserBrowser: activityId => ipcRenderer.invoke('browser:user:reset',activityId),
+  openBrowserExtension: () => ipcRenderer.invoke('browser:user:extension'),
+  desktopComputer: request => ipcRenderer.invoke('desktop:computer', request),
+  desktopAlarm: request => ipcRenderer.invoke('desktop:alarm', request),
+  desktopWorkflow: (operation, args, activityId) => ipcRenderer.invoke('desktop:workflow', operation, args, activityId),
+  setDesktopBackground: enabled => ipcRenderer.invoke('desktop:background', enabled),
+  openDesktopContext: (activityId, itemId) => ipcRenderer.invoke('desktop:context', activityId, itemId),
+  onOpenDesktop: callback => {
+    const listener = (_event: unknown, resourceId?: string) => callback(resourceId);
+    ipcRenderer.on('desktop:open', listener);
+    return () => ipcRenderer.removeListener('desktop:open', listener);
+  },
+  openFile: (activityId, itemId) => ipcRenderer.invoke('files:open', activityId, itemId),
+  onOpenActivity: callback => {
+    const listener = (_event: unknown, activityId: string) => callback(activityId);
+    ipcRenderer.on('activity:open', listener);
+    return () => ipcRenderer.removeListener('activity:open', listener);
+  },
   copyText: text => ipcRenderer.invoke('clipboard:write', text),
   loadImage: url => ipcRenderer.invoke('image:load', url),
   setTheme: theme => ipcRenderer.invoke('appearance:theme', theme),
@@ -8,6 +36,8 @@ const api: DesktopAPI = {
   modelReasoning: (url, model) => ipcRenderer.invoke('model:reasoning', url, model),
   resume: activityId => ipcRenderer.invoke('activity:resume', activityId),
   steer: (activityId, messageId) => ipcRenderer.invoke('activity:steer', activityId, messageId),
+  editMessage: input => ipcRenderer.invoke('activity:edit-message', input),
+  updateQueuedMessage: input => ipcRenderer.invoke('activity:update-queued-message', input),
   decidePlan: input => ipcRenderer.invoke('activity:plan', input),
   copyLoginCode: id => ipcRenderer.invoke('browser:login:copy', id),
   openLoginExtension: id => ipcRenderer.invoke('browser:login:extension', id),
@@ -47,14 +77,17 @@ const api: DesktopAPI = {
   importSkill: () => ipcRenderer.invoke('skills:import'),
   usage: period => ipcRenderer.invoke('usage', period),
   models: (connection, apiKey) => ipcRenderer.invoke('models', connection, apiKey),
-  saveSettings: (settings, apiKey) => ipcRenderer.invoke('settings:save', settings, apiKey),
+  modelCatalog: (connection, apiKey, auth) => ipcRenderer.invoke('modelCatalog', connection, apiKey, auth),
+  saveSettings: (settings, apiKey, auth) => ipcRenderer.invoke('settings:save', settings, apiKey, auth),
   start: (input) => ipcRenderer.invoke('activity:start', input),
   cancel: (id) => ipcRenderer.invoke('activity:cancel', id),
   showBrowser: (id, tabId) => ipcRenderer.invoke('browser:show', id, tabId),
   newBrowserTab: (id, url) => ipcRenderer.invoke('browser:new', id, url),
+  browserDownload: (id, action) => ipcRenderer.invoke('browser:download', id, action),
   refreshBrowserTab: id => ipcRenderer.invoke('browser:refresh', id),
   closeBrowserTab: id => ipcRenderer.invoke('browser:close', id),
   hideBrowser: () => ipcRenderer.invoke('browser:hide'),
+  setBrowserOverlay: visible => ipcRenderer.invoke('browser:overlay', visible),
   resizeBrowser: (width, dragging) => ipcRenderer.invoke('browser:resize', width, dragging),
   selectActivity: (id) => ipcRenderer.invoke('activity:select', id),
   fusedCLIStatus: () => ipcRenderer.invoke('fused:cli:status'),
@@ -75,6 +108,8 @@ const api: DesktopAPI = {
   saveFused: (input) => ipcRenderer.invoke('fused:save', input),
   approve: (input) => ipcRenderer.invoke('activity:approve', input),
   setSessionApprovals: (id, allowAll) => ipcRenderer.invoke('activity:session-approvals', id, allowAll),
+  integrations: (input) => ipcRenderer.invoke('integrations:command', input),
+  setBrowserPreferences: (input) => ipcRenderer.invoke('browser:preferences', input),
   setPermission: (input) => ipcRenderer.invoke('activity:permission', input),
   subscribe: (callback) => {
     const listener = (_event: unknown, snapshot: Parameters<typeof callback>[0]) =>

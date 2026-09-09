@@ -1,4 +1,4 @@
-import { Button, Card, TextInput } from './ui';
+import { Button, Card, TextInput, Icon } from './ui';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Activity, ContextItem } from '../shared/types';
 const labels = {
@@ -9,6 +9,10 @@ const labels = {
   visited: 'Visited',
 };
 function locationLabel(item: ContextItem) {
+  if (item.kind === 'desktop')
+    return [item.desktop?.path ?? item.desktop?.work, item.desktop?.state]
+      .filter(Boolean)
+      .join(' · ');
   if (item.kind === 'url') {
     try {
       return new URL(item.location).hostname;
@@ -19,7 +23,8 @@ function locationLabel(item: ContextItem) {
   const parent = item.location.split(/[\\/]/).slice(0, -1).filter(Boolean).slice(-2).join(' / ');
   return parent || 'Local file';
 }
-function ContextIcon({ kind }: { kind: 'file' | 'url' }) {
+function ContextIcon({ kind }: { kind: 'file' | 'url' | 'desktop' }) {
+  if (kind === 'desktop') return <Icon name="desktop" />;
   return (
     <svg
       viewBox="0 0 20 20"
@@ -44,13 +49,19 @@ function ContextIcon({ kind }: { kind: 'file' | 'url' }) {
     </svg>
   );
 }
+function contextSummary(count: number) {
+  if (!count) return 'Sources for this chat';
+  return `${count} ${count === 1 ? 'source' : 'sources'} in this chat`;
+}
 export function ContextPanel({
   activity,
   changed,
   hidden = false,
+  minimize,
 }: {
   activity: Activity;
   hidden?: boolean;
+  minimize: () => void;
   changed: () => Promise<void>;
 }) {
   const [attaching, setAttaching] = useState(false);
@@ -83,7 +94,8 @@ export function ContextPanel({
       .includes(query.trim().toLowerCase()),
   );
   return (
-    <Card as="aside"
+    <Card
+      as="aside"
       ref={panel}
       id="session-context"
       hidden={hidden}
@@ -94,45 +106,26 @@ export function ContextPanel({
       <div className="context-header">
         <div>
           <h2 className="context-heading">Context</h2>
-          <p>
-            {items.length
-              ? `${items.length} ${items.length === 1 ? 'source' : 'sources'} in this chat`
-              : 'Sources for this chat'}
-          </p>
+          <p>{contextSummary(items.length)}</p>
         </div>
-        <Button variant="layout"
-          className="context-attach"
-          aria-label="Attach context files"
-          title="Attach documents, PDFs, spreadsheets or images"
-          disabled={attaching}
-          onClick={async () => {
-            setAttaching(true);
-            setError('');
-            setMessage('');
-            try {
-              const paths = await window.dextana.pickFiles();
-              if (paths.length) {
-                await window.dextana.attachContext(activity.id, paths);
-                await changed();
-                setExpanded((e) => ({ ...e, file: true }));
-                setMessage('Files added to context');
-              }
-            } catch (failure) {
-              setError((failure as Error).message);
-            } finally {
-              setAttaching(false);
-            }
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M8 3v10M3 8h10"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-          </svg>
-        </Button>
+        <div className="context-header-actions">
+          <Button
+            variant="layout"
+            className="context-minimize"
+            aria-label="Minimize context"
+            title="Minimize context"
+            onClick={minimize}
+          >
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="m4 6 4 4 4-4"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </Button>
+        </div>
       </div>
       {items.length > 0 && (
         <div className="context-search">
@@ -173,9 +166,9 @@ export function ContextPanel({
           No matching context.
         </p>
       )}
-      {(['file', 'url'] as const).map((kind) => {
+      {(['file', 'url', 'desktop'] as const).map((kind) => {
         const group = filtered.filter((item) => item.kind === kind);
-        const title = kind === 'file' ? 'Files' : 'Links';
+        const title = kind === 'file' ? 'Files' : kind === 'url' ? 'Links' : 'Desktop';
         if (query && !group.length) return null;
         return (
           <details
@@ -191,6 +184,44 @@ export function ContextPanel({
           >
             <summary>
               {title}
+              {kind === 'file' && (
+                <Button
+                  variant="layout"
+                  className="context-attach"
+                  aria-label="Attach context files"
+                  title="Attach documents, PDFs, spreadsheets or images"
+                  disabled={attaching}
+                  onClick={async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setAttaching(true);
+                    setError('');
+                    setMessage('');
+                    try {
+                      const paths = await window.dextana.pickFiles();
+                      if (paths.length) {
+                        await window.dextana.attachContext(activity.id, paths);
+                        await changed();
+                        setExpanded((e) => ({ ...e, file: true }));
+                        setMessage('Files added to context');
+                      }
+                    } catch (failure) {
+                      setError((failure as Error).message);
+                    } finally {
+                      setAttaching(false);
+                    }
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                      d="M8 3v10M3 8h10"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </Button>
+              )}
               <span>{group.length}</span>
             </summary>
             {!group.length && <p className="context-empty">No {title.toLowerCase()} yet.</p>}
@@ -207,7 +238,9 @@ export function ContextPanel({
                   </span>
                   <div className="context-item-content">
                     <strong title={item.name}>{item.name}</strong>
-                    <p title={item.location}>{locationLabel(item)}</p>
+                    <p title={item.kind === 'desktop' ? locationLabel(item) : item.location}>
+                      {locationLabel(item)}
+                    </p>
                     <div className="context-item-meta">
                       <span className={`context-status status-${item.status}`}>
                         {labels[item.status]}
@@ -218,7 +251,23 @@ export function ContextPanel({
                         </span>
                       )}
                     </div>
-                    <Button variant="layout"
+                    {item.kind === 'file' && (
+                      <Button
+                        variant="layout"
+                        className="context-open"
+                        aria-label={`Open ${item.name}`}
+                        onClick={() => {
+                          setError('');
+                          void window.dextana
+                            .openFile(activity.id, item.id)
+                            .catch((failure) => setError((failure as Error).message));
+                        }}
+                      >
+                        Open
+                      </Button>
+                    )}
+                    <Button
+                      variant="layout"
                       className="context-open"
                       aria-label={
                         item.kind === 'file' ? `Show ${item.name} in folder` : `Open ${item.name}`
@@ -228,11 +277,17 @@ export function ContextPanel({
                         void (
                           item.kind === 'file'
                             ? window.dextana.revealFile(activity.id, item.id)
-                            : window.dextana.openLink(item.location)
+                            : item.kind === 'desktop'
+                              ? window.dextana.openDesktopContext(activity.id, item.id)
+                              : window.dextana.openLink(item.location)
                         ).catch((e) => setError(e.message));
                       }}
                     >
-                      {item.kind === 'file' ? 'Show in folder' : 'Open link'}
+                      {item.kind === 'file'
+                        ? 'Show in folder'
+                        : item.kind === 'desktop'
+                          ? 'View on desktop'
+                          : 'Open link'}
                       <span aria-hidden="true"> ↗</span>
                     </Button>
                   </div>

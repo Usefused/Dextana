@@ -16,6 +16,7 @@ import {
   Notice,
   PermissionCard,
   Popover,
+  SearchInput,
   SearchSelect,
   SectionHeader,
   Select,
@@ -47,6 +48,7 @@ export function InteractionExamples() {
   const [modalName, setModalName] = useState('Weekly review');
   const [notify, setNotify] = useState(true);
   const [feedback, setFeedback] = useState('');
+  const [search, setSearch] = useState('');
   const [permission, setPermission] = useState<'pending' | 'allowed' | 'denied'>('pending');
   const [planStatus, setPlanStatus] = useState<'proposed' | 'approved' | 'declined'>('proposed');
   const [tabs, setTabs] = useState([
@@ -212,6 +214,17 @@ export function InteractionExamples() {
                 onChange={setModel}
               />
             </div>
+          </div>
+          <div className="design-stack">
+            <span className="design-control-label">Search with icon and submit button</span>
+            <SearchInput
+              label="Example search"
+              value={search}
+              onChange={setSearch}
+              onSearch={(value) =>
+                setFeedback(value ? `Search submitted for “${value}”.` : 'Search cleared.')
+              }
+            />
           </div>
         </Card>
       </section>

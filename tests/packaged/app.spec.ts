@@ -143,8 +143,7 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
     await expect(page.getByTestId('assistant-message').filter({ hasText: 'Reminder: The packaged reminder was delivered.' })).toHaveCount(1, { timeout: 30_000 });
     await page.getByLabel('Workspace view').selectOption('cron');
     const reminder = page.getByRole('article', { name: 'Packaged reminder', exact: true });
-    await expect(reminder).toContainText('Once');
-    await expect(reminder.getByRole('button', { name: /completed/i })).toBeVisible();
+    await expect(reminder).toHaveCount(0);
   } finally {
     await app.close();
     site.closeAllConnections();

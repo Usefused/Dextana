@@ -121,26 +121,28 @@ test('website login transfer needs approval, imports before scripts, and consume
     ).toBe(200);
     await expect(work.page.getByText('Login state transferred.')).toBeVisible();
     // Leave the completion notice open: another transfer must start with fresh UI state.
-    const transferredState = () => work.app().evaluate(async ({ BrowserWindow }) => {
-      const view = BrowserWindow.getAllWindows()[0].contentView.children.at(
-        -1,
-      ) as import('electron').WebContentsView;
-      if (!view) return undefined;
-      return {
-        title: view.webContents.getTitle(),
-        cookies: (await view.webContents.session.cookies.get({ name: 'login' })).map((c) => ({
-          value: c.value,
-          httpOnly: c.httpOnly,
-          session: c.session,
-        })),
-      };
-    });
+    const transferredState = () =>
+      work.app().evaluate(async ({ BrowserWindow }) => {
+        const view = BrowserWindow.getAllWindows()[0].contentView.children.at(
+          -1,
+        ) as import('electron').WebContentsView;
+        if (!view) return undefined;
+        return {
+          title: view.webContents.getTitle(),
+          cookies: (await view.webContents.session.cookies.get({ name: 'login' })).map((c) => ({
+            value: c.value,
+            httpOnly: c.httpOnly,
+            session: c.session,
+          })),
+        };
+      });
     await expect.poll(transferredState).toEqual({
       title: 'Signed in',
       cookies: [{ value: 'cookie-test', httpOnly: true, session: true }],
     });
     expect(JSON.stringify(work.calls)).not.toContain('cookie-test');
-    await work.page.getByRole('button', { name: 'Use login from my browser' }).click();
+    await work.page.getByRole('button', { name: 'Browser options', exact: true }).click();
+    await work.page.getByRole('menuitem', { name: 'Use login from my browser' }).click();
     const staleCode = await work.page.getByLabel('Browser connection code').inputValue();
     const [stalePort, staleToken] = staleCode.split('.');
     await work.app().evaluate(async ({ BrowserWindow }, pageURL) => {
@@ -171,7 +173,8 @@ test('website login transfer needs approval, imports before scripts, and consume
         return (await view.webContents.session.cookies.get({ name: 'login' }))[0]?.value;
       }),
     ).toBe('cookie-test');
-    await work.page.getByRole('button', { name: 'Use login from my browser' }).click();
+    await work.page.getByRole('button', { name: 'Browser options', exact: true }).click();
+    await work.page.getByRole('menuitem', { name: 'Use login from my browser' }).click();
     const cancelled = await work.page.getByLabel('Browser connection code').inputValue();
     await work.page.getByRole('button', { name: 'Cancel transfer', exact: true }).click();
     const [cancelPort, cancelToken] = cancelled.split('.');
@@ -185,9 +188,18 @@ test('website login transfer needs approval, imports before scripts, and consume
     inspectAfterTransfer = true;
     await work.page.getByLabel('Describe your work').fill('Inspect the transferred website');
     await work.page.getByRole('button', { name: 'Send message', exact: true }).click();
-    await expect.poll(() => work.calls.some((body: any) => body.messages?.some((message: any) =>
-      message.role === 'tool' && String(message.content).includes('Signed in') && String(message.content).includes('elements'),
-    ))).toBe(true);
+    await expect
+      .poll(() =>
+        work.calls.some((body: any) =>
+          body.messages?.some(
+            (message: any) =>
+              message.role === 'tool' &&
+              String(message.content).includes('Signed in') &&
+              String(message.content).includes('elements'),
+          ),
+        ),
+      )
+      .toBe(true);
     await expect(work.page.getByTestId('activity-status')).toHaveText('Completed');
   } finally {
     await work.close();
@@ -196,8 +208,13 @@ test('website login transfer needs approval, imports before scripts, and consume
   }
 });
 
-for (const openSourceSite of [false, true]) {
-  test(`the real Chromium extension approves and transfers a signed-in source tab${openSourceSite ? ' across a login redirect' : ''}`, async ({
+for (const { openSourceSite, staleInstall, closeForPermission } of [
+  { openSourceSite: false, staleInstall: false, closeForPermission: false },
+  { openSourceSite: true, staleInstall: false, closeForPermission: false },
+  { openSourceSite: false, staleInstall: true, closeForPermission: false },
+  { openSourceSite: false, staleInstall: false, closeForPermission: true },
+]) {
+  test(`the real Chromium extension approves and transfers a signed-in source tab${openSourceSite ? ' across a login redirect' : ''}${staleInstall ? ' after upgrading a stale installation' : ''}${closeForPermission ? ' when the permission prompt destroys the popup' : ''}`, async ({
     workspace,
   }, testInfo) => {
     test.setTimeout(120_000);
@@ -214,7 +231,12 @@ for (const openSourceSite of [false, true]) {
     manifest.permissions.push('cookies');
     manifest.host_permissions.push('http://localhost/*');
     manifest.optional_permissions = [];
-    await writeFile(join(extension, 'manifest.json'), JSON.stringify(manifest));
+    const installedManifest = { ...manifest };
+    if (staleInstall) {
+      installedManifest.version = '0.2.0';
+      delete installedManifest.background;
+    }
+    await writeFile(join(extension, 'manifest.json'), JSON.stringify(installedManifest));
     const extensionId = createHash('sha256')
       .update(Buffer.from(manifest.key, 'base64'))
       .digest('hex')
@@ -265,7 +287,8 @@ for (const openSourceSite of [false, true]) {
       await expect(work.page.getByTestId('activity-status')).toHaveText('Completed', {
         timeout: 60_000,
       });
-      await work.page.getByRole('button', { name: 'Use login from my browser' }).click();
+      await work.page.getByRole('button', { name: 'Browser options', exact: true }).click();
+    await work.page.getByRole('menuitem', { name: 'Use login from my browser' }).click();
       await work.app().evaluate(({ shell, clipboard }) => {
         const state = globalThis as any;
         state.restoreExtensionUI = { openPath: shell.openPath, writeText: clipboard.writeText };
@@ -293,9 +316,48 @@ for (const openSourceSite of [false, true]) {
       await work.page.locator('summary').filter({ hasText: 'Need the extension?' }).click();
       await work.page.screenshot({ path: testInfo.outputPath('login-transfer-approval.png') });
       let popup = await chrome.newPage();
+      const popupErrors: string[] = [];
+      popup.on('pageerror', (error) => popupErrors.push(error.message));
+      // Refreshing unpacked files does not refresh Chrome's loaded manifest.
+      if (staleInstall) await writeFile(join(extension, 'manifest.json'), JSON.stringify(manifest));
       await popup.setViewportSize({ width: 392, height: 600 });
       await popup.goto(`chrome-extension://${extensionId}/popup.html`);
       await popup.locator('#code').fill(code);
+      if (staleInstall) {
+        await expect(popup.getByRole('status')).toContainText('extension needs to reload');
+        await expect(popup.locator('#connect')).toBeDisabled();
+        await expect(popup.locator('#approval')).toBeHidden();
+        expect(
+          await popup.evaluate(() =>
+            (window as any).chrome.permissions.contains({
+              origins: ['https://accounts.google.com/*'],
+            }),
+          ),
+        ).toBe(false);
+        expect(popupErrors).toEqual([]);
+        const settingsOpened = chrome.waitForEvent('page');
+        await popup.getByRole('button', { name: 'Open extension settings', exact: true }).click();
+        const settings = await settingsOpened;
+        await settings.waitForLoadState();
+        await settings.locator('#devMode').click();
+        await settings.getByRole('button', { name: 'Reload', exact: true }).click();
+        await settings.close();
+        await popup.close();
+        popup = await chrome.newPage();
+        await popup.setViewportSize({ width: 392, height: 600 });
+        await expect(async () => {
+          await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+        }).toPass({ timeout: 10_000 });
+        // Chrome clears session storage on reload. Pair again without ever
+        // persisting this short-lived credential in durable extension storage.
+        await expect(popup.locator('#code')).toHaveValue('');
+        await popup.locator('#code').fill(code);
+        await expect(popup.locator('#reload-extension')).toBeHidden();
+        await expect(popup.locator('#connect')).toBeEnabled();
+        await popup.locator('#pairing').evaluate((element: HTMLDetailsElement) => {
+          element.open = true;
+        });
+      }
       const blank = !openSourceSite ? await chrome.newPage() : undefined;
       await (blank ?? source).bringToFront();
       // Opening the action popup leaves the source tab active in ordinary Chrome.
@@ -333,18 +395,32 @@ for (const openSourceSite of [false, true]) {
       if (openSourceSite) {
         await expect(popup.locator('#source-switch')).toBeVisible();
         await expect(popup.locator('#source-switch')).toContainText(sourceOrigin);
-        await popup.getByRole('button', { name: 'Approve and transfer' }).click();
-        await expect(popup.locator('#status')).toContainText('Approve opening');
-        await popup.locator('#open-source-site').check();
+        await expect(
+          popup.getByRole('button', { name: 'Transfer login and open this site' }),
+        ).toBeVisible();
       }
       await popup.screenshot({ path: testInfo.outputPath('extension-approval.png') });
+      await popup.getByText('More data (optional)', { exact: true }).click();
       await popup.locator('#localStorage').check();
       await popup.locator('#sessionStorage').check();
-      await expect(popup.getByRole('button', { name: 'Approve and transfer' })).toBeInViewport({
+      await popup.getByText('More data (optional)', { exact: true }).click();
+      const approveTransfer = popup.getByRole('button', {
+        name: openSourceSite ? 'Transfer login and open this site' : 'Approve and transfer',
+      });
+      await expect(approveTransfer).toBeInViewport({
         ratio: 1,
       });
-      await popup.getByRole('button', { name: 'Approve and transfer' }).click();
-      if (!openSourceSite) {
+      if (closeForPermission) {
+        // Access is pre-granted only in this synthetic fixture. Reproduce the
+        // lost callback: Chrome's prompt outlives the action popup, so request()
+        // never resolves there. Capture/import must already belong to the worker.
+        await popup.evaluate(() => {
+          (window as any).chrome.permissions.request = () => new Promise(() => {});
+        });
+      }
+      await approveTransfer.click();
+      if (closeForPermission) await popup.close();
+      else if (!openSourceSite) {
         await expect(popup.locator('#status')).toContainText('Transferring');
         await expect
           .poll(() =>

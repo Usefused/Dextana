@@ -146,7 +146,8 @@ export function LoginTransfer({
               {opening ? 'Opening…' : 'Open extension folder'}
             </Button>
             <p className="login-caption">
-              Included with Dextana. Keep this folder; Chrome loads it from here.
+              Included with Dextana. Keep this folder; Chrome loads it from here. Already installed?
+              Refresh the folder here, then reload Dextana’s extension in Chrome before connecting.
             </p>
           </details>
         </>

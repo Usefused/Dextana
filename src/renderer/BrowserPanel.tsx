@@ -1,5 +1,6 @@
+import { BrowserDownloads } from './BrowserDownloads';
 import { BrowserResize } from './BrowserResize';
-import { BrowserTabs, BrowserToolbar, Button, IconButton, TextInput } from './ui';
+import { BrowserTabs, BrowserToolbar, Button, Icon, IconButton, Popover, TextInput } from './ui';
 import { LoginTransfer } from './LoginTransfer';
 import { useEffect, useState } from 'react';
 import type { Activity, BrowserPane, LoginConnection } from '../shared/types';
@@ -14,6 +15,7 @@ export function BrowserPanel({
   const [connection, setConnection] = useState<LoginConnection>();
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
+  const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [address, setAddress] = useState('');
   const [busy, setBusy] = useState(false);
   async function act(action: () => Promise<void>) {
@@ -45,19 +47,19 @@ export function BrowserPanel({
       <BrowserResize />
       <div className="browser-pane-title">
         <span>◉ Activity browser</span>
-        <IconButton
-          icon="key"
-          className="site-login-button"
-          label="Use login from my browser"
-          title="Use login from my browser"
-          disabled={busy || browser.busyTabIds.includes(browser.tabId)}
-          onClick={() => {
-            void act(async () =>
-              setConnection(await window.dextana.beginLoginTransfer(browser.tabId)),
-            );
-          }}
-        />
         <div>
+          <Popover label="Browser options" icon="chevron" iconOnly menu>
+            {close => <>
+              <Button role="menuitem" variant="ghost" onClick={() => { close(); setDownloadsOpen(true); }}>
+                <span aria-hidden="true">↓</span> Downloads
+              </Button>
+              <Button role="menuitem" variant="ghost" disabled={busy || browser.busyTabIds.includes(browser.tabId)} onClick={() => {
+                close();
+                void act(async () => setConnection(await window.dextana.beginLoginTransfer(browser.tabId)));
+              }}><Icon name="key" />Use login from my browser</Button>
+            </>}
+          </Popover>
+          <BrowserDownloads downloads={browser.downloads ?? []} open={downloadsOpen} close={() => setDownloadsOpen(false)} />
           <IconButton
             icon="plus"
             label="New browser tab"

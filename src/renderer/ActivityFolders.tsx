@@ -13,8 +13,8 @@ export function ActivityFolders({
   changed,
   failed,
 }: Feedback & {
-  view: 'activities' | 'cron';
-  onViewChange: (view: 'activities' | 'cron') => void;
+  view: 'activities' | 'cron' | 'desktop';
+  onViewChange: (view: 'activities' | 'cron' | 'desktop') => void;
   newChat: (folderId: string) => void;
   activities: Activity[];
   folders: ConversationFolder[];
@@ -114,8 +114,8 @@ export function ActivityFolders({
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </Button>
-        <Select className="workspace-view" aria-label="Workspace view" title="Switch workspace view" value={view} onChange={event => onViewChange(event.target.value as 'activities' | 'cron')}>
-          <option value="activities">Activities</option><option value="cron">Cron jobs</option>
+        <Select className="workspace-view" aria-label="Workspace view" title="Switch workspace view" value={view} onChange={event => onViewChange(event.target.value as 'activities' | 'cron' | 'desktop')}>
+          <option value="activities">Activities</option><option value="cron">Scheduled jobs</option><option value="desktop">Desktop</option>
         </Select>
       </div>
       {editing === 'new' && editor('new')}

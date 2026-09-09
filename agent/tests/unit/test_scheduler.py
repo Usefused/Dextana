@@ -210,12 +210,74 @@ def test_agent_schedules_one_time_reminders_and_tasks_with_verified_times(agent,
         await service.execute(**dict(task.arguments))
         assert len(activity['messages']) == 1
         restored = Activities(tmp_path / 'state')
-        restored.remind('chat', 'Check Zoho', task.job_id, saved['id'])
+        restored.remind('chat', 'Check Zoho', task.job_id, task.arguments['job_id'])
         assert len(restored.get('chat')['messages']) == 1
-        job, = await service.list()
-        assert not job['enabled'] and job['nextRunAt'] is None and job['runs'][0]['status'] == 'completed'
-        await service.tool(activity, {'action': 'remove', 'schedule_id': saved['id']})
+        assert await provider.transaction(lambda db: db.execute('SELECT count(*) FROM jobs').fetchone()[0]) == 0
+        await service.initialize()
         assert (await service.tool(activity, {'action': 'list'}))['jobs'] == []
+        await provider.close()
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('status', ['running', 'failed', 'cancelled', 'completed'])
+@pytest.mark.parametrize('restart', [False, True])
+def test_one_time_work_is_removed_only_after_success(agent, tmp_path, status, restart):
+    from harnest.lib.scheduler import Scheduler, APPLICATION, QUEUE
+    from harnest.lib.task_store import SQLiteTaskStore
+
+    async def check():
+        backend = Backend()
+        now = [1000.0]
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: now[0], backend)
+        await service.initialize()
+        await service.save(dict(name='Once', prompt='Do work', model='test', runAt='1970-01-01T00:20:00+00:00', timezone='UTC', enabled=True))
+        now[0] = 1200
+        task, = await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=now[0], lease_seconds=30)
+        result = await service.execute(**dict(task.arguments))
+        await provider.finish_task(application_id=APPLICATION, job_id=task.job_id, lease_token=task.lease_token,
+                                   now=now[0], status='completed', result=result)
+        # Dispatch completion is not completion of the agent's work.
+        assert len(await service.list()) == 1
+        backend.state['activities'][0]['status'] = status
+        if restart:
+            await provider.close()
+            provider = SQLiteTaskStore(provider.path)
+            service = Scheduler(provider, lambda: now[0], backend)
+            await service.initialize()
+        assert len(await service.list()) == (0 if status == 'completed' else 1)
+        assert len(backend.state['activities']) == 1
+        assert await provider.get_task(application_id=APPLICATION, job_id=task.job_id) is not None
+        await provider.close()
+    asyncio.run(check())
+
+
+def test_completed_manual_or_previous_runs_do_not_remove_future_one_time_work(agent, tmp_path):
+    from harnest.lib.scheduler import Scheduler, APPLICATION, QUEUE
+    from harnest.lib.task_store import SQLiteTaskStore
+
+    async def check():
+        backend = Backend()
+        now = [1000.0]
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: now[0], backend)
+        await service.initialize()
+        data = dict(name='Once', prompt='Do work', model='test', runAt='1970-01-01T00:20:00+00:00', timezone='UTC', enabled=True)
+        identifier = await service.save(data)
+        await service.run_now(identifier)
+        manual, = await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=1000, lease_seconds=30)
+        await service.execute(**dict(manual.arguments))
+        backend.state['activities'][0]['status'] = 'completed'
+        assert (await service.list())[0]['nextRunAt'] == data['runAt']
+        now[0] = 1200
+        due, = await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=1200, lease_seconds=30)
+        await service.execute(**dict(due.arguments))
+        # Reschedule while the old activity is still running, then pause it.
+        await service.save({**data, 'runAt': '1970-01-01T00:30:00+00:00'}, identifier)
+        await service.save({**data, 'runAt': '1970-01-01T00:30:00+00:00', 'enabled': False}, identifier)
+        backend.state['activities'][1]['status'] = 'completed'
+        job, = await service.list()
+        assert job['id'] == identifier and not job['enabled']
         await provider.close()
     asyncio.run(check())
 
@@ -239,5 +301,136 @@ def test_one_time_pause_edit_and_delete_cancel_the_native_queue_entries(agent, t
         assert (await provider.get_task(application_id=APPLICATION, job_id=current.job_id)).status == 'cancelled'
         assert await service.execute(**dict(current.arguments)) == {'status': 'skipped'}
         assert await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=1300, lease_seconds=30) == ()
+        await provider.close()
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize('restart', [False, True])
+def test_overdue_one_time_reminders_deliver_once_after_wake_or_restart(agent, tmp_path, restart):
+    from harnest.lib.scheduler import Scheduler, APPLICATION, QUEUE
+    from harnest.lib.task_store import SQLiteTaskStore
+    from harnest.lib.activities import Activities
+
+    async def check():
+        now = [1000.0]
+        backend = Activities(tmp_path / 'state')
+        backend.configure({'settings': {'models': ['test']}})
+        activity = dict(id='chat', model='test', status='completed', messages=[], events=[])
+        backend.state['activities'].append(activity)
+        backend.commit()
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: now[0], backend)
+        await service.initialize()
+        await service.tool(activity, dict(action='create', name='Invoice', prompt='Send invoice', kind='reminder', delay_seconds=30))
+        now[0] = 2000
+        if restart:
+            await provider.close()
+            provider = SQLiteTaskStore(provider.path)
+            service = Scheduler(provider, lambda: now[0], backend)
+            await service.initialize()
+        task, = await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=now[0], lease_seconds=30)
+        result = await service.execute(**dict(task.arguments))
+        await service.execute(**dict(task.arguments))
+        assert result['status'] == 'completed'
+        assert len(activity['messages']) == 1
+        assert activity['messages'][0]['content'] == 'Reminder: Send invoice'
+        assert activity['messages'][0]['reminder']['overdue'] is True
+        assert activity['messages'][0]['reminder']['dueAt'] == '1970-01-01T00:17:10+00:00'
+        assert not backend.tasks
+        await provider.close()
+    asyncio.run(check())
+
+
+def test_recurring_reminders_keep_harnest_due_cursor_then_resume_without_catchup_storm(agent, tmp_path):
+    from harnest.lib.scheduler import Scheduler, APPLICATION, OWNER
+    from harnest.lib.task_store import SQLiteTaskStore
+    from harnest.lib.activities import Activities
+
+    async def check():
+        now = [1000.0]
+        backend = Activities(tmp_path / 'state')
+        backend.configure({'settings': {'models': ['test']}})
+        activity = dict(id='chat', model='test', status='completed', messages=[], events=[])
+        backend.state['activities'].append(activity)
+        backend.commit()
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: now[0], backend)
+        await service.initialize()
+        await service.tool(activity, dict(action='create', name='Stretch', prompt='Stand up', kind='reminder', expression='* * * * *', timezone='UTC'))
+        original, = await provider.list_crons(application_id=APPLICATION, user_id=OWNER)
+        now[0] = 2000
+        await provider.close()
+        provider = SQLiteTaskStore(provider.path)
+        service = Scheduler(provider, lambda: now[0], backend)
+        await service.initialize()
+        due, = await provider.list_crons(application_id=APPLICATION, user_id=OWNER)
+        assert due.next_run_at == original.next_run_at
+        result = await service.execute(**dict(due.arguments), occurrence=due.schedule_id + ':overdue', due_at=due.next_run_at)
+        assert result['status'] == 'completed'
+        assert len(activity['messages']) == 1
+        resumed, = await provider.list_crons(application_id=APPLICATION, user_id=OWNER)
+        assert resumed.next_run_at > now[0]
+        queued_while_asleep = await service.execute(**dict(due.arguments), occurrence=due.schedule_id + ':also-overdue', due_at=due.next_run_at + 60)
+        assert queued_while_asleep == {'status': 'skipped'}
+        assert len(activity['messages']) == 1
+        await service.initialize()
+        assert len(activity['messages']) == 1
+        now[0] = resumed.next_run_at
+        following = await service.execute(**dict(resumed.arguments), occurrence=resumed.schedule_id + ':following', due_at=now[0])
+        assert following['status'] == 'completed'
+        assert len(activity['messages']) == 2
+        assert activity['messages'][-1]['reminder']['overdue'] is False
+        await provider.close()
+    asyncio.run(check())
+
+
+def test_schedule_tool_receipts_keep_storage_ids_private_and_references_durable(agent, tmp_path):
+    from harnest.lib.scheduler import Scheduler
+    from harnest.lib.task_store import SQLiteTaskStore
+    from harnest.lib.activities import Activities
+
+    async def check():
+        backend = Activities(tmp_path / 'state')
+        backend.configure({'settings': {'models': ['test']}})
+        activity = dict(id='private-chat', model='test', status='completed', messages=[], events=[])
+        backend.state['activities'].append(activity)
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: 1000, backend)
+        await service.initialize()
+        args = dict(action='create', name='Email', prompt='Check inbox', kind='reminder', delay_seconds=60, timezone='UTC')
+        first = await service.tool(activity, args)
+        second = await service.tool(activity, args)
+        assert first['reference'] != second['reference']
+        assert set(first) == {'status', 'reference', 'name', 'kind', 'nextRunAt', 'timezone', 'expression', 'delivery', 'availability'}
+        internal = await service.list()
+        ids = [job['id'] for job in internal]
+        # Simulate additional metadata, including nested run identifiers, in persisted jobs.
+        def add_metadata(db):
+            import json
+            for job in internal:
+                job.update(futureMetadata={'id': 'future-private-id'})
+                db.execute('UPDATE jobs SET data=? WHERE id=?', (json.dumps(job), job['id']))
+        await provider.transaction(add_metadata)
+        await provider.close()
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: 1000, backend)
+        await service.initialize()
+        listed = (await service.tool(activity, {'action': 'list'}))['jobs']
+        assert [job['reference'] for job in listed] == [first['reference'], second['reference']]
+        for job in listed:
+            assert set(job) == {'reference', 'name', 'prompt', 'kind', 'enabled', 'nextRunAt', 'timezone', 'expression', 'runAt'}
+        import json
+        wire = json.dumps([first, second, listed])
+        assert all(identifier not in wire for identifier in ids + ['private-chat', 'future-private-id'])
+        removed = await service.tool(activity, dict(action='remove', schedule_id=first['reference']))
+        assert removed == dict(status='removed', reference=first['reference'], name='Email')
+        assert [job['reference'] for job in (await service.tool(activity, {'action': 'list'}))['jobs']] == [second['reference']]
+        third = await service.tool(activity, args)
+        assert third['reference'] not in (first['reference'], second['reference'])
+        with pytest.raises(ValueError, match='not found'):
+            await service.tool(activity, dict(action='remove', schedule_id=first['reference']))
+        # Previously saved tool calls can still cancel by their old internal handle.
+        legacy = await service.tool(activity, dict(action='remove', schedule_id=ids[1]))
+        assert 'id' not in legacy and legacy['reference'] == second['reference']
         await provider.close()
     asyncio.run(check())

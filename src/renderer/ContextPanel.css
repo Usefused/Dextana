@@ -213,3 +213,24 @@
 .refined-context .context-search > svg { flex-shrink: 0; }
 
 .refined-context.context-panel .context-group > summary { padding: 8px 10px; }
+
+.context-header-actions { display: flex; align-items: center; gap: 4px; }
+:root .refined-context .context-minimize { display: grid; place-items: center; width: 26px; height: 26px; min-height: 26px; padding: 0; border: 0; background: transparent; color: var(--dx-muted); opacity: 0; pointer-events: none; }
+:root .refined-context:hover .context-minimize, :root .refined-context:focus-within .context-minimize { opacity: 1; pointer-events: auto; }
+@media (hover: none) { :root .refined-context .context-minimize { opacity: 1; pointer-events: auto; } }
+
+.refined-context .context-header-actions { margin-left: auto; }
+:root .refined-context .context-group .context-attach { display: grid; place-items: center; position: static; flex-shrink: 0; align-self: center; width: 20px; height: 20px; min-height: 20px; padding: 0; border: 0; background: transparent; color: var(--dx-muted); }
+:root .refined-context .context-group .context-attach svg { width: 12px; height: 12px; }
+:root .refined-context .context-group .context-attach:hover { background: var(--dx-surface); color: var(--dx-text); }
+
+.refined-context.context-panel .context-group > summary { align-items: center; }
+
+:root .refined-context .context-group > summary > .context-attach { margin-left: auto; }
+.refined-context.context-panel .context-group > summary > .context-attach + span { margin-left: 0; }
+
+@media (hover: hover) {
+  :root .refined-context .context-group > summary > .context-attach { opacity: 0; pointer-events: none; }
+  :root .refined-context .context-group > summary:hover > .context-attach,
+  :root .refined-context .context-group > summary:focus-within > .context-attach { opacity: 1; pointer-events: auto; }
+}

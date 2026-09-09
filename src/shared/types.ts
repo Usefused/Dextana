@@ -1,11 +1,28 @@
-export type Reasoning = 'default' | 'off' | 'on' | 'low' | 'medium' | 'high' | 'max';
+import type { AppNotification, NotificationCommand } from './notifications';
+import type { IntegrationsCommand, IntegrationsResult } from './integrations';
+import type { UserBrowserState, UserBrowserPairing } from './user-browser';
+import type { ComputerCommand, ComputerSnapshot, ComputerWindow } from './desktop-computer';
+import type { DesktopAlarmSnapshot, DesktopTimeFilesRequest } from './desktop-time-files';
+import type { DesktopWorkflowSnapshot } from './desktop-workflows';
+import type { DesktopWork } from './desktop';
+import type { ModelAuth } from './model-auth';
+export type Reasoning = 'default' | 'off' | 'on' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+export type ReasoningSupport = 'none' | 'unknown' | 'toggle' | 'levels' | 'extended' | { kind: 'effort'; choices: Reasoning[] };
 export type Theme = 'system' | 'light' | 'dark';
+export interface ModelCatalog { chat: string[]; embedding: string[]; vision?: string[] }
+
 export interface Settings {
   provider?: 'ollama' | 'openai';
   connectionId?: string;
   hasApiKey?: boolean;
+  authMode?: 'bearer' | 'custom';
+  hasCustomAuth?: boolean;
   ollamaUrl: string;
   models: string[];
+  embeddingModel?: string;
+  imageInterpreterModel?: string;
+  embeddingDimensions?: number;
+  memoryError?: string;
   defaultModel?: string; // Legacy settings; ignored.
 }
 export interface FusedServer { id: string; mcpId: string; name: string; version: string; url: string }
@@ -16,12 +33,12 @@ export interface FusedSettings {
   url: string;
   hasToken: boolean;
 }
-export interface FusedIntegration extends FusedSettings { id: string; name: string; revision: string; secretId?: string }
+export interface FusedIntegration extends FusedSettings { managed?: 'dext'; id: string; name: string; revision: string; secretId?: string }
 export interface FusedInput { id?: string; name?: string; enabled: boolean; url: string; token: string }
 export interface Approval {
   source?: 'harnest';
   id: string;
-  capability: 'browser' | 'mcp' | 'fileRead' | 'fileCreate';
+  capability: 'browser' | 'mcp' | 'fileRead' | 'fileCreate' | 'desktop';
   description: string;
   arguments: string;
 }
@@ -44,7 +61,11 @@ export interface WorkPlan {
   };
 }
 export interface Message {
-  reminder?: { scheduleId: string; deliveredAt: string };
+  replyToMessageId?: string;
+  editedAt?: string;
+  generated?: boolean;
+  mode?: ActivityMode;
+  reminder?: { scheduleId: string; deliveredAt: string; overdue?: boolean; dueAt?: string };
   reasoning?: Reasoning;
   files?: string[];
   id: string;
@@ -52,6 +73,14 @@ export interface Message {
   content: string;
   model: string;
   thought?: { text: string; steps?: string[]; durationMs: number; runningSince?: number };
+}
+export interface LiveQuestion {
+  id: string;
+  activityId: string;
+  sourceTitle: string;
+  form: unknown;
+  status: 'pending' | 'answered' | 'cancelled';
+  answer?: string;
 }
 export interface QueuedMessage {
   reasoning?: Reasoning;
@@ -61,15 +90,28 @@ export interface QueuedMessage {
   prompt: string;
   model: string;
 }
+export type QueuedMessageUpdate = { activityId: string; messageId: string } &
+  ({ action: 'edit'; prompt: string } | { action: 'delete' });
 export interface ContextItem {
-  id: string; kind: 'file' | 'url'; location: string; name: string;
+  id: string; kind: 'file' | 'url' | 'desktop'; location: string; name: string;
+  desktop?: { work: DesktopWork; resourceId: string; operation: string; state?: string; path?: string };
   status: 'selected' | 'read' | 'created' | 'referenced' | 'visited';
 }
 export interface BrowserTab {
   id: string; activityId: string; url: string; title: string; needsReopen: boolean;
 }
+/** File facts allowed in agent tool results. Routing metadata belongs to BrowserDownload. */
+export interface BrowserDownloadReceipt {
+  filename: string;
+  state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+  receivedBytes: number; totalBytes: number; path?: string; message?: string;
+}
+/** Desktop controls need these identifiers; agent download results must use the receipt projection. */
+export interface BrowserDownload extends BrowserDownloadReceipt {
+  id: string; activityId: string; tabId: string;
+}
 export interface BrowserPane {
-  activityId: string; tabId: string; url: string; tabs: BrowserTab[]; busyTabIds: string[];
+  activityId: string; tabId: string; url: string; tabs: BrowserTab[]; busyTabIds: string[]; downloads?: BrowserDownload[];
 }
 export interface Activity {
   provider?: 'ollama' | 'openai';
@@ -83,10 +125,11 @@ export interface Activity {
   planOwnerId?: string;
   allowAllApprovals?: boolean;
   browserTabsInitialized?: boolean;
+  browserChoice?: {surface: 'user' | 'in-app'; afterMessageId?: string};
   browser?: { url: string; needsReopen: boolean; saveError?: string; tabs?: BrowserTab[]; activeTabId?: string };
   context?: ContextItem[];
   folderId?: string;
-  permissions?: { browser?: boolean; mcp?: boolean; fileRead?: boolean; fileCreate?: boolean };
+  permissions?: { browser?: boolean; mcp?: boolean; fileRead?: boolean; fileCreate?: boolean; desktop?: boolean };
   archived?: boolean;
   queue?: QueuedMessage[];
   id: string;
@@ -96,15 +139,25 @@ export interface Activity {
   status: ActivityStatus;
   messages: Message[];
   events: string[];
+  compacting?: boolean;
   error?: string;
   runtimeSessionId?: string;
   approval?: Approval;
   parentId?: string;
+  questions?: LiveQuestion[];
 }
 export interface ConversationFolder { id: string; name: string; collapsed?: boolean }
 export interface CronJobInput { name: string; prompt: string; model: string; expression: string; timezone: string; enabled: boolean; runAt?: string | null; kind?: 'task' | 'reminder' }
 export interface CronJob extends CronJobInput { id: string; nextRunAt?: string; error?: string; runs: { id: string; startedAt: string; status?: string; activityId?: string; error?: string }[] }
 export interface Snapshot {
+  notifications?: AppNotification[];
+  userBrowsers?: UserBrowserState[];
+  desktopComputer?: ComputerSnapshot;
+  desktopAlarms?: DesktopAlarmSnapshot;
+  desktopWorkflows?: DesktopWorkflowSnapshot;
+  desktopBackground?: boolean;
+  browserPreferences?: { autoAllow: boolean };
+  desktopError?: string;
   theme?: Theme;
   cronJobs?: CronJob[];
   cronError?: string;
@@ -127,6 +180,23 @@ export interface FusedCLIStatus {
   downloaded?: number; total?: number; error?: string; message?: string;
 }
 export interface DesktopAPI {
+  notification(command: NotificationCommand): Promise<void>;
+  onOpenNotifications(callback: () => void): () => void;
+  integrations(input: IntegrationsCommand): Promise<IntegrationsResult>;
+  beginUserBrowser(activityId: string): Promise<UserBrowserPairing | undefined>;
+  userBrowserPairing(activityId: string): Promise<UserBrowserPairing | undefined>;
+  stopUserBrowser(activityId: string): Promise<void>;
+  resetUserBrowser(activityId: string): Promise<void>;
+  openBrowserExtension(): Promise<void>;
+  desktopComputer(request: ComputerCommand): Promise<ComputerSnapshot | ComputerWindow[]>;
+  desktopAlarm(request: DesktopTimeFilesRequest): Promise<unknown>;
+  desktopWorkflow(operation: string, args: Record<string, unknown>, activityId: string): Promise<unknown>;
+  setDesktopBackground(enabled: boolean): Promise<void>;
+  setBrowserPreferences(input: { autoAllow: boolean }): Promise<void>;
+  openDesktopContext(activityId: string, itemId: string): Promise<void>;
+  onOpenDesktop(callback: (resourceId?: string) => void): () => void;
+  openFile(activityId: string, itemId: string): Promise<unknown>;
+  onOpenActivity(callback: (activityId: string) => void): () => void;
   fusedCLIStatus(): Promise<FusedCLIStatus>;
   checkFusedCLI(): Promise<FusedCLIStatus>;
   installFusedCLI(): Promise<FusedCLIStatus>;
@@ -143,6 +213,9 @@ export interface DesktopAPI {
   decidePlan(input: { activityId: string; planId: string; approved: boolean }): Promise<void>;
   resume(activityId: string): Promise<void>;
   steer(activityId: string, messageId: string): Promise<void>;
+  editMessage(input: { activityId: string; messageId: string; prompt: string }): Promise<string>;
+  updateQueuedMessage(input: QueuedMessageUpdate): Promise<void>;
+  answerQuestions(input: { activityId: string; questionId: string; prompt: string }): Promise<void>;
   copyLoginCode(id: string): Promise<void>;
   openLoginExtension(id: string): Promise<void>;
   onLoginOffer(callback: (tabId: string) => void): () => void;
@@ -176,16 +249,19 @@ export interface DesktopAPI {
   importSkill(): Promise<PersonalSkillInput | null>;
   usage(period: '7d' | '30d' | 'all'): Promise<UsageSummary>;
   models(connection: string | Settings, apiKey?: string): Promise<string[]>;
-  saveSettings(settings: Settings, apiKey?: string): Promise<void>;
+  modelCatalog(connection: string | Settings, apiKey?: string, auth?: ModelAuth): Promise<ModelCatalog>;
+  saveSettings(settings: Settings, apiKey?: string, auth?: ModelAuth): Promise<void>;
   selectModel(activityId: string, model: string, reasoning: Reasoning): Promise<void>;
-  modelReasoning(url: string, model: string): Promise<'none' | 'toggle' | 'levels' | 'extended'>;
-  start(input: { reasoning?: Reasoning; mode?: ActivityMode; files?: string[]; prompt: string; model: string; activityId?: string; folderId?: string }): Promise<string>;
+  modelReasoning(url: string, model: string): Promise<ReasoningSupport>;
+  start(input: { reasoning?: Reasoning; mode?: ActivityMode; files?: string[]; prompt: string; model: string; activityId?: string; folderId?: string; replyToMessageId?: string }): Promise<string>;
   cancel(id: string): Promise<void>;
   showBrowser(id: string, tabId?: string): Promise<void>;
   newBrowserTab(id: string, url: string): Promise<void>;
   refreshBrowserTab(tabId: string): Promise<void>;
+  browserDownload(id: string, action: 'cancel' | 'reveal'): Promise<void>;
   closeBrowserTab(tabId: string): Promise<void>;
   hideBrowser(): Promise<void>;
+  setBrowserOverlay(visible: boolean): Promise<void>;
   resizeBrowser(width: number | undefined, dragging: boolean): Promise<void>;
   selectActivity(id?: string): Promise<void>;
   saveFusedAccount(input: { url: string; licenseKey: string }): Promise<void>;
@@ -193,7 +269,7 @@ export interface DesktopAPI {
   saveFused(input: FusedInput): Promise<string>;
   removeFused(id: string): Promise<void>;
   approve(input: { activityId: string; approvalId: string; approved: boolean; autoAllow?: boolean }): Promise<void>;
-  setPermission(input: { activityId: string; capability: 'browser' | 'mcp' | 'fileRead' | 'fileCreate'; autoAllow: boolean }): Promise<void>;
+  setPermission(input: { activityId: string; capability: 'browser'; autoAllow: boolean | null } | { activityId: string; capability: 'mcp' | 'fileRead' | 'fileCreate' | 'desktop'; autoAllow: boolean }): Promise<void>;
   subscribe(callback: (snapshot: Snapshot) => void): () => void;
 }
 export type MCPToolPolicy = 'disabled' | 'ask' | 'auto';
@@ -221,6 +297,7 @@ export interface MCPConnection {
   tools: MCPTool[];
 }
 export interface MCPConnectionInput {
+  customAuth?: { headers: Record<string, string>; body: Record<string, unknown> };
   auth?: MCPAuth;
   id?: string;
   name: string;
@@ -232,7 +309,7 @@ export interface MCPConnectionInput {
   token?: string;
   environment?: Record<string, string>;
 }
-export type MCPAuth = { type: 'none' | 'bearer' } | { type: 'header' | 'body'; name: string };
+export type MCPAuth = { type: 'none' | 'bearer' | 'custom' } | { type: 'header' | 'body'; name: string };
 declare global {
   interface Window {
     dextana: DesktopAPI;

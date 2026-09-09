@@ -3,6 +3,17 @@ import { createPortal } from 'react-dom';
 import { Button } from './index';
 import { Icon, IconButton, type IconName } from './Icon';
 
+let openOverlays = 0;
+function useBrowserOverlay(open: boolean) {
+  useLayoutEffect(() => {
+    if (!open) return;
+    if (++openOverlays === 1) void window.dextana.setBrowserOverlay?.(true);
+    return () => {
+      if (--openOverlays === 0) void window.dextana.setBrowserOverlay?.(false);
+    };
+  }, [open]);
+}
+
 export function Modal({
   open = true,
   title,
@@ -28,6 +39,7 @@ export function Modal({
   children: ReactNode;
   actions?: ReactNode;
 }) {
+  useBrowserOverlay(open);
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useLayoutEffect(() => {
@@ -95,6 +107,7 @@ export function Popover({
   iconOnly = false,
   className = '',
   triggerClassName,
+  containInChat = false,
 }: {
   label: string;
   trigger?: ReactNode;
@@ -104,19 +117,25 @@ export function Popover({
   iconOnly?: boolean;
   className?: string;
   triggerClassName?: string;
+  containInChat?: boolean;
   children: ReactNode | ((close: () => void) => ReactNode);
 }) {
   const anchor = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
   const [open, setOpen] = useState(false);
+  useBrowserOverlay(open && !containInChat);
   useLayoutEffect(() => {
     if (!open) return;
     const position = () => {
       const box = anchor.current!.getBoundingClientRect();
       const popup = panel.current!;
+      const chat = containInChat ? anchor.current?.closest('main')?.getBoundingClientRect() : undefined;
+      const left = (chat?.left ?? 0) + 12;
+      const right = (chat?.right ?? window.innerWidth) - 12;
+      popup.style.maxWidth = `${Math.max(0, right - left)}px`;
       const height = popup.offsetHeight;
-      popup.style.left = `${Math.max(12, Math.min(box.left, window.innerWidth - popup.offsetWidth - 12))}px`;
+      popup.style.left = `${Math.max(left, Math.min(box.left, right - popup.offsetWidth))}px`;
       popup.style.top = `${Math.max(12, box.bottom + height + 8 < window.innerHeight ? box.bottom + 8 : box.top - height - 8)}px`;
     };
     position();
@@ -167,6 +186,7 @@ export function Popover({
           id={id}
           popover="auto"
           data-overlay-root
+          data-contained-chat={containInChat || undefined}
           role={menu ? 'menu' : 'dialog'}
           aria-label={label}
           className={`dx-popover ${menu ? 'dx-menu' : ''} ${className}`}

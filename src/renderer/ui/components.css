@@ -41,6 +41,17 @@
   border-color: transparent;
   color: var(--dx-muted);
 }
+/* Plain actions stay unfilled, including hover; focus keeps the shared ring. */
+:root .dx-button.dx-button--plain,
+:root .dx-button.dx-button--plain:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--dx-muted);
+}
+:root .dx-button.dx-button--plain:hover:not(:disabled) {
+  color: var(--dx-accent);
+}
 :root .dx-button.dx-button--danger {
   color: var(--dx-danger);
   background: var(--dx-danger-soft);
@@ -420,6 +431,41 @@
   position: relative;
   min-width: 0;
   width: 100%;
+}
+.dx-search-input {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.dx-search-input-control {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.dx-search-input-control > .dx-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--dx-muted);
+  pointer-events: none;
+}
+:root .dx-search-input-control > .dx-input.dx-input {
+  width: 100%;
+  height: 100%;
+  padding-left: 40px;
+  background: var(--dx-surface);
+  border-color: var(--dx-border-strong);
+}
+.dx-search-input > .dx-button {
+  flex-shrink: 0;
 }
 .dx-search-select > .dx-icon {
   position: absolute;
@@ -830,12 +876,16 @@
   gap: 6px;
   padding: 12px 14px;
 }
-:root .dx-modal .dx-field--card > label { margin: 0; }
+:root .dx-modal .dx-field--card > label {
+  margin: 0;
+}
 :root .dx-modal .dx-field--card > .dx-input.dx-input {
   grid-column: 1;
   grid-row: 2;
 }
-.dx-modal .dx-field--card > .dx-field-help { grid-row: 3; }
+.dx-modal .dx-field--card > .dx-field-help {
+  grid-row: 3;
+}
 @media (max-width: 900px) {
   .dx-field--card {
     grid-template-columns: minmax(0, 1fr);
@@ -1011,8 +1061,66 @@
 }
 
 /* Folder editing must fit the sidebar, including its focus treatment. */
-:root .folder-editor { min-width: 0; max-width: 100%; padding: 8px 6px 12px; }
-:root .folder-editor > .dx-input { box-sizing: border-box; display: block; width: 100%; min-width: 0; min-height: 32px; height: 32px; margin: 0; padding: 5px 9px; font-size: 12px; border-radius: 6px; }
-:root .folder-editor > .dx-input:focus-visible { outline: none; border-color: var(--dx-focus); box-shadow: inset 0 0 0 1px var(--dx-focus); }
-:root .folder-editor > div { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-:root .folder-editor .dx-button { flex: 0 0 auto; min-height: 28px; padding: 4px 10px; font-size: 11px; line-height: 18px; border-radius: 6px; }
+:root .folder-editor {
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 6px 12px;
+}
+:root .folder-editor > .dx-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 5px 9px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+:root .folder-editor > .dx-input:focus-visible {
+  outline: none;
+  border-color: var(--dx-focus);
+  box-shadow: inset 0 0 0 1px var(--dx-focus);
+}
+:root .folder-editor > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+:root .folder-editor .dx-button {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 11px;
+  line-height: 18px;
+  border-radius: 6px;
+}
+
+/* Keep model names on one line, even when the browser narrows the composer. */
+:root .model-selector .model-selector-trigger.dx-button {
+  width: 100%;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.model-selector-trigger .selected-model { white-space: nowrap; min-width: 0; max-width: 240px; }
+.model-selector-trigger .selected-reasoning { flex-shrink: 0; white-space: nowrap; }
+.composer-footer { flex-wrap: wrap; }
+.composer { container: composer / inline-size; }
+.composer-footer > .model-selector { flex: 0 1 auto; min-width: 0; margin-left: auto; }
+@container composer (max-width: 420px) {
+  .composer-footer > .model-selector { flex: 1 1 180px; min-width: min(180px, 100%); }
+}
+.dx-checkbox-card--compact > .dx-checkbox-card-selection {
+  grid-template-rows: auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.dx-checkbox-card--compact .dx-checkbox-card-copy { grid-column: 1; grid-row: 1; }
+.dx-checkbox-card--compact:has(.dx-checkbox-card-icon) > .dx-checkbox-card-selection { grid-template-columns: 30px minmax(0, 1fr) auto; }
+.dx-checkbox-card--compact:has(.dx-checkbox-card-icon) .dx-checkbox-card-copy { grid-column: 2; }
+.dx-checkbox-card--compact:has(.dx-checkbox-card-icon) > .dx-checkbox-card-selection > input { grid-column: 3; }

@@ -1,0 +1,109 @@
+/* The dialog uses one body scale; shared heading and badge roles retain their hierarchy. */
+.dx-modal.user-browser-dialog {
+  width: min(480px, calc(100vw - 32px));
+  font: 400 var(--dx-text-sm) / var(--dx-leading) var(--dx-font);
+}
+.user-browser-dialog .dx-modal-description {
+  margin: 0 0 var(--dx-space-4);
+}
+.user-browser-dialog .dx-form-section {
+  gap: var(--dx-space-4);
+}
+.user-browser-dialog .dx-form-section p {
+  margin: 0;
+  font: inherit;
+}
+.user-browser-code {
+  display: grid;
+  gap: var(--dx-space-2);
+  min-width: 0;
+}
+.user-browser-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dx-space-2);
+}
+.user-browser-code-row .dx-input {
+  flex: 1 1 200px;
+  width: 0;
+}
+.user-browser-code > p {
+  color: var(--dx-muted);
+}
+.user-browser-dialog .user-browser-resource {
+  padding: var(--dx-space-4);
+  box-shadow: none;
+}
+.user-browser-dialog .dx-section-header {
+  gap: var(--dx-space-2);
+  margin-bottom: var(--dx-space-2);
+}
+.user-browser-dialog .dx-section-header h2 {
+  font: 600 var(--dx-text-sm) / var(--dx-leading) var(--dx-font);
+}
+.user-browser-address {
+  color: var(--dx-muted);
+  overflow-wrap: anywhere;
+}
+.user-browser-dialog details summary {
+  cursor: pointer;
+  color: var(--dx-muted);
+}
+.user-browser-dialog details[open] {
+  display: grid;
+  gap: var(--dx-space-3);
+}
+.user-browser-dialog .dx-modal-actions {
+  justify-content: flex-start;
+  padding-top: var(--dx-space-4);
+  margin-top: var(--dx-space-4);
+  border-top: 1px solid var(--dx-border);
+}
+
+/* Connection notices share the chat alert gutters. */
+.dx-notice.user-browser-notice {
+  align-self: stretch;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  margin: 15px 30px 0;
+  padding: var(--dx-space-2) var(--dx-space-3);
+  font: 400 var(--dx-text-sm) / var(--dx-leading) var(--dx-font);
+}
+.user-browser-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dx-space-2) var(--dx-space-3);
+}
+.user-browser-status > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.user-browser-tabs {
+  display: grid;
+  gap: var(--dx-space-3);
+  max-height: 280px;
+  overflow-y: auto;
+}
+.user-browser-tab {
+  display: flex;
+  gap: var(--dx-space-3);
+  align-items: start;
+  justify-content: space-between;
+  min-width: 0;
+}
+.user-browser-tab > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.user-browser-tab .user-browser-address {
+  margin-top: var(--dx-space-1);
+}
+
+:root .user-browser-status > .dx-button {
+  margin-left: auto;
+  flex-shrink: 0;
+}

@@ -1,10 +1,50 @@
-import { test, expect } from '@playwright/test';
-import { spawn } from 'node:child_process';
+import { test, expect, _electron as electron, type ElectronApplication } from '@playwright/test';
+import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { createServer as httpServer } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+
+test('stopping desktop from the terminal releases its backend and allows the same workspace to restart', async () => {
+  test.skip(process.platform === 'win32', 'Unix terminal signals and process groups');
+  test.setTimeout(60_000);
+  const directory = await mkdtemp(join(tmpdir(), 'dextana-shutdown-'));
+  let app: ElectronApplication | undefined;
+  const backendPids: number[] = [];
+  const alive = (pid: number) => {
+    try { process.kill(pid, 0); return true; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false; throw error; }
+  };
+  const launch = async () => {
+    app = await electron.launch({ args: ['.'], env: { ...process.env, DEXTANA_USER_DATA: directory } });
+    const page = await app.firstWindow();
+    await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible();
+    const parentPid = app.process().pid!;
+    const child = execFileSync('ps', ['-axo', 'pid,ppid,command'], { encoding: 'utf8' })
+      .split('\n').map(line => line.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/))
+      .find(row => row && Number(row[2]) === parentPid && row[3].includes('harnest-agent'));
+    expect(child).toBeTruthy();
+    const backendPid = Number(child![1]);
+    backendPids.push(backendPid);
+    return backendPid;
+  };
+  try {
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      const backendPid = await launch();
+      const desktop = app!.process();
+      desktop.kill(signal);
+      await expect.poll(() => desktop.exitCode !== null || desktop.signalCode !== null).toBe(true);
+      await expect.poll(() => alive(backendPid), { timeout: 10_000 }).toBe(false);
+    }
+    await launch();
+  } finally {
+    if (app && app.process().exitCode === null && app.process().signalCode === null) await app.close();
+    for (const pid of backendPids) if (alive(pid)) process.kill(pid, 'SIGTERM');
+    await expect.poll(() => backendPids.some(alive), { timeout: 10_000 }).toBe(false);
+    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  }
+});
 
 test('compiled backend rejects unauthenticated callers and accepts only the desktop owner token', async () => {
   test.setTimeout(90_000);

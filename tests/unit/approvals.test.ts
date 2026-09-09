@@ -136,5 +136,72 @@ test('session-wide approval settings save atomically and asking again clears aut
   activity.permissions = { browser: true };
   await activities.setSessionApprovals(activity.id, false);
   expect(activity.allowAllApprovals).toBe(false);
-  expect(activity.permissions).toEqual({});
+  expect(activity.permissions).toEqual({ browser: false });
+});
+
+test('browser defaults apply to new and existing chats, explicit overrides win, and reset restores inheritance', async () => {
+  const { activities, store, execute, start } = setup();
+  const { activity, input } = await start();
+  await activities.approve(input);
+  await vi.waitFor(() => expect(activity.status).toBe('completed'));
+  execute.mockClear();
+  await activities.setBrowserPreferences({ autoAllow: true });
+  const tool = { name: 'browser', arguments: { action: 'read' } };
+  await activities.execute(activity, tool, new AbortController().signal);
+  expect(execute).toHaveBeenCalledTimes(1);
+  const newId = await activities.start({ prompt: 'New chat', model: 'test' });
+  await vi.waitFor(() => expect(store.state.activities.find(item => item.id === newId)?.status).toBe('completed'));
+  expect(execute).toHaveBeenCalledTimes(2);
+  expect(activity.permissions).toBeUndefined();
+
+  await activities.setPermission({ activityId: activity.id, capability: 'browser', autoAllow: false });
+  const pending = expect(activities.execute(activity, tool, new AbortController().signal)).rejects.toThrow('denied');
+  await vi.waitFor(() => expect(activity.approval).toBeDefined());
+  expect(execute).toHaveBeenCalledTimes(2);
+  await activities.approve({ activityId: activity.id, approvalId: activity.approval!.id, approved: false });
+  await pending;
+  await activities.setPermission({ activityId: activity.id, capability: 'browser', autoAllow: null });
+  expect(activity.permissions?.browser).toBeUndefined();
+  await activities.execute(activity, tool, new AbortController().signal);
+  expect(execute).toHaveBeenCalledTimes(3);
+
+  await activities.setPermission({ activityId: activity.id, capability: 'browser', autoAllow: true });
+  await activities.setBrowserPreferences({ autoAllow: false });
+  await activities.execute(activity, tool, new AbortController().signal);
+  expect(execute).toHaveBeenCalledTimes(4);
+  await activities.setBrowserPreferences({ autoAllow: true });
+  await activities.setSessionApprovals(activity.id, false);
+  expect(activity.permissions?.browser).toBe(false);
+});
+
+test('global browser permission never grants MCP access or accepts an already pending action', async () => {
+  const browser = setup();
+  const { activity, input } = await browser.start();
+  await browser.activities.setBrowserPreferences({ autoAllow: true });
+  expect(activity.approval?.id).toBe(input.approvalId);
+  expect(browser.execute).not.toHaveBeenCalled();
+  await browser.activities.cancel(activity.id);
+
+  const fused = setup('fused');
+  await fused.activities.setBrowserPreferences({ autoAllow: true });
+  const mcp = await fused.start();
+  expect(fused.execute).not.toHaveBeenCalled();
+  await fused.activities.cancel(mcp.activity.id);
+});
+
+test('unsaved browser defaults cannot authorize actions and failed saves restore the previous default', async () => {
+  const { activities, store, execute, start } = setup();
+  let rejectSave!: (error: Error) => void;
+  vi.mocked(store.save).mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { rejectSave = reject; }));
+  const saving = activities.setBrowserPreferences({ autoAllow: true });
+  const failed = expect(saving).rejects.toThrow('disk full');
+  await expect(activities.setBrowserPreferences({ autoAllow: false })).rejects.toThrow('already being saved');
+  const { activity } = await start();
+  expect(execute).not.toHaveBeenCalled();
+  rejectSave(new Error('disk full'));
+  await failed;
+  expect(store.state.browserPreferences).toBeUndefined();
+  await activities.cancel(activity.id);
+  await expect(activities.setBrowserPreferences({ autoAllow: 'true' } as any)).rejects.toThrow('Invalid');
+  await expect(activities.setPermission({ activityId: activity.id, capability: 'mcp', autoAllow: null } as any)).rejects.toThrow('Invalid');
 });

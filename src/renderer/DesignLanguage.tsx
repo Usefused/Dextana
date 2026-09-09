@@ -6,6 +6,7 @@ import {
   EmptyState,
   Field,
   FormSection,
+  IconButton,
   Notice,
   SectionHeader,
   Select,
@@ -157,6 +158,7 @@ export function DesignLanguage() {
             <Button variant="danger" disabled={!example} onClick={() => setExample(false)}>
               Remove example
             </Button>
+            <IconButton variant="plain" icon="edit" label="Edit example details" onClick={() => document.getElementById('design-workflow')?.focus()} />
           </div>
           <div className="dx-actions">
             <Button size="small" disabled>

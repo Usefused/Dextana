@@ -13,7 +13,17 @@ export const extensionFiles = [
   'popup.css',
   'popup.js',
   'transfer.js',
+  'runtime.js',
+  'site-scope.js',
+  'site-scope.LICENSE',
   'background.js',
+  'control-worker.js',
+  'control-session.js',
+  'control-tabs.js',
+  'control-actions.js',
+  'control-page.js',
+  'page-semantics.js',
+  'control-popup.js',
 ];
 export function extensionSource(environment: ExtensionEnvironment) {
   return join(

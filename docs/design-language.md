@@ -17,7 +17,7 @@ Import from `src/renderer/ui`. Native element props, events, and React 19 refs p
 | `PageHeader`                      | One page title, description, and optional actions                                 |
 | `SectionHeader`                   | Section title, supporting copy, and actions                                       |
 | `SettingRow`                      | Preference title and description beside a control                                 |
-| `Button`                          | Primary, secondary, ghost, and danger actions; small and medium sizes; busy state |
+| `Button`                          | Primary, secondary, ghost, plain, and danger actions; small and medium sizes; busy state |
 | `Field`                           | Explicit label and associated hint or validation error                            |
 | `TextInput`, `TextArea`, `Select` | Native form controls with consistent styling                                      |
 | `Switch`                          | Native checkbox keyboard behavior with switch semantics                           |
@@ -59,6 +59,8 @@ import { Button, Card, Field, PageHeader, TextInput } from './ui';
 
 Buttons default to `type="button"`; explicitly set `type="submit"` for form submission. A busy button disables repeated activation; provide meaningful busy text. Give standalone controls an accessible name, and use `Field` for visible labels and connected validation. Switches must have a label or `aria-label`. Use one primary action per group and a danger action for deletion.
 
+Use `<IconButton variant="plain" icon="edit" label="Edit last message" />` for an icon-only action without a background or visible border. The plain variant remains transparent on hover, changes the icon color for feedback, and retains the shared keyboard focus ring and disabled state. Message editing uses this pattern below the bubble, revealed on hover or keyboard focus.
+
 `IconButton` requires a `label`; icons are decorative and never replace the accessible name. `CheckboxField` and `CheckboxCard` use native labels, so both the text and checkbox toggle the selection. Keep links and buttons outside these labels. `CheckboxCard` provides `icon`, `actions`, and `accessory` slots, with `selection="switch"` for enable/disable cards. Its selected state keeps a neutral surface and adds a thin accent outline. Footer actions sit outside the label so Settings never changes selection. Use `Button size="small" icon={<Icon name="gear" />}` for compact icon-and-text actions. Disabled controls retain native behavior.
 
 `SearchSelect` accepts unique `{ value, label, description?, disabled? }` options. Typing filters the list, arrow keys move the active option, Enter selects, Escape restores the committed value, and Tab leaves the control. Lists render in the native top layer to avoid clipping; inside a dialog they remain descendants of that dialog. Custom popup containers can use `data-overlay-root` to preserve their outside-click boundary.
@@ -85,3 +87,14 @@ For prominent settings such as the model provider and address, use `Field varian
 All renderer buttons, text inputs, selects, checkboxes, switches, sliders, and textareas route through `src/renderer/ui`. Structural buttons such as sidebar rows, browser tabs, and disclosure controls use `Button variant="layout"`, which retains the containing layout while sharing typography, radius, focus, and disabled behavior. Visible form and action buttons use the standard variants and icon slots.
 
 Actual tool permissions use `CheckboxCard` with the policy selector and input details outside its clickable label. Enabling a tool still selects Ask every time; automatic permission requires its explicit policy choice. Fused token preferences, integration enablement, and scheduled-job enablement use `CheckboxField`. Model/reasoning and chat settings use `Popover`; skill editing and login transfer use `Modal`. Scheduled-job results use `Card`, actual approval prompts use `PermissionCard`, and real proposed plans use `AgentPlan`. The same tokens and components are imported by the gallery and the application; the gallery is not a separate style implementation.
+Interactive A2UI questions use `QuestionForm` with shared selects, text inputs,
+text areas, and `CheckboxCard compact`. Compact checkbox cards keep the label and
+selection control on one row, preserving the shared borders, selected state and
+8px corners. The form's Send reply button continues the conversation; permission
+and plan approval controls remain separate components.
+
+Connection authentication uses `AuthenticationFields` for both Models and MCP setup.
+Keep header and body editors in shared gray `Field variant="card"` surfaces, with
+labels and hints above full-width modal controls. Use the existing 8px control radius,
+theme tokens and icon buttons. Credential values are never prefilled from saved state;
+show the shared saved-configuration notice instead.

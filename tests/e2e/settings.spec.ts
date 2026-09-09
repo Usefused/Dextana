@@ -78,6 +78,7 @@ test('owner changes appearance before Ollama setup and retains theme and models 
     await page.getByLabel('Ollama address').fill(`http://127.0.0.1:${address.port}`);
     await page.getByRole('button', { name: 'Connect to Ollama' }).click();
     await expect(page.getByText('2 models available')).toBeVisible();
+    await expect(page.getByLabel('Embedding model', { exact: true }).locator('option')).toHaveText(['Disabled', 'embeddinggemma:latest', 'Enter a model ID manually…']);
     await expect(page.getByLabel('Default model')).toHaveCount(0);
     await page.getByRole('button', { name: 'Save settings' }).click();
     await expect(page.getByRole('button', { name: 'Model and reasoning', exact: true })).toContainText('Qwen3:8b');

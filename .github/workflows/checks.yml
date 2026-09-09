@@ -12,6 +12,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run check:desktop
       - run: npm test
       - run: npm run build
 # Full desktop E2E runs require the Harnest CLI and a graphical session.

@@ -1,4 +1,8 @@
+import type { UserBrowser } from './user-browser';
+import { browserResourceAllowed } from './browser-network';
+import { BrowserDownloads, downloadReceipt } from './browser-downloads';
 import { BrowserInspection } from './browser-inspection';
+import { describeBrowserElements } from '../shared/browser-semantics';
 import { browserLayout } from '../shared/browser-layout';
 import { browserKey, browserKeys } from './browser-keys';
 import { LoginOffer } from './login-offer';
@@ -77,7 +81,8 @@ const readPage = `(() => {
   const active = globalThis.__dextanaFocus();
   const focused = active?.matches('body,html') ? -1 : nodes.indexOf(active);
   const text = [document.body?.innerText || '', ...[...roots.values()].map(root => [...root.children].map(e => e.innerText || e.textContent || '').join('\\n'))].join('\\n');
-  return { title: document.title, url: location.href, text, viewport:{width:innerWidth,height:innerHeight}, focused_ref: focused < 0 ? null : String(focused+1), overlays: overlays.map(e => ({ref:String(nodes.indexOf(e)+1), role:e.getAttribute('role') || (e.tagName === 'DIALOG' ? 'dialog' : 'popover'), label:label(e).slice(0,180)})), elements: nodes.map((e,i) => { const r=e.getBoundingClientRect(); return { ref:String(i+1), tag:e.tagName.toLowerCase(), role:e.getAttribute('role') || '', label:label(e).slice(0,180), label_length:label(e).length, type:e.getAttribute('type') || '', visible:visible(e), bounds:{x:r.x,y:r.y,width:r.width,height:r.height}, value:e.type === 'password' ? '[redacted]' : (typeof e.value === 'string' || typeof e.value === 'number' ? String(e.value).slice(0,200) : '') }; }) };
+  const described = (${describeBrowserElements.toString()})(nodes, nodes.map((_,i) => String(i+1)));
+  return { title: document.title, url: location.href, text, viewport:{width:innerWidth,height:innerHeight}, focused_ref: focused < 0 ? null : String(focused+1), overlays: overlays.map(e => ({ref:String(nodes.indexOf(e)+1), role:e.getAttribute('role') || (e.tagName === 'DIALOG' ? 'dialog' : 'popover'), label:label(e).slice(0,180)})), ...described };
 })()`;
 
 const cursor = `(() => {
@@ -93,11 +98,13 @@ const cursor = `(() => {
 })()`;
 
 export class Browsers {
+  private downloads = new BrowserDownloads(() => this.notify());
   private loginOffer = new LoginOffer();
   private dismissedLogins = new Map<string, string>();
   private checkingLogin = false;
   private loginTimer = setInterval(() => { void this.checkLogin(); }, 1200);
   private transferOverlay = false;
+  private appOverlay = false;
   private preferredWidth?: number;
   private draggingPane = false;
   private importing = new Set<string>();
@@ -125,6 +132,7 @@ export class Browsers {
       parent: (activityId: string) => string | undefined;
     },
     private offerLogin?: (tabId: string) => void,
+    private userBrowser?: UserBrowser,
   ) {
     this.loginTimer.unref();
     for (const tab of bookmarks.list()) this.tabs.set(tab.id, { ...tab });
@@ -167,13 +175,18 @@ export class Browsers {
     const url = view.webContents.getURL();
     return { id, activityId: tab.activityId, url, origin: loginOrigin(url) };
   }
+  setAppOverlay(visible: boolean) {
+    this.appOverlay = visible;
+    if (visible) this.loginOffer.close();
+    this.active?.setVisible(!visible && !this.transferOverlay && !this.draggingPane);
+  }
   setTransferOverlay(visible: boolean) {
     this.transferOverlay = visible;
     if (visible) {
       this.loginOffer.close();
       if (this.activeId && this.active) this.dismissedLogins.set(this.activeId, this.active.webContents.getURL());
     }
-    this.active?.setVisible(!visible && !this.draggingPane);
+    this.active?.setVisible(!this.appOverlay && !visible && !this.draggingPane);
   }
   async importLogin(target: ReturnType<Browsers['loginTarget']>, material: LoginMaterial) {
     const current = this.loginTarget(target.id);
@@ -220,6 +233,7 @@ export class Browsers {
             url: tab.url,
             tabs: [...this.tabs.values()],
             busyTabIds: [...this.busy],
+            downloads: this.downloads.desktopRecords(tab.activityId),
           }
         : undefined,
     );
@@ -236,6 +250,7 @@ export class Browsers {
     return false;
   }
   private create(activityId: string, url: string) {
+    if (this.userBrowser?.has(activityId)) throw new Error('The browser selection changed. Request the action again.');
     if (this.importing.has(activityId)) throw new Error('Wait for the login transfer to finish.');
     if (this.owned(activityId).length >= 12)
       throw new Error(
@@ -259,7 +274,7 @@ export class Browsers {
     this.preferredWidth = width as number | undefined;
     this.draggingPane = dragging;
     if (dragging) this.loginOffer.close();
-    this.active?.setVisible(!this.transferOverlay && !dragging);
+    this.active?.setVisible(!this.appOverlay && !this.transferOverlay && !dragging);
     this.resize();
   }
   private resize = () => {
@@ -281,6 +296,7 @@ export class Browsers {
           nodeIntegration: false,
           contextIsolation: true,
           sandbox: true,
+          plugins: true, // Chromium’s built-in PDF viewer; pages still have no Node/preload.
           partition: `persist:dextana-browser-${createHash('sha256').update(this.tabs.get(id)!.activityId).digest('hex')}`,
           webSecurity: true,
         },
@@ -296,16 +312,20 @@ export class Browsers {
         this.configuredSessions.add(session);
         session.setPermissionRequestHandler((_wc, _p, callback) => callback(false));
         session.setPermissionCheckHandler(() => false);
-        session.on('will-download', (event) => event.preventDefault());
+        session.on('will-download', (event, item, contents) => {
+          let source = contents;
+          while (source?.hostWebContents) source = source.hostWebContents;
+          const entry = [...this.windows.entries()].find(([, view]) => view.webContents === source);
+          const tab = entry && this.tabs.get(entry[0]);
+          if (!tab) { event.preventDefault(); return; }
+          this.downloads.start(item, tab.activityId, tab.id, this.planOrigins.get(source.id)?.origins);
+        });
         session.webRequest.onBeforeRequest((details, callback) => {
-          const protocol = new URL(details.url).protocol;
           const scope = details.webContentsId === undefined ? undefined : this.planOrigins.get(details.webContentsId);
           const outsidePlan = scope && details.resourceType === 'mainFrame' && !scope.origins.includes(new URL(details.url).origin);
           if (outsidePlan) scope.blocked = details.url;
           callback({
-            cancel: !!outsidePlan || !['https:', 'http:', 'data:', 'blob:', 'about:', 'ws:', 'wss:'].includes(
-              protocol,
-            ),
+            cancel: !!outsidePlan || !browserResourceAllowed(details.url, details.frame?.url ?? '', details.resourceType),
           });
         });
       }
@@ -356,6 +376,8 @@ export class Browsers {
     this.persist(tab.activityId);
   }
   async reopen(activityId: string, tabId?: string) {
+    // The owner may view an in-app tab while the agent uses an attached browser.
+    // Viewing changes neither that connection nor the agent's approved target.
     if (this.importing.has(activityId)) throw new Error('Wait for the login transfer to finish.');
     const id = tabId ?? this.viewed.get(activityId) ?? this.defaults.get(activityId);
     const tab = id && this.tabs.get(id);
@@ -378,6 +400,18 @@ export class Browsers {
     )
       this.show(tab.id);
   }
+  private async loadPage(tab: BrowserTab, contents: Electron.WebContents, url: string, signal?: AbortSignal) {
+    const previous = new Set(this.downloads.desktopRecords(tab.activityId, tab.id).map(item => item.id));
+    try { await contents.loadURL(url); }
+    catch (error) {
+      // Chromium aborts navigation when an attachment becomes a download.
+      if (!['ERR_ABORTED', 'ERR_FAILED'].includes((error as { code?: string }).code ?? '')) throw error;
+      await delay(100, undefined, { signal });
+      const started = this.downloads.desktopRecords(tab.activityId, tab.id).filter(item => !previous.has(item.id));
+      if (!started.length) throw error;
+      return started.map(downloadReceipt);
+    }
+  }
   private async loadSaved(tab: BrowserTab) {
     const pending = this.reopening.get(tab.id);
     if (pending) return pending;
@@ -387,7 +421,8 @@ export class Browsers {
     this.notify();
     const opening = (async () => {
       try {
-        await view.webContents.loadURL(url);
+        const downloads = await this.loadPage(tab, view.webContents, url);
+        if (downloads) { this.remember(tab.id, url); return; }
         await pageScript(view.webContents, [{ code: cursor }]);
         this.remember(tab.id, view.webContents.getURL());
       } catch {
@@ -471,6 +506,7 @@ export class Browsers {
     }
     if (view && !view.webContents.isDestroyed()) view.webContents.close();
     this.windows.delete(id);
+    this.downloads.cancelTab(id);
     this.tabs.delete(id);
     this.dismissedLogins.delete(id);
     if (this.viewed.get(tab.activityId) === id) this.viewed.delete(tab.activityId);
@@ -488,23 +524,44 @@ export class Browsers {
     }
     this.persist(tab.activityId);
   }
-  prepare(activityId: string, args: Record<string, unknown>) {
+  downloadAction(id: unknown, action: unknown) {
+    if (typeof id !== 'string' || !['cancel', 'reveal'].includes(String(action))) throw new Error('Invalid download action.');
+    if (action === 'cancel') this.downloads.cancel(id);
+    else this.downloads.reveal(id);
+  }
+  releaseUserBrowser(activityId: string) { this.userBrowser?.release(activityId); }
+  requestUserBrowser(activityId: string, title: string, signal: AbortSignal) {
+    if (!this.userBrowser) throw new Error('External browser control is unavailable.');
+    return this.userBrowser.request(activityId, title, signal);
+  }
+  prepare(activityId: string, args: Record<string, unknown>): Record<string, unknown> {
+    if (args.action === 'connect_user') return {action:'connect_user', _userConnection:'request'};
+    if (this.userBrowser?.has(activityId)) return this.userBrowser.prepare(activityId,args);
+    return this.prepareInApp(activityId, args);
+  }
+  private prepareInApp(activityId: string, args: Record<string, unknown>) {
     // Freeze implicit targets before the approval wait. Closing a tab must never
     // redirect an already approved action to the remaining page.
     const id =
       typeof args.tab_id === 'string' && args.tab_id ? args.tab_id : this.defaults.get(activityId);
-    if (args.action === 'new_tab' || args.action === 'list_tabs') return { ...args };
+    if (['new_tab', 'list_tabs', 'downloads'].includes(String(args.action))) return { ...args };
     if (!id && args.action === 'open') return { ...args, action: 'new_tab' };
     return { ...args, ...(id ? { tab_id: id } : {}) };
   }
   async execute(activityId: string, args: Record<string, unknown>, signal: AbortSignal, approvedOrigins?: string[]) {
     signal.throwIfAborted();
+    if (args._userConnection) {
+      if (!this.userBrowser) throw new Error('Your browser connection is unavailable.');
+      return this.userBrowser.execute(activityId,args,signal);
+    }
+    if (this.userBrowser?.has(activityId)) throw new Error('The browser selection changed. Request the action again.');
     if (this.importing.has(activityId)) throw new Error('Wait for the login transfer to finish.');
     if (
       ![
         'open',
         'new_tab',
         'list_tabs',
+        'downloads',
         'close_tab',
         'read',
         'click',
@@ -518,6 +575,7 @@ export class Browsers {
       ].includes(String(args.action))
     )
       throw new Error('Unsupported browser action.');
+    if (args.action === 'downloads') return { downloads: this.downloads.receipts(activityId) };
     if (args.action === 'list_tabs')
       return {
         tabs: this.owned(activityId).map((tab) => ({
@@ -569,13 +627,15 @@ export class Browsers {
             'Cookies cleared for this activity only. The page was not reloaded. Open the desired URL to refresh its session state.',
         };
       }
-      if (args.action === 'open' || args.action === 'new_tab')
-        await window.webContents.loadURL(browserURL(args.url));
+      if (args.action === 'open' || args.action === 'new_tab') {
+        const downloads = await this.loadPage(tab, window.webContents, browserURL(args.url), signal);
+        if (downloads) return { tab_id: id, downloads, message: 'Navigation started a download. Only a completed download with a saved path proves the file was saved.' };
+      }
       let inspection = this.inspections.get(window.webContents);
       if (!inspection) { inspection = new BrowserInspection(window.webContents); this.inspections.set(window.webContents, inspection); }
       // A read establishes references in every frame's own isolated context.
       if (['open','new_tab','read'].includes(String(args.action)) && !args.ref)
-        return { ...await inspection.snapshot(readPage, args), tab_id: id };
+        return { ...await inspection.snapshot(readPage, args), tab_id: id, downloads: this.downloads.receipts(activityId, id) };
       if (args.action === 'screenshot') {
         const image = await window.webContents.capturePage(undefined, {stayHidden:true,stayAwake:true});
         const bounds = window.getBounds(), zoom = window.webContents.getZoomFactor();
@@ -789,7 +849,7 @@ export class Browsers {
         await delay(150, undefined, { signal });
       }
       signal.throwIfAborted();
-      return { ...await inspection.snapshot(readPage, {}), tab_id: id };
+      return { ...await inspection.snapshot(readPage, {}), tab_id: id, downloads: this.downloads.receipts(activityId, id) };
     } catch (error) {
       if (scope?.blocked) throw new Error(`This page redirected outside the approved plan to ${scope.blocked}. Request permission to open that address.`);
       throw error;
@@ -818,13 +878,14 @@ export class Browsers {
     this.activeId = id;
     host.contentView.addChildView(view);
     this.resize();
-    view.setVisible(!this.transferOverlay && !this.draggingPane);
+    view.setVisible(!this.appOverlay && !this.transferOverlay && !this.draggingPane);
     host.removeListener('resize', this.resize);
     host.removeListener('move', this.positionLogin);
     host.on('resize', this.resize);
     host.on('move', this.positionLogin);
     this.notify();
   }
+  get selectedActivityId() { return this.selectedId; }
   select(id?: string) {
     this.viewRequest++;
     this.selectedId = id;
@@ -865,6 +926,7 @@ export class Browsers {
     );
   }
   close() {
+    this.downloads.close();
     this.clipboards.clear();
     clearInterval(this.loginTimer);
     this.hide();

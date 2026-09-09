@@ -1,6 +1,6 @@
 import { SearchSelect, Button, Popover, RangeInput } from './ui';
 import { useEffect, useState, type CSSProperties } from 'react';
-import type { Reasoning } from '../shared/types';
+import type { Reasoning, ReasoningSupport } from '../shared/types';
 
 export function ModelSelector({
   models,
@@ -23,7 +23,7 @@ export function ModelSelector({
   const [support, setSupport] = useState<{
     model: string;
     url: string;
-    kind: 'none' | 'toggle' | 'levels' | 'extended' | 'error';
+    kind: ReasoningSupport | 'error';
   }>();
   useEffect(() => {
     let live = true;
@@ -40,25 +40,22 @@ export function ModelSelector({
       live = false;
     };
   }, [model, url, retry]);
-  const kind = support?.model === model && support.url === url ? support.kind : undefined;
+  const resolved = support?.model === model && support.url === url ? support.kind : undefined;
+  const kind = typeof resolved === 'object' ? resolved.kind : resolved;
   const preferred: Reasoning =
     kind === 'levels' ? 'medium' : kind === 'extended' || kind === 'toggle' ? 'on' : 'default';
+  const choices: Reasoning[] = typeof resolved === 'object' ? resolved.choices :
+    kind === 'extended' ? ['off', 'on', 'max'] : kind === 'levels' ? ['low', 'medium', 'high'] : kind === 'toggle' ? ['off', 'on'] : ['default'];
+  const requested = reasoning === 'default' ? preferred : reasoning;
+  const effective = choices.includes(requested) ? requested : preferred;
   useEffect(() => {
-    if (reasoning === 'default' && preferred !== 'default') changeReasoning(preferred);
-  }, [reasoning, preferred, changeReasoning]);
-  const effective = reasoning === 'default' ? preferred : reasoning;
-  const choices: Reasoning[] =
-    kind === 'extended'
-      ? ['off', 'on', 'max']
-      : kind === 'levels'
-        ? ['low', 'medium', 'high']
-        : kind === 'toggle'
-          ? ['off', 'on']
-          : ['default'];
-  if (!choices.includes(effective)) choices.push(effective);
-  const unavailable = !kind || kind === 'none' || kind === 'error';
+    if (resolved && resolved !== 'error' && reasoning !== effective) changeReasoning(effective);
+  }, [resolved, reasoning, effective, changeReasoning]);
+  const unavailable = !kind || kind === 'none' || kind === 'unknown' || kind === 'error';
   const caption =
-    kind === 'none'
+    kind === 'unknown'
+      ? 'This provider does not report reasoning controls'
+      : kind === 'none'
       ? 'Reasoning unavailable'
       : kind === 'error'
         ? 'Could not check reasoning support'
@@ -67,7 +64,7 @@ export function ModelSelector({
           : 'Reasoning';
   const label =
     effective === 'default'
-      ? kind === 'none'
+      ? kind === 'effort' || kind === 'unknown' ? 'Default' : kind === 'none'
         ? 'Standard'
         : kind === 'error'
           ? 'Unavailable'
@@ -78,13 +75,14 @@ export function ModelSelector({
   return (
     <div className="model-selector">
       <Popover
+        containInChat
         label="Model and reasoning"
         disabled={disabled}
         triggerClassName="model-selector-trigger"
         className="dx-model-popover"
         trigger={
           <>
-            <span className="selected-model">
+            <span className="selected-model" title={model}>
               {model ? model.charAt(0).toUpperCase() + model.slice(1) : 'Select model'}
             </span>
             <span className="selected-reasoning">{kind === 'none' ? null : label}</span>
@@ -170,7 +168,7 @@ export function ModelSelector({
               choices.map((value) => (
                 <span key={value}>
                   {value === 'default'
-                    ? 'Standard'
+                    ? 'Default'
                     : value.charAt(0).toUpperCase() + value.slice(1)}
                 </span>
               ))}

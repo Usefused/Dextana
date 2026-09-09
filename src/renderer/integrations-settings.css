@@ -1,0 +1,54 @@
+.integrations-settings {
+  display: grid;
+  gap: var(--dx-space-4);
+}
+.settings-panel .integrations-membership {
+  display: grid;
+  gap: var(--dx-space-4);
+  background: var(--dx-form-surface);
+}
+.integrations-membership h2 {
+  margin: 12px 0 8px;
+}
+.integrations-membership p {
+  margin: 0;
+  color: var(--dx-muted);
+}
+.integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--dx-space-3);
+}
+.integrations-signup {
+  display: grid;
+  gap: var(--dx-space-4);
+}
+.integrations-signup .dx-input {
+  width: 100%;
+}
+.integrations-activation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dx-space-3);
+  color: var(--dx-muted);
+}
+.integration-operations {
+  display: grid;
+  gap: var(--dx-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.integration-operations li {
+  display: flex;
+  align-items: center;
+  gap: var(--dx-space-3);
+  padding-bottom: var(--dx-space-3);
+  border-bottom: 1px solid var(--dx-border);
+}
+.integration-operations .dx-icon {
+  color: var(--dx-accent);
+  flex-shrink: 0;
+}

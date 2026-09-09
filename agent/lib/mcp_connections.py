@@ -82,11 +82,48 @@ class TokenPlacement(httpx.Auth):
         yield request
 
 
+class CustomPlacement(httpx.Auth):
+    requires_request_body = True
+
+    def __init__(self, fields):
+        from harnest.lib.model_auth import auth_config
+        self.fields = auth_config(dict(fields, mode='custom'), reserved_fields=('jsonrpc', 'id', 'method', 'params', 'result', 'error'))
+        if any(name in ('accept', 'mcp-session-id', 'mcp-protocol-version', 'last-event-id') for name in self.fields['headers']):
+            raise ValueError('MCP protocol headers cannot be replaced.')
+        if not self.fields['headers'] and not self.fields['body']:
+            raise ValueError('Add authentication fields or choose No authentication.')
+
+    def auth_flow(self, request):
+        request.headers.update(self.fields['headers'])
+        if request.method == 'POST' and self.fields['body']:
+            payload = json.loads(request.content)
+            if not isinstance(payload, dict) or any(key in payload for key in self.fields['body']):
+                raise ValueError('Auth cannot replace an MCP message field.')
+            payload.update(self.fields['body'])
+            body = json.dumps(payload).encode('utf-8')
+            request = httpx.Request(request.method, request.url, headers=request.headers,
+                                    content=body, extensions=request.extensions)
+            request.headers['Content-Length'] = str(len(body))
+        yield request
+
+
+def credential_values(value):
+    if isinstance(value, str):
+        return [value] if value else []
+    if isinstance(value, dict):
+        return [secret for child in value.values() for secret in credential_values(child)]
+    if isinstance(value, list):
+        return [secret for child in value for secret in credential_values(child)]
+    return []
+
+
 def authentication(config, token):
     value = config.get('auth') or {'type': 'bearer' if token else 'none'}
     if not isinstance(value, dict):
         raise ValueError('Invalid MCP authentication.')
     kind, name = value.get('type'), value.get('name', '')
+    if kind == 'custom':
+        return CustomPlacement(config.get('customAuth', {}))
     if kind not in ('none', 'bearer', 'header', 'body') or not isinstance(name, str):
         raise ValueError('Invalid MCP authentication.')
     if kind != 'none' and not token:
@@ -154,7 +191,7 @@ def native_client(config):
 class Connection:
     def __init__(self, config):
         self.toolset = native_client(config).to_adk_toolset()
-        self.token = config.get('token', '')
+        self.secrets = sorted(set(credential_values(config.get('customAuth', {})) + credential_values(config.get('token', ''))), key=len, reverse=True)
         self.bindings = mcp_lifecycle_bindings(self.toolset)
         self.closed = False
         self.pending = set()
@@ -180,7 +217,9 @@ class Connection:
         value = result.model_dump(mode='json', by_alias=True, exclude_unset=True)
         if len(json.dumps(value)) > 1_000_000:
             raise ValueError('MCP result too large.')
-        return redact(value, self.token)
+        for secret in self.secrets:
+            value = redact(value, secret)
+        return value
 
     async def request(self, method, args):
         if self.closed:

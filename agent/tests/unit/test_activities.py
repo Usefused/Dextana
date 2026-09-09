@@ -214,3 +214,101 @@ def test_rejected_start_and_failed_queue_save_preserve_live_message_identity(age
         assert backend.repository.load()['activities'][0]['messages'][-1]['content'] == 'First final'
 
     asyncio.run(check())
+
+
+def test_edit_latest_message_replaces_turn_and_preserves_history_receipts_and_files(agent, tmp_path):
+    from harnest.lib.activities import Activities
+
+    async def check():
+        backend = Activities(tmp_path)
+        history = [dict(id='earlier', role='user', content='Earlier request', model='test'),
+                   dict(id='answer', role='assistant', content='Earlier answer', model='test')]
+        original = dict(id='last', role='user', content='Old request', model='test', mode='plan', files=['/tmp/report.txt'])
+        backend.configure(dict(settings=dict(models=['test'], ollamaUrl=''), activities=[dict(
+            id='chat', title='Chat', model='test', status='awaiting_plan', mode='plan', runtimeSessionId='old-session',
+            activePlanId='old-plan', messages=history + [original, dict(id='automatic', role='user', content='Approved plan', model='test', generated=True), dict(id='old-answer', role='assistant', content='Obsolete answer', model='test')],
+            plans=[dict(id='old-plan', messageId='old-answer', status='proposed')], events=['Created report.txt'])]))
+        seen = []
+        async def run(activity):
+            seen.append(copy.deepcopy(activity))
+            activity['messages'].append(dict(id='new-answer', role='assistant', content='Revised answer', model='test'))
+            activity['status'] = 'completed'
+        backend.run = run
+        backend.edit_message(dict(activityId='chat', messageId='last', prompt='Revised request'))
+        await backend.tasks['chat']
+        activity = backend.get('chat')
+        assert activity['messages'][:2] == history
+        assert activity['messages'][2]['id'] == original['id']
+        assert activity['messages'][2]['content'] == 'Revised request'
+        assert activity['messages'][2]['files'] == original['files']
+        assert activity['messages'][2]['editedAt']
+        assert seen[0]['turnMode'] == 'plan'
+        assert 'runtimeSessionId' not in seen[0]
+        assert 'activePlanId' not in seen[0]
+        assert activity['plans'] == []
+        assert activity['events'] == ['Created report.txt']
+        assert Activities(tmp_path).get('chat')['messages'] == activity['messages']
+    asyncio.run(check())
+
+
+def test_edit_message_rejects_stale_busy_and_invalid_changes_without_losing_the_turn(agent, tmp_path):
+    from harnest.lib.activities import Activities
+
+    async def check():
+        backend = Activities(tmp_path)
+        backend.configure(dict(settings=dict(models=['test'], ollamaUrl=''), activities=[dict(
+            id='chat', title='Chat', model='test', status='completed', runtimeSessionId='saved-session',
+            messages=[dict(id='last', role='user', content='Original', model='test'),
+                      dict(id='answer', role='assistant', content='Keep this answer', model='test')], events=[])]))
+        activity = backend.get('chat')
+        data = dict(activityId='chat', messageId='last', prompt='Edited')
+        previous = copy.deepcopy(activity)
+        for patch in [dict(messageId='old'), dict(prompt=' '), dict(prompt='x' * 32001)]:
+            with pytest.raises(ValueError):
+                backend.edit_message(dict(data, **patch))
+            assert activity == previous
+        for field, value in [('archived', True), ('parentId', 'parent'), ('queue', [dict(id='queued')]), ('approval', dict(id='pending'))]:
+            activity[field] = value
+            with pytest.raises(ValueError):
+                backend.edit_message(data)
+            activity.pop(field)
+            assert activity == previous
+        for pending in (backend.tasks, backend.deciding):
+            if isinstance(pending, dict):
+                pending['chat'] = object()
+            else:
+                pending.add('chat')
+            with pytest.raises(ValueError):
+                backend.edit_message(data)
+            if isinstance(pending, dict):
+                pending.pop('chat')
+            else:
+                pending.discard('chat')
+            assert activity == previous
+        activity['messages'][0]['generated'] = True
+        with pytest.raises(ValueError):
+            backend.edit_message(data)
+        activity['messages'][0].pop('generated')
+        save = backend.repository.save
+        backend.repository.save = lambda _: (_ for _ in ()).throw(OSError('Disk full'))
+        with pytest.raises(OSError):
+            backend.edit_message(data)
+        backend.repository.save = save
+        assert activity == previous
+        assert backend.repository.load()['activities'][0] == previous
+        assert not backend.tasks
+    asyncio.run(check())
+
+
+def test_desktop_context_and_file_handles_survive_backend_restart(agent, tmp_path):
+    from harnest.lib.activities import Activities
+    backend = Activities(tmp_path)
+    backend.configure(dict(activities=[dict(id='chat', messages=[], events=[], status='completed')]))
+    references = [dict(id='file-handle', kind='file', location='/Documents/report.xlsx', status='created', name='report.xlsx'),
+                  dict(id='desktop-handle', kind='desktop', location='desktop:time:timer', status='referenced', name='Tea', desktop=dict(work='time', resourceId='timer', operation='timer', state='running'))]
+    backend.configure(dict(local=[dict(id='chat', context=references)]))
+    assert backend.get('chat')['context'] == references
+    references[1]['desktop']['state'] = 'ringing'
+    backend.configure(dict(local=[dict(id='chat', context=references)]))
+    restored = Activities(tmp_path)
+    assert restored.get('chat')['context'] == references

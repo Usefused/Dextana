@@ -4,7 +4,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-export async function mcpServer(paginated = false, auth: { type: 'bearer' | 'header' | 'body' | 'none'; name?: string } = { type: 'bearer' }) {
+export async function mcpServer(paginated = false, auth: { type: 'bearer' | 'header' | 'body' | 'none' | 'custom'; name?: string } = { type: 'bearer' }) {
   const calls: string[] = [];
   let changed = false;
   const clients = new Map<string, { server: Server; transport: StreamableHTTPServerTransport }>();
@@ -12,7 +12,7 @@ export async function mcpServer(paginated = false, auth: { type: 'bearer' | 'hea
     let body = '';
     for await (const chunk of req) body += chunk;
     const payload = body ? JSON.parse(body) : undefined;
-    const authenticated = auth.type === 'none' || (auth.type === 'bearer' ? req.headers.authorization === 'Bearer synthetic-mcp-token'
+    const authenticated = auth.type === 'custom' ? !req.headers.authorization && req.headers['x-api-key'] === 'synthetic-mcp-token' && req.headers['x-tenant'] === 'synthetic-tenant-secret' && (req.method !== 'POST' || payload?.credentials?.token === 'synthetic-body-secret') : auth.type === 'none' || (auth.type === 'bearer' ? req.headers.authorization === 'Bearer synthetic-mcp-token'
       : auth.type === 'header' ? req.headers[(auth.name ?? 'X-API-Key').toLowerCase()] === 'synthetic-mcp-token'
       : req.method === 'POST' ? payload?.[auth.name ?? 'api_key'] === 'synthetic-mcp-token' : clients.has(String(req.headers['mcp-session-id'])));
     if (!authenticated) {
@@ -20,6 +20,7 @@ export async function mcpServer(paginated = false, auth: { type: 'bearer' | 'hea
       res.end();
       return;
     }
+    if (auth.type === 'custom' && payload) delete payload.credentials;
     if (auth.type === 'body' && payload) delete payload[auth.name ?? 'api_key'];
     let entry = clients.get(String(req.headers['mcp-session-id']));
     if (!entry) {

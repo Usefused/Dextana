@@ -18,6 +18,10 @@ test('settings adds a dynamic skill, tracks reported tokens, and retains both af
     if (!results.length) reply(body, res, '', [{ function: { name: 'list_skills', arguments: { source: 'personal', query: 'weekly-review', limit: 50 } } }]);
     else if (results.length === 1) {
       const skill = findSkills(results[0].content)?.find(item => item.name === 'weekly-review');
+      if (skill) {
+        expect(skill.id).toBe('personal/weekly-review');
+        expect(JSON.stringify(skill)).not.toMatch(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/i);
+      }
       if (skill) reply(body, res, '', [{ function: { name: 'load_skill', arguments: { name: skill.id, source: skill.source, version: skill.version } } }]);
       else reply(body, res, 'Personal skill unavailable.');
     } else {

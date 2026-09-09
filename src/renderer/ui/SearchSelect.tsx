@@ -45,8 +45,11 @@ export function SearchSelect({
     const position = () => {
       const box = input.current!.getBoundingClientRect();
       const popup = list.current!;
-      popup.style.width = `${Math.min(Math.max(box.width, 240), window.innerWidth - 24)}px`;
-      popup.style.left = `${Math.max(12, Math.min(box.left, window.innerWidth - popup.offsetWidth - 12))}px`;
+      const container = input.current?.closest('[data-contained-chat="true"]')?.getBoundingClientRect();
+      const left = container?.left ?? 12;
+      const right = container?.right ?? window.innerWidth - 12;
+      popup.style.width = `${Math.min(Math.max(box.width, 240), right - left)}px`;
+      popup.style.left = `${Math.max(left, Math.min(box.left, right - popup.offsetWidth))}px`;
       const below = window.innerHeight - box.bottom - 12;
       const above = box.top - 12;
       const useAbove = below < 200 && above > below;

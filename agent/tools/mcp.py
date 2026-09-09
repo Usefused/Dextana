@@ -10,7 +10,7 @@ async def mcp(action: Literal["list", "call"], server_id: str = "", tool_name: s
 
     action: list reads the desktop's approved catalog without contacting a server;
         call executes one enabled tool with its current approval policy.
-    server_id: exact connection id returned by list. Never invent an id.
+    server_id: exact connection reference returned by list. Never invent a reference.
     tool_name: exact enabled tool name from that connection's catalog.
     arguments_json: JSON object matching that tool's inputSchema. Credentials are supplied by the desktop.
         Never retry an uncertain execution automatically. Disabled tools cannot be used.

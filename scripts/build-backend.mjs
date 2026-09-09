@@ -1,3 +1,4 @@
+import { assertBackendStopped } from './backend-build-guard.mjs';
 import { createHash } from 'node:crypto';
 import {
   cp,
@@ -42,7 +43,8 @@ sourceFiles.sort();
 const digest = createHash('sha256')
   .update(version.stdout)
   .update(process.platform + process.arch)
-  .update(await readFile(new URL(import.meta.url)));
+  .update(await readFile(new URL(import.meta.url)))
+  .update(await readFile(new URL('./backend-build-guard.mjs', import.meta.url)));
 for (const path of sourceFiles) digest.update(relative(root, path)).update(await readFile(path));
 const fingerprint = digest.digest('hex');
 try {
@@ -53,6 +55,7 @@ try {
 } catch {
   /* First build or incomplete previous output. */
 }
+assertBackendStopped(output);
 await mkdir(join(root, '.build'), { recursive: true });
 const staging = await mkdtemp(join(root, '.build/backend-stage-'));
 const source = join(staging, 'source-agent');
@@ -140,6 +143,7 @@ try {
     join(bundle, 'NOTICE.txt'),
     'Dextana includes a compiled Harnest ADK backend and a private CPython runtime. Dependency licences are preserved in python/**/site-packages/*.dist-info and the Python distribution. The Harnest compiler is not included.\n',
   );
+  assertBackendStopped(output);
   await rm(output, { recursive: true, force: true });
   await rename(bundle, output);
   console.log(`Compiled backend and private Python runtime ready: ${output}`);

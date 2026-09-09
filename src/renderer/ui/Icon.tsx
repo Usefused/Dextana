@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { Button } from './index';
 
 const paths = {
+  desktop: 'M4 3h16a1 1 0 0 1 1 1v12H3V4a1 1 0 0 1 1-1ZM8 21h8M12 16v5',
   plus: 'M12 5v14M5 12h14',
   edit: 'm16 3 5 5-12 12-6 1 1-6L16 3Zm-1 1 5 5',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',

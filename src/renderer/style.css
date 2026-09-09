@@ -532,17 +532,41 @@ select {
 .message.user {
   width: fit-content;
   max-width: 100%;
+  padding: 0;
+  margin: 10px 0 10px auto;
+}
+.message.user > .message-bubble {
   background: light-dark(#f0f2eb, var(--dark-raised));
   padding: 12px 16px;
-  margin: 10px 0 10px auto;
   border-radius: var(--dx-radius-lg);
 }
+.message-hover-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  opacity: 0;
+  pointer-events: none;
+}
+.message.user:hover > .message-hover-actions,
+.message.user:focus-within > .message-hover-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
 .message-author {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
   font-size: 10px;
   font-weight: 600;
   color: light-dark(#78846e, var(--dark-muted));
   margin-bottom: 8px;
 }
+.message.user.message-editing { width: 100%; }
+.message.user.message-editing > .message-bubble { background: var(--dx-form-surface); }
+.message-edit-form { display: grid; gap: 12px; white-space: normal; }
+.message-edit-form textarea { width: 100%; }
+.message-edit-actions { justify-content: flex-end; }
 .message.assistant .message-author {
   color: light-dark(#456941, var(--dark-accent));
 }
@@ -1001,3 +1025,7 @@ header > .session-heading { display: flex; align-items: center; gap: 12px; min-w
 .browser-resize.is-dragging::after { background: var(--dx-accent); width: 3px; }
 .browser-resize:focus-visible { outline: none; }
 .resizing-browser, .resizing-browser * { cursor: col-resize !important; user-select: none !important; }
+
+.browser-downloads-list{list-style:none;padding:0;margin:0;display:grid;gap:12px}.browser-downloads-list li{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--dx-border)}.browser-downloads-list li>div{min-width:0}.browser-downloads-list strong{font-size:14px;overflow-wrap:anywhere}.browser-downloads-list p{font-size:13px;margin:6px 0 0;opacity:.75}
+
+.queued-message-body{flex:1;min-width:0}.queued-message-actions{display:flex;align-items:flex-start;gap:4px;flex-shrink:0}.message-queue:has(.message-edit-form){max-height:300px}.queued-message .message-edit-form{width:100%}

@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import type { Activity, Snapshot } from '../shared/types';
 
 export function localActivity(activity: Activity) {
-  const { id, browser, browserTabsInitialized, context, folderId, permissions, allowAllApprovals, archived } = activity;
-  return { id, browser, browserTabsInitialized, context, folderId, permissions, allowAllApprovals, archived };
+  const { id, browser, browserTabsInitialized, browserChoice, context, folderId, permissions, allowAllApprovals, archived } = activity;
+  return { id, browser, browserTabsInitialized, browserChoice, context, folderId, permissions, allowAllApprovals, archived };
 }
 
 export class Store {
@@ -29,6 +29,8 @@ export class Store {
         );
     }
     this.state.activities ??= [];
+    this.state.notifications ??= [];
+    this.state.browserPreferences = { autoAllow: this.state.browserPreferences?.autoAllow === true };
     if (!['system', 'light', 'dark'].includes(this.state.theme ?? '')) this.state.theme = 'system';
     this.state.mcpConnections ??= [];
     this.state.folders ??= [];
@@ -46,8 +48,7 @@ export class Store {
         activity.context = [];
         for (const message of activity.messages) if (message.content) rememberReferences(activity, message.content);
       }
-      const lastVisited = activity.context?.filter(item => item.kind === 'url' && item.status === 'visited').at(-1)?.location;
-      const url = externalURL(activity.browser?.url) ?? (previousBrowser?.activityId === activity.id ? externalURL(previousBrowser.url) : undefined) ?? externalURL(lastVisited);
+      const url = externalURL(activity.browser?.url) ?? (previousBrowser?.activityId === activity.id ? externalURL(previousBrowser.url) : undefined);
       const tabs = (activity.browser?.tabs ?? []).flatMap(tab => {
         const page = externalURL(tab.url);
         if (!page || typeof tab.id !== 'string' || !tab.id || tabIds.has(tab.id)) return [];

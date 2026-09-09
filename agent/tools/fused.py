@@ -5,14 +5,14 @@ from harnest.agent import client_tool
 @client_tool
 def fused(action: Literal["connections", "list", "search_docs", "execute"], arguments_json: str = "{}", integration_id: str = "") -> dict:
     """Use the owner's named Fused integrations. Call connections to discover enabled
-    integration IDs and names, then list with integration_id for exact schemas.
+    integration references and names, then list with integration_id for exact schemas.
     Servers added through the Fused workspace are MCP connections: discover those
     with mcp(action="list") and invoke their tools with mcp(action="call").
     An empty connections result here does not mean the MCP catalog is empty.
 
-    integration_id: Exact ID from connections. Required when multiple integrations
-        are enabled. Keep the same ID for discovery, execution and result retrieval;
-        each integration has its own session and credentials. Never guess an ID.
+    integration_id: Exact reference from connections. Required when multiple integrations
+        are enabled. Keep the same reference for discovery, execution and result retrieval;
+        each integration has its own session and credentials. Never guess a reference.
     action: connections lists configured integrations locally. list returns available tool schemas, search_docs discovers physical
         or Unified operations, execute runs the exact discovered operation.
     arguments_json: JSON object matching the selected tool's discovered schema.

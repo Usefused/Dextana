@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS harnest_cron (
 CREATE INDEX IF NOT EXISTS cron_due
  ON harnest_cron(application_id, status, next_run_at, schedule_id);
 CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS schedule_references (
+ number INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT UNIQUE NOT NULL
+);
 '''
 
 

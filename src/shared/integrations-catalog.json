@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-09-09T14:33:16.251Z",
+  "price": {
+    "amount": 1000,
+    "currency": "gbp",
+    "interval": "month"
+  },
+  "providers": [
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "operations": [
+        {
+          "id": "gmail.users.drafts.create",
+          "name": "Create an email draft"
+        },
+        {
+          "id": "gmail.users.drafts.send",
+          "name": "Send a draft"
+        },
+        {
+          "id": "gmail.users.getProfile",
+          "name": "Read your Gmail profile"
+        },
+        {
+          "id": "gmail.users.messages.get",
+          "name": "Read an email"
+        },
+        {
+          "id": "gmail.users.messages.list",
+          "name": "List emails"
+        },
+        {
+          "id": "gmail.users.messages.send",
+          "name": "Send an email"
+        }
+      ]
+    },
+    {
+      "id": "google-calendar",
+      "name": "Google Calendar",
+      "operations": [
+        {
+          "id": "calendar.calendarList.list",
+          "name": "List calendars"
+        },
+        {
+          "id": "calendar.events.delete",
+          "name": "Delete an event"
+        },
+        {
+          "id": "calendar.events.get",
+          "name": "Read an event"
+        },
+        {
+          "id": "calendar.events.insert",
+          "name": "Create an event"
+        },
+        {
+          "id": "calendar.events.list",
+          "name": "List events"
+        },
+        {
+          "id": "calendar.events.update",
+          "name": "Update an event"
+        },
+        {
+          "id": "calendar.freebusy.query",
+          "name": "Check availability"
+        }
+      ]
+    },
+    {
+      "id": "google-oauth2",
+      "name": "Google OAuth2 API",
+      "operations": [
+        {
+          "id": "oauth2.userinfo.v2.me.get",
+          "name": "Read your Google account profile"
+        }
+      ]
+    }
+  ]
+}

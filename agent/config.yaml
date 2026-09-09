@@ -3,6 +3,9 @@ kind: Agent
 server:
   live: true
   http:
+    # Activity progress owns idle expiry. Harnest's live transport has a separate
+    # wall-clock ceiling, so it must not terminate normally progressing work.
+    requestTimeoutSeconds: 86400
     # Eight runs also need live sockets, control requests and local-tool replies.
     maxConcurrentRequests: 64
 metadata:
