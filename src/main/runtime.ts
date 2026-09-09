@@ -46,6 +46,7 @@ export class Runtime {
           DEXTANA_RUNTIME_URL: this.url,
           DEXTANA_STORAGE_DIRECTORY: join(this.workingDirectory, 'agent-state'),
           DEXTANA_SCHEDULER_DIRECTORY: this.workingDirectory,
+          DEXTANA_TIMEZONE: Intl.DateTimeFormat().resolvedOptions().timeZone,
           LITELLM_LOCAL_MODEL_COST_MAP: 'True',
         },
         stdio: ['ignore', 'pipe', 'pipe'],

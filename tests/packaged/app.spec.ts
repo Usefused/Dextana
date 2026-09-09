@@ -24,8 +24,12 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
     let input = '';
     for await (const chunk of req) input += chunk;
     const body = JSON.parse(input || '{}');
+    const reminderRequest = body.messages?.some((entry: any) => entry.role === 'user' && String(entry.content).includes('Test the packaged reminder'));
     const message = body.messages?.some((entry: any) => entry.role === 'tool')
       ? { role: 'assistant', content: 'The packaged backend is working.' }
+      : reminderRequest ? { role: 'assistant', content: '', tool_calls: [{ id: 'packaged-reminder', type: 'function', function: {
+          name: 'schedule', arguments: { action: 'create', name: 'Packaged reminder', prompt: 'The packaged reminder was delivered.', kind: 'reminder', delay_seconds: 3 },
+        } }] }
       : {
           role: 'assistant',
           content: '',
@@ -133,10 +137,19 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
       'DextanaTransfer',
     );
     await page.getByRole('button', { name: 'Cancel transfer', exact: true }).click();
+    await page.getByRole('button', { name: 'New activity', exact: true }).click();
+    await page.getByLabel('Describe your work').fill('Test the packaged reminder');
+    await page.getByRole('button', { name: 'Start activity', exact: true }).click();
+    await expect(page.getByTestId('assistant-message').filter({ hasText: 'Reminder: The packaged reminder was delivered.' })).toHaveCount(1, { timeout: 30_000 });
+    await page.getByLabel('Workspace view').selectOption('cron');
+    const reminder = page.getByRole('article', { name: 'Packaged reminder', exact: true });
+    await expect(reminder).toContainText('Once');
+    await expect(reminder.getByRole('button', { name: /completed/i })).toBeVisible();
   } finally {
     await app.close();
     site.closeAllConnections();
     await new Promise<void>((resolve) => site.close(() => resolve()));
-    await rm(directory, { recursive: true, force: true });
+    // Chromium and the bundled backend may finish a final profile write after quit.
+    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });

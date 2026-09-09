@@ -44,6 +44,7 @@ export interface WorkPlan {
   };
 }
 export interface Message {
+  reminder?: { scheduleId: string; deliveredAt: string };
   reasoning?: Reasoning;
   files?: string[];
   id: string;
@@ -101,7 +102,7 @@ export interface Activity {
   parentId?: string;
 }
 export interface ConversationFolder { id: string; name: string; collapsed?: boolean }
-export interface CronJobInput { name: string; prompt: string; model: string; expression: string; timezone: string; enabled: boolean }
+export interface CronJobInput { name: string; prompt: string; model: string; expression: string; timezone: string; enabled: boolean; runAt?: string | null; kind?: 'task' | 'reminder' }
 export interface CronJob extends CronJobInput { id: string; nextRunAt?: string; error?: string; runs: { id: string; startedAt: string; status?: string; activityId?: string; error?: string }[] }
 export interface Snapshot {
   theme?: Theme;

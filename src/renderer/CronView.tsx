@@ -3,6 +3,11 @@ import './cron.css';
 import { useState } from 'react';
 import type { CronJobInput, Snapshot } from '../shared/types';
 
+function localDateTime(value: string) {
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 19);
+}
+
 export function CronView({ snapshot, openActivity }: { snapshot: Snapshot; openActivity: (id: string) => void }) {
   const [editing, setEditing] = useState<string>();
   const [draft, setDraft] = useState<CronJobInput>();
@@ -23,17 +28,18 @@ export function CronView({ snapshot, openActivity }: { snapshot: Snapshot; openA
       <h2>{editing ? 'Edit job' : 'New scheduled job'}</h2>
       <label>Job name<TextInput autoFocus value={draft.name} maxLength={80} required onChange={e => setDraft({ ...draft, name: e.target.value })}/></label>
       <label>Job instructions<TextArea value={draft.prompt} maxLength={32000} required rows={3} onChange={e => setDraft({ ...draft, prompt: e.target.value })}/></label>
-      <div className="cron-fields"><label>Schedule<Select value={['0 9 * * *', '0 9 * * 1-5', '0 * * * *'].includes(draft.expression) ? draft.expression : 'custom'} onChange={e => setDraft({ ...draft, expression: e.target.value === 'custom' ? '30 9 * * *' : e.target.value })}>
+      <div className="cron-fields"><label>Schedule<Select value={draft.runAt ? 'once' : ['0 9 * * *', '0 9 * * 1-5', '0 * * * *'].includes(draft.expression) ? draft.expression : 'custom'} onChange={e => setDraft({ ...draft, runAt: e.target.value === 'once' ? new Date(Date.now() + 3600_000).toISOString() : null, expression: e.target.value === 'once' ? '' : e.target.value === 'custom' ? '30 9 * * *' : e.target.value })}>
+        <option value="once">Once</option>
         <option value="0 9 * * *">Every day at 9:00</option><option value="0 9 * * 1-5">Weekdays at 9:00</option><option value="0 * * * *">Every hour</option><option value="custom">Custom cron</option>
       </Select></label><label>Time zone<TextInput required value={draft.timezone} onChange={e => setDraft({ ...draft, timezone: e.target.value })}/></label></div>
-      <div className="cron-fields"><label>Cron expression<TextInput required value={draft.expression} onChange={e => setDraft({ ...draft, expression: e.target.value })}/><small>minute · hour · day · month · weekday</small></label><label>Model<Select value={draft.model} required onChange={e => setDraft({ ...draft, model: e.target.value })}>{snapshot.settings.models.map(model => <option key={model}>{model}</option>)}</Select></label></div>
+      <div className="cron-fields">{draft.runAt ? <label>Run at<TextInput type="datetime-local" step="1" required value={localDateTime(draft.runAt)} onChange={e => { if (e.target.value) setDraft({ ...draft, runAt: new Date(e.target.value).toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }); }}/><small>Shown in your computer’s local time.</small></label> : <label>Cron expression<TextInput required value={draft.expression} onChange={e => setDraft({ ...draft, expression: e.target.value })}/><small>minute · hour · day · month · weekday</small></label>}<label>Model<Select value={draft.model} required onChange={e => setDraft({ ...draft, model: e.target.value })}>{snapshot.settings.models.map(model => <option key={model}>{model}</option>)}</Select></label></div>
       <CheckboxField label="Enable this job" description="Run on this schedule while Dextana is open." checked={draft.enabled} disabled={busy} onChange={event => setDraft({ ...draft, enabled: event.target.checked })}/>
       <div className="cron-actions"><Button icon={<Icon name="check" />} type="submit" variant="primary" disabled={busy}>Save job</Button><Button icon={<Icon name="close" />} variant="secondary" type="button" disabled={busy} onClick={() => setDraft(undefined)}>Cancel</Button></div>
     </form>}
     <div className="cron-list">{(snapshot.cronJobs ?? []).map(job => <Card as="article" className="cron-card" aria-label={job.name} key={job.id}>
-      <div className="cron-heading"><h2>{job.name}</h2><Badge tone={job.enabled ? 'success' : 'neutral'}>{job.enabled ? 'Scheduled' : 'Paused'}</Badge></div>
+      <div className="cron-heading"><h2>{job.name}</h2><Badge tone={job.enabled ? 'success' : 'neutral'}>{job.enabled ? 'Scheduled' : job.runAt && job.runs.some(run => run.status === 'completed') ? 'Completed' : 'Paused'}</Badge></div>
       <p className="cron-prompt">{job.prompt}</p>
-      <p className="cron-meta"><code>{job.expression}</code> · {job.timezone} · {job.model}</p>
+      <p className="cron-meta">{job.runAt ? <>Once · {new Date(job.runAt).toLocaleString(undefined, { timeZone: job.timezone })}</> : <code>{job.expression}</code>} · {job.timezone} · {job.kind === 'reminder' ? 'Reminder in chat' : job.model}</p>
       {job.enabled && job.nextRunAt && <p className="cron-meta">Next run · {new Date(job.nextRunAt).toLocaleString(undefined, { timeZone: job.timezone })}</p>}
       {job.error && <p role="status">{job.error}</p>}
       <div className="cron-actions"><Button icon={<Icon name="play" />} variant="secondary" disabled={busy} onClick={() => void action(() => window.dextana.runCronJob(job.id))}>Run now</Button><Button icon={<Icon name="pause" />} variant="secondary" disabled={busy} onClick={() => void action(() => window.dextana.saveCronJob({ ...job, enabled: !job.enabled }, job.id))}>{job.enabled ? 'Pause' : 'Resume'}</Button><Button icon={<Icon name="edit" />} variant="secondary" disabled={busy} onClick={() => { setEditing(job.id); setDraft({ ...job }); setError(''); }}>Edit</Button><Button icon={<Icon name="trash" />} variant="danger" disabled={busy} onClick={() => void action(async () => { await window.dextana.removeCronJob(job.id); if (editing === job.id) setDraft(undefined); })}>Delete</Button></div>

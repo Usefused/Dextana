@@ -171,3 +171,73 @@ def test_job_routes_require_authentication_and_validate_input(agent, tmp_path, m
         assert client.post('/dextana/jobs', headers=headers, json=data).status_code == 200
         assert len(client.get('/dextana/jobs', headers=headers).json()) == 1
         assert client.post('/dextana/jobs/claim', headers=headers).status_code in (404, 405)
+
+
+def test_agent_schedules_one_time_reminders_and_tasks_with_verified_times(agent, tmp_path):
+    from harnest.lib.scheduler import Scheduler, APPLICATION, QUEUE
+    from harnest.lib.task_store import SQLiteTaskStore
+    from harnest.lib.activities import Activities
+
+    async def check():
+        now = [1000.0]
+        backend = Activities(tmp_path / 'state')
+        backend.configure({'settings': {'models': ['test']}})
+        activity = dict(id='chat', model='test', status='completed', messages=[], events=[])
+        backend.state['activities'].append(activity)
+        backend.commit()
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: now[0], backend)
+        await service.initialize()
+        args = dict(action='create', name='Email', prompt='Check Zoho', kind='reminder', delay_seconds=30, timezone='Europe/London')
+        saved = await service.tool(activity, args)
+        assert saved['status'] == 'scheduled' and saved['nextRunAt'] == '1970-01-01T01:17:10+01:00'
+        with pytest.raises(ValueError):
+            await service.tool(activity, {**args, 'delay_seconds': 0})
+        with pytest.raises(ValueError):
+            await service.tool(activity, {**args, 'expression': '* * * * *'})
+        with pytest.raises(ValueError):
+            await service.tool(activity, {**args, 'delay_seconds': 0, 'run_at': '2026-09-09T12:00:00'})
+        assert await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=1029, lease_seconds=30) == ()
+        # Reopening storage must retain the original exact due time and queued task.
+        await service.initialize()
+        now[0] = 1030
+        task, = await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=now[0], lease_seconds=30)
+        result = await service.execute(**dict(task.arguments))
+        await provider.finish_task(application_id=APPLICATION, job_id=task.job_id, lease_token=task.lease_token, now=1030, status='completed', result=result)
+        assert result['status'] == 'completed'
+        assert activity['messages'][0]['content'] == 'Reminder: Check Zoho'
+        assert not backend.tasks
+        await service.execute(**dict(task.arguments))
+        assert len(activity['messages']) == 1
+        restored = Activities(tmp_path / 'state')
+        restored.remind('chat', 'Check Zoho', task.job_id, saved['id'])
+        assert len(restored.get('chat')['messages']) == 1
+        job, = await service.list()
+        assert not job['enabled'] and job['nextRunAt'] is None and job['runs'][0]['status'] == 'completed'
+        await service.tool(activity, {'action': 'remove', 'schedule_id': saved['id']})
+        assert (await service.tool(activity, {'action': 'list'}))['jobs'] == []
+        await provider.close()
+    asyncio.run(check())
+
+
+def test_one_time_pause_edit_and_delete_cancel_the_native_queue_entries(agent, tmp_path):
+    from harnest.lib.scheduler import Scheduler, APPLICATION, QUEUE
+    from harnest.lib.task_store import SQLiteTaskStore
+
+    async def check():
+        provider = SQLiteTaskStore(tmp_path / 'jobs.sqlite')
+        service = Scheduler(provider, lambda: 1000.0, Backend())
+        await service.initialize()
+        data = dict(name='Once', prompt='Original', model='test', expression='', runAt='1970-01-01T00:20:00+00:00', timezone='UTC', enabled=True)
+        identifier = await service.save(data)
+        await service.save({**data, 'enabled': False}, identifier)
+        assert await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=1200, lease_seconds=30) == ()
+        await service.save(data, identifier)
+        await service.save({**data, 'prompt': 'Updated'}, identifier)
+        current, = await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=1200, lease_seconds=30)
+        await service.remove(identifier)
+        assert (await provider.get_task(application_id=APPLICATION, job_id=current.job_id)).status == 'cancelled'
+        assert await service.execute(**dict(current.arguments)) == {'status': 'skipped'}
+        assert await provider.claim_tasks(application_id=APPLICATION, queues=(QUEUE,), now=1300, lease_seconds=30) == ()
+        await provider.close()
+    asyncio.run(check())

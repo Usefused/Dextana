@@ -8,6 +8,7 @@ import asyncio
 from dataclasses import replace
 from datetime import datetime
 import json
+import os
 import re
 import time
 from uuid import uuid4, uuid5, NAMESPACE_URL
@@ -38,6 +39,9 @@ def iso(value):
 
 
 def _native_schedule(job, now):
+    if job.get('runAt'):
+        ZoneInfo(job['timezone'])
+        return '', datetime.fromisoformat(job['runAt']).timestamp()
     upcoming = next_run(job['expression'], job['timezone'], now)
     if job['timezone'] in ('UTC', 'Etc/UTC', 'GMT') and re.fullmatch(r'[0-9*/ ,\-]+', job['expression']):
         expression = job['expression']
@@ -75,6 +79,20 @@ class Scheduler:
 
     def _schedule(self, db, job, now):
         expression, upcoming = _native_schedule(job, now)
+        if job.get('runAt'):
+            job['nextRunAt'] = iso(upcoming) if job['enabled'] else None
+            if job.get('nativeCronId'):
+                db.execute('DELETE FROM harnest_cron WHERE application_id=? AND schedule_id=?', (APPLICATION, job.pop('nativeCronId')))
+            if job['enabled']:
+                identifier = 'once_' + uuid5(NAMESPACE_URL, job['id'] + ':' + job['generation']).hex
+                arguments = dict(job_id=job['id'], generation=job['generation'], once=True, occurrence=identifier, due_at=upcoming)
+                record = self.provider.enqueue(db, TaskRecord(job_id=identifier, application_id=APPLICATION, user_id=OWNER,
+                    task_name=TASK, queue=QUEUE, arguments=arguments, agent_permissions=(), trigger='user',
+                    scheduled_at=upcoming, max_retries=0, idempotency_key=identifier, created_at=now, updated_at=now))
+                job['nativeTaskId'] = record.job_id
+                if record.status in ('completed', 'failed', 'cancelled'):
+                    job.update(enabled=False, nextRunAt=None)
+            return
         identifier = job.setdefault('nativeCronId', 'cron_' + uuid5(NAMESPACE_URL, APPLICATION + ':' + job['id']).hex)
         generation = job.setdefault('generation', uuid4().hex)
         row = db.execute('SELECT data FROM harnest_cron WHERE application_id=? AND user_id=? AND schedule_id=?',
@@ -94,7 +112,10 @@ class Scheduler:
     def _reconcile(self, db, job, activities):
         for run in job['runs']:
             activity = next((a for a in activities if a['id'] == run.get('activityId') or a.get('scheduledRunId') == run['id']), None)
-            if activity:
+            if activity and job.get('kind') == 'reminder':
+                if any(m.get('id') == run['id'] and m.get('reminder') for m in activity.get('messages', [])):
+                    run.update(activityId=activity['id'], status='completed')
+            elif activity:
                 run.update(activityId=activity['id'], status=activity['status'])
                 if activity.get('error'):
                     run['error'] = activity['error']
@@ -115,7 +136,8 @@ class Scheduler:
         def migrate(db):
             for row in db.execute('SELECT data FROM jobs ORDER BY rowid').fetchall():
                 job = json.loads(row['data'])
-                legacy = not job.get('nativeCronId')
+                legacy = not job.get('nativeCronId') and not job.get('nativeTaskId')
+                job.setdefault('generation', uuid4().hex)
                 self._reconcile(db, job, activities)
                 for run in job['runs']:
                     if run.get('status') in _ACTIVE and (legacy or run.get('status') != 'queued'):
@@ -123,6 +145,9 @@ class Scheduler:
                 try:
                     # Desktop policy skips missed work. Re-arm before Harnest's
                     # worker starts so a restart cannot create a catch-up storm.
+                    if job.get('runAt') and datetime.fromisoformat(job['runAt']).timestamp() < self.clock() - 90 and job['enabled']:
+                        job.update(enabled=False, nextRunAt=None, error='Missed run skipped while the backend was stopped.')
+                        self.provider.cancel(db, application_id=APPLICATION, user_id=OWNER, job_id=job.get('nativeTaskId', ''), now=self.clock())
                     self._schedule(db, job, self.clock())
                 except (ValueError, KeyError) as error:
                     job.update(enabled=False, error=str(error), nextRunAt=None)
@@ -139,13 +164,15 @@ class Scheduler:
             for job in jobs:
                 self._reconcile(db, job, activities)
                 _write(db, job)
-            return [{key: value for key, value in job.items() if key not in ('nativeCronId', 'generation')} for job in jobs]
+            return [{key: value for key, value in job.items() if key not in ('nativeCronId', 'nativeTaskId', 'generation')} for job in jobs]
         async with self._lock:
             return await self.provider.transaction(read)
 
-    async def save(self, data, job_id=None):
+    async def save(self, data, job_id=None, source_activity_id=None):
         data = ScheduleInput(**data).model_dump()
-        _native_schedule(data, self.clock())
+        _, upcoming = _native_schedule(data, self.clock())
+        if data.get('runAt') and data['enabled'] and upcoming <= self.clock():
+            raise ValueError('Choose a future date and time.')
         def save(db):
             old = _read(db, job_id) if job_id else None
             if job_id and not old:
@@ -153,8 +180,14 @@ class Scheduler:
             if not old and db.execute('SELECT count(*) FROM jobs').fetchone()[0] >= 100:
                 raise ValueError('Keep up to 100 jobs.')
             job = {**(old or {}), **data, 'id': job_id or str(uuid4()), 'runs': old['runs'] if old else []}
-            if not old or any(old[key] != data[key] for key in ('prompt', 'model', 'expression', 'timezone')):
+            if not old or any(old.get(key) != data.get(key) for key in ('prompt', 'model', 'expression', 'timezone', 'runAt', 'kind')) or (data.get('runAt') and old['enabled'] != data['enabled']):
                 job['generation'] = uuid4().hex
+            if old and old.get('nativeTaskId') and (job['generation'] != old['generation'] or not job['enabled']):
+                self.provider.cancel(db, application_id=APPLICATION, user_id=OWNER, job_id=job.pop('nativeTaskId'), now=self.clock())
+            if source_activity_id:
+                job['sourceActivityId'] = source_activity_id
+            if job['kind'] == 'reminder' and not job.get('sourceActivityId'):
+                raise ValueError('Create reminders from the chat where they should be delivered.')
             job.pop('error', None)
             self._schedule(db, job, self.clock())
             _write(db, job)
@@ -166,7 +199,8 @@ class Scheduler:
         def remove(db):
             job = _read(db, job_id)
             if job:
-                db.execute('DELETE FROM harnest_cron WHERE application_id=? AND user_id=? AND schedule_id=?', (APPLICATION, OWNER, job['nativeCronId']))
+                self.provider.cancel(db, application_id=APPLICATION, user_id=OWNER, job_id=job.get('nativeTaskId', ''), now=self.clock())
+                db.execute('DELETE FROM harnest_cron WHERE application_id=? AND user_id=? AND schedule_id=?', (APPLICATION, OWNER, job.get('nativeCronId', '')))
                 db.execute('DELETE FROM jobs WHERE id=?', (job_id,))
         async with self._lock:
             await self.provider.transaction(remove)
@@ -196,7 +230,7 @@ class Scheduler:
         async with self._lock:
             await self.provider.transaction(enqueue)
 
-    async def execute(self, job_id, generation, occurrence, due_at, manual=False):
+    async def execute(self, job_id, generation, occurrence, due_at, manual=False, once=False):
         """Launch one activity after a durable, non-replayable dispatch receipt."""
         now = self.clock()
         backend = self.backend()
@@ -210,7 +244,10 @@ class Scheduler:
                     return None
                 # Re-arm time-zone projections and skip missed occurrences after
                 # wake. UTC expressions still use Harnest's own cron calculator.
-                self._schedule(db, job, now)
+                if job.get('runAt'):
+                    job.update(enabled=False, nextRunAt=None)
+                else:
+                    self._schedule(db, job, now)
             self._reconcile(db, job, activities)
             run = next((r for r in job['runs'] if r['id'] == occurrence), None)
             if run and run.get('status') != 'queued':
@@ -229,6 +266,8 @@ class Scheduler:
                 return None
             if not run:
                 run = dict(id=occurrence, startedAt=iso(now))
+                if job.get('kind') == 'reminder':
+                    run['activityId'] = job['sourceActivityId']
                 job['runs'] = [run, *job['runs']][:20]
             run['status'] = 'starting'
             job.pop('error', None)
@@ -239,8 +278,12 @@ class Scheduler:
             if job is None:
                 return {'status': 'skipped'}
             try:
-                activity_id = backend.start(dict(prompt=job['prompt'], model=job['model'], scheduledRunId=occurrence), internal=True)
-                result = dict(activityId=activity_id, status='starting')
+                if job.get('kind') == 'reminder':
+                    activity_id = backend.remind(job['sourceActivityId'], job['prompt'], occurrence, job['id'])
+                    result = dict(activityId=activity_id, status='completed')
+                else:
+                    activity_id = backend.start(dict(prompt=job['prompt'], model=job['model'], scheduledRunId=occurrence), internal=True)
+                    result = dict(activityId=activity_id, status='starting')
             except Exception as error:
                 result = dict(status='failed', error=str(error)[:2000])
             def report(db):
@@ -252,6 +295,39 @@ class Scheduler:
                     _write(db, saved)
             await self.provider.transaction(report)
             return result
+
+    async def tool(self, activity, arguments):
+        """Trusted activity identity and model come from the backend, never the model."""
+        action = arguments.get('action')
+        if action == 'list':
+            return {'jobs': await self.list()}
+        if action == 'remove':
+            identifier = arguments.get('schedule_id', '')
+            if not any(job['id'] == identifier for job in await self.list()):
+                raise ValueError('Scheduled job not found. List jobs to get its ID.')
+            await self.remove(identifier)
+            return {'status': 'removed', 'id': identifier}
+        if action != 'create':
+            raise ValueError('Choose create, list, or remove.')
+        delay = arguments.get('delay_seconds', 0)
+        run_at = arguments.get('run_at', '')
+        expression = arguments.get('expression', '')
+        if type(delay) not in (int, float) or delay < 0 or delay > 315360000:
+            raise ValueError('Use a positive delay of at most ten years.')
+        if sum(bool(value) for value in (delay, run_at, expression)) != 1:
+            raise ValueError('Specify exactly one delay, future date, or recurring cron expression. Ask the owner when if it is unknown.')
+        if delay:
+            run_at = iso(self.clock() + delay)
+        zone = arguments.get('timezone') or os.environ.get('DEXTANA_TIMEZONE', 'UTC')
+        identifier = await self.save(dict(name=arguments.get('name', ''), prompt=arguments.get('prompt', ''),
+            kind=arguments.get('kind', 'reminder'), model=activity['model'], expression=expression, runAt=run_at or None,
+            timezone=zone, enabled=True), source_activity_id=activity['id'])
+        saved = next(job for job in await self.list() if job['id'] == identifier)
+        local = datetime.fromisoformat(saved['nextRunAt']).astimezone(ZoneInfo(zone)).isoformat()
+        return dict(status='scheduled', id=identifier, name=saved['name'], kind=saved['kind'], nextRunAt=local,
+                    timezone=zone, expression=expression or None,
+                    delivery='This chat' if saved['kind'] == 'reminder' else 'A new activity with normal action approvals',
+                    availability='Dextana must be open and the computer awake. Missed runs are skipped.')
 
 
 _schedulers = {}

@@ -43,9 +43,9 @@ function App() {
     document.documentElement.dataset.theme = snapshot?.theme ?? 'system';
   }, [snapshot?.theme]);
   const [archiving, setArchiving] = useState(false);
-  const [notice, setNotice] = useState<{ text: string; archivedId?: string }>();
+  const [notice, setNotice] = useState<{ text: string; archivedId?: string; reminderActivityId?: string }>();
   useEffect(() => {
-    if (!notice || archiving) return;
+    if (!notice || archiving || notice.reminderActivityId) return;
     const timer = window.setTimeout(() => setNotice(undefined), 8000);
     return () => window.clearTimeout(timer);
   }, [notice, archiving]);
@@ -88,6 +88,15 @@ function App() {
   const visibleActivities = snapshot?.activities.filter(item => !item.archived) ?? [];
   const running = activity && ['starting', 'running'].includes(activity.status);
   useEffect(() => window.dextana.subscribe(setSnapshot), []);
+  const seenReminders = useRef<Set<string> | undefined>(undefined);
+  useEffect(() => {
+    if (!snapshot) return;
+    const reminders = snapshot.activities.flatMap(activity => activity.messages.filter(message => message.reminder).map(message => ({ activityId: activity.id, message })));
+    if (seenReminders.current) for (const { activityId, message } of reminders) {
+      if (!seenReminders.current.has(message.id)) setNotice({ text: message.content, reminderActivityId: activityId });
+    }
+    seenReminders.current = new Set(reminders.map(item => item.message.id));
+  }, [snapshot]);
   const newActivity = (folderId?: string) => {
     setWorkspaceView('activities');
     setMode('work');
@@ -464,6 +473,7 @@ function App() {
         )}
         {notice && <div className="action-notice" role="status">
           <span>{notice.text}</span>
+          {notice.reminderActivityId && <Button variant="layout" onClick={() => { setSelectedId(notice.reminderActivityId); setWorkspaceView('activities'); setSettingsOpen(false); setNotice(undefined); }}>View reminder</Button>}
           {notice.archivedId && <Button variant="layout" disabled={archiving} onClick={() => { void undoArchive(notice.archivedId!); }}>Undo</Button>}
           <Button variant="layout" aria-label="Dismiss notification" onClick={() => setNotice(undefined)}>×</Button>
         </div>}

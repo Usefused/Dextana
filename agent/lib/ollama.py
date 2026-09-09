@@ -1,4 +1,7 @@
 from urllib.parse import urlparse
+from datetime import datetime
+from zoneinfo import ZoneInfo
+import os
 from harnest import context
 from harnest.model import LiteLLMLifecycle, LiteLLMModel
 
@@ -28,6 +31,14 @@ def configure_connections(connections):
 
 class DesktopModelRouting(LiteLLMLifecycle):
     async def before_request(self, request, model_context):
+        zone = os.environ.get('DEXTANA_TIMEZONE', 'UTC')
+        clock = '\nCurrent local time: ' + datetime.now(ZoneInfo(zone)).isoformat() + ' (' + zone + ').'
+        if isinstance(request.get('messages'), list):
+            request['messages'] = [
+                {**message, 'content': message['content'] + clock}
+                if message.get('role') == 'system' and isinstance(message.get('content'), str) else message
+                for message in request['messages']
+            ]
         metadata = context.current().metadata
         model = metadata.get("model", "")
         base = metadata.get("ollamaUrl", "http://127.0.0.1:11434")

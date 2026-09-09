@@ -38,3 +38,18 @@ test('a busy snapshot endpoint preserves pending local consent and never dispatc
     await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce());
   } finally { activities.stopAll(); }
 });
+
+test('new reminder messages notify once and historical reminders do not notify on startup', () => {
+  const store = new Store('/unused');
+  const notify = vi.fn();
+  const activities = new Activities(store, {} as Runtime, () => {}, {} as Browsers, {} as Fused, undefined, undefined, notify);
+  const old = { id: 'old', role: 'assistant', content: 'Reminder: Earlier', model: 'test', reminder: { scheduleId: 'old-job', deliveredAt: '2026-09-09T10:00:00Z' } };
+  const activity = { id: 'chat', title: 'Chat', status: 'completed', model: 'test', messages: [old], events: [] };
+  (activities as any).apply({ revision: 1, activities: [structuredClone(activity)], requests: [] });
+  expect(notify).not.toHaveBeenCalled();
+  activity.messages.push({ ...old, id: 'new', content: 'Reminder: Zoho', reminder: { ...old.reminder, scheduleId: 'new-job' } });
+  const update = { revision: 2, activities: [activity], requests: [] };
+  (activities as any).apply(structuredClone(update));
+  (activities as any).apply(structuredClone(update));
+  expect(notify).toHaveBeenCalledExactlyOnceWith('Reminder: Zoho');
+});

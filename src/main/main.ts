@@ -6,7 +6,7 @@ import { installApplicationMenu } from './application-menu';
 import { LoginTransfer } from './session-transfer';
 import { Folders } from './folders';
 import { externalURL } from '../shared/links';
-import { app, BrowserWindow, ipcMain, dialog, shell, clipboard, nativeTheme } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, clipboard, nativeTheme, Notification } from 'electron';
 import { join } from 'node:path';
 import { Store } from './store';
 import { modelReasoning } from './settings';
@@ -83,7 +83,12 @@ app
     const fused = new Fused(store, app.getPath('userData'), runtime);
     const mcp = new MCPConnections(store, app.getPath('userData'), publish, fusedCLI, runtime);
     const files = new WorkFiles(join(process.env.DEXTANA_USER_DATA ? app.getPath('userData') : app.getPath('documents'), process.env.DEXTANA_USER_DATA ? 'artifacts' : 'Dextana'));
-    const activities = new Activities(store, runtime, publish, browsers, fused, mcp, files);
+    const activities = new Activities(store, runtime, publish, browsers, fused, mcp, files, text => {
+      if (!Notification.isSupported()) return;
+      const notification = new Notification({ title: 'Dextana reminder', body: text });
+      notification.on('click', () => { if (!window.isDestroyed()) { window.show(); window.focus(); } });
+      notification.show();
+    });
     await activities.initialize();
     const cron = new CronJobs(store, publish, runtime);
     void cron.initialize();

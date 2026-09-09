@@ -43,8 +43,8 @@ export class CronJobs {
     return this.serial(async () => {
       if (!input || !this.store.state.settings.models.includes(input.model)) throw new Error('Choose an available model.');
       // Only send the authored input, never renderer-provided run history.
-      const { name, prompt, model, expression, timezone, enabled } = input;
-      const saved = await this.request(id === undefined ? '' : '/' + encodeURIComponent(id), id === undefined ? 'POST' : 'PUT', { name, prompt, model, expression, timezone, enabled });
+      const { name, prompt, model, expression, timezone, enabled, runAt, kind } = input;
+      const saved = await this.request(id === undefined ? '' : '/' + encodeURIComponent(id), id === undefined ? 'POST' : 'PUT', { name, prompt, model, expression, timezone, enabled, runAt, kind });
       await this.refresh(); return saved as string;
     });
   }

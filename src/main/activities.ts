@@ -22,7 +22,7 @@ export class Activities {
   private revision = -1;
   private localVersion = '';
   private pending = new Map<string, { controller: AbortController; activityId: string; events: number }>();
-  constructor(private store: Store, private runtime: Runtime, private publish: () => void, browsers: Browsers, fused: Fused, mcp?: MCPConnections, files?: WorkFiles) {
+  constructor(private store: Store, private runtime: Runtime, private publish: () => void, browsers: Browsers, fused: Fused, mcp?: MCPConnections, files?: WorkFiles, private notifyReminder: (text: string) => void = () => {}) {
     this.local = new LocalCapabilities(store, publish, browsers, fused, mcp, files, activity => this.receipt(activity));
   }
   private async request(path: string, data?: unknown) {
@@ -44,6 +44,14 @@ export class Activities {
   }
   private apply(data: BackendState) {
     if (data.revision < this.revision) return;
+    if (this.revision >= 0) {
+      const previous = new Set(this.store.state.activities.flatMap(activity => activity.messages.filter(message => message.reminder).map(message => message.id)));
+      for (const activity of data.activities) for (const message of activity.messages) {
+        if (message.reminder && !previous.has(message.id)) {
+          try { this.notifyReminder(message.content); } catch { /* Chat delivery remains available if desktop notifications are disabled. */ }
+        }
+      }
+    }
     this.revision = data.revision;
     const requests = new Set(data.requests.map(request => request.id));
     for (const [id, pending] of this.pending) if (!requests.has(id)) { pending.controller.abort(); this.pending.delete(id); }

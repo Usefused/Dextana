@@ -224,14 +224,15 @@ class SQLiteTaskStore:
             return True
         return await self.transaction(finish)
 
+    def cancel(self, db, *, application_id, user_id, job_id, now):
+        record = _task(db.execute('SELECT data FROM harnest_tasks WHERE application_id=? AND user_id=? AND job_id=?', (application_id, user_id, job_id)).fetchone())
+        if record is None or record.status not in ('pending', 'running'):
+            return False
+        self.write_task(db, _terminal(record, 'cancelled', now, failure_code='task_cancelled'))
+        return True
+
     async def cancel_task(self, *, application_id, user_id, job_id, now):
-        def cancel(db):
-            record = _task(db.execute('SELECT data FROM harnest_tasks WHERE application_id=? AND user_id=? AND job_id=?', (application_id, user_id, job_id)).fetchone())
-            if record is None or record.status not in ('pending', 'running'):
-                return False
-            self.write_task(db, _terminal(record, 'cancelled', now, failure_code='task_cancelled'))
-            return True
-        return await self.transaction(cancel)
+        return await self.transaction(lambda db: self.cancel(db, application_id=application_id, user_id=user_id, job_id=job_id, now=now))
 
     def write_cron(self, db, record):
         db.execute('''INSERT INTO harnest_cron VALUES (?,?,?,?,?,?,?,?)

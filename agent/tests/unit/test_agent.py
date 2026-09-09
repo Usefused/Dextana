@@ -14,6 +14,11 @@ def test_agent_identity(agent, monkeypatch):
                 assert 'think' not in request
             else:
                 assert request['think'] == expected
+        messages = [dict(role='system', content='Instructions'), dict(role='user', content='Remind me in five minutes')]
+        request = await DesktopModelRouting().before_request({'messages': messages}, None)
+        assert 'Current local time:' in request['messages'][0]['content']
+        assert request['messages'][1] == messages[1]
+        assert messages[0]['content'] == 'Instructions'
     asyncio.run(check_routing())
 
 

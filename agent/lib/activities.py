@@ -165,6 +165,15 @@ class Activities:
                 activity['modelSelection'] = previous
             raise
 
+    def remind(self, activity_id, text, occurrence, schedule_id):
+        activity = self.get(activity_id)
+        if not any(message['id'] == occurrence for message in activity['messages']):
+            activity['messages'].append(dict(id=occurrence, role='assistant', content='Reminder: ' + text,
+                model=activity['model'], reminder=dict(scheduleId=schedule_id, deliveredAt=now())))
+            activity['events'].append('Delivered scheduled reminder')
+            self.commit()
+        return activity_id
+
     def _start(self, data, parent=None, approved=None, queued_id=None, internal=False):
         prompt = data.get('prompt')
         model = data.get('model')
@@ -445,6 +454,9 @@ class Activities:
                                         raise ValueError('Plan mode cannot execute work. Submit a plan with propose_plan and wait for approval.')
                                     if name == 'delegate':
                                         output = await self.delegate(activity, args['tasks'])
+                                    elif name == 'schedule':
+                                        from harnest.lib.scheduler import scheduler
+                                        output = await scheduler().tool(activity, args)
                                     elif name == 'propose_plan':
                                         if activity['turnMode'] != 'plan' or proposal:
                                             raise ValueError('Submit one plan per planning turn.')
