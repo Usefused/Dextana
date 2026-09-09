@@ -26,12 +26,10 @@ copyright notices. Modified versions must clearly identify that they have
 been modified. This license does not grant permission to use Fused or Dextana
 names, logos, or trademarks to imply endorsement.
 
-4. Third-party components and earlier versions
+4. Third-party components
 Third-party components remain subject to their own licenses. This license
-does not override rights granted by those licenses. It applies only to copies
-of Dextana distributed under this license. It does not revoke permissions
-already granted for copies previously distributed under the MIT License or
-another license. This is not an open-source license.
+does not override rights granted by those licenses. These terms apply to
+Dextana distributed under this license. This is not an open-source license.
 
 5. Disclaimer
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR

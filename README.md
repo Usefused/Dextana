@@ -101,7 +101,7 @@ Browser isolation is Chromium process/session isolation, **not a VM or container
 - The desktop enforces eight active runs, a five-minute run deadline, forty desktop actions per run, and bounded delegation. Actual parallel model inference depends on Ollama's configuration and available memory.
 - Fused operation authoring and dynamic connected-user selector configuration stay in Fused's tools for now.
 
-See [architecture](docs/architecture.md) for code boundaries and extension points. Licensed under the [Dextana No-Resale License](LICENSE). Personal and business use are allowed; selling or repackaging Dextana for resale requires written permission from [Fused](https://usefused.com). Previously distributed MIT copies retain their original rights.
+See [architecture](docs/architecture.md) for code boundaries and extension points. Licensed under the [Dextana No-Resale License](LICENSE). Personal and business use are allowed; selling or repackaging Dextana for resale requires written permission from [Fused](https://usefused.com).
 
 ### Work documents and chat context
 
