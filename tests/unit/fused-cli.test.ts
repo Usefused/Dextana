@@ -50,3 +50,11 @@ test('token JSON must match the approved MCP, exact allowlist and bounded expiry
   expect(parseFusedToken(value, 'mcp', 'dext-token', ['mail.send']).token).toBe('secret');
   for (const changed of [{ allow: ['*'] }, { app_family_id: 'other' }, { name: 'other' }, { expires_at: 'invalid' }, { expires_at: new Date(Date.now() + 90000000).toISOString() }, { token: '' }]) expect(() => parseFusedToken({ ...value, ...changed }, 'mcp', 'dext-token', ['mail.send'])).toThrow('Invalid Fused token');
 });
+
+
+test('omitting operation restrictions validates the CLI default all-operations token', async () => {
+  const { parseFusedToken } = await import('../../src/main/fused-cli');
+  const value = { id: 'id', app_family_id: 'mcp', name: 'dext-token', token: 'secret', allow: ['*'], expires_at: new Date(Date.now() + 86400000).toISOString() };
+  expect(parseFusedToken(value, 'mcp', 'dext-token', []).token).toBe('secret');
+  expect(() => parseFusedToken({ ...value, allow: [] }, 'mcp', 'dext-token', [])).toThrow('Invalid Fused token');
+});

@@ -60,7 +60,7 @@ export async function prepareWorkPlan(
     const tool = connection?.tools.find(
       (item) => item.name === value?.tool_name && item.policy !== 'disabled',
     );
-    if (!connection || !tool || (connection.fusedNative && tool.name === 'connect'))
+    if (!connection || !tool || (tool.fingerprint === 'fused-native-connect-v1'))
       throw new Error(
         'Choose enabled tools from the local catalog. Credential setup requires its own approval.',
       );

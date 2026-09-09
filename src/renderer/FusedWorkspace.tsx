@@ -111,7 +111,7 @@ function Server({
   connection?: MCPConnection;
   disabled: boolean;
 }) {
-  const [autoToken, setAutoToken] = useState(connection?.fusedNative?.autoToken ?? false);
+  const [autoToken, setAutoToken] = useState(connection?.fusedNative?.autoToken ?? true);
   const [operations, setOperations] = useState(
     connection?.fusedNative?.operations.join(', ') ?? '',
   );
@@ -133,18 +133,18 @@ function Server({
         checked={autoToken} disabled={disabled || busy}
         onChange={event => setAutoToken(event.target.checked)} />
       {autoToken && (
-        <Field label="Allowed operation IDs">
+        <Field label="Allowed operation IDs (optional)">
           {props => <TextInput {...props}
             value={operations}
             disabled={disabled || busy}
-            placeholder="Exact IDs from Fused, separated by commas"
+            placeholder="Leave blank for all operations in this MCP"
             onChange={(event) => setOperations(event.target.value)}
           />}
         </Field>
       )}
       <Button icon={<Icon name={connection ? 'check' : 'plus'} />} variant="secondary" size="small"
         className="fused-server-action"
-        disabled={disabled || busy || (autoToken && !operations.trim())}
+        disabled={disabled || busy}
         onClick={async () => {
           setBusy(true);
           setMessage('');
@@ -157,7 +157,7 @@ function Server({
                 .map((value) => value.trim())
                 .filter(Boolean),
             );
-            setMessage('MCP selection saved. The agent will ask for approval before creating a token.');
+            setMessage('Connected and tools discovered. Review tool permissions in Connectors.');
           } catch (failure) {
             setMessage((failure as Error).message);
           } finally {

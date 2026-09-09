@@ -30,7 +30,7 @@ test('owner settings test discovers tools with a temporary scoped token and leav
   expect(issuer.revoke).toHaveBeenCalledWith(token);
   expect(store.state.mcpConnections![0].tools[0].policy).toBe('ask');
   expect(JSON.stringify(store.state)).not.toContain(token.token);
-  expect(mcp.prepare('chat', 'call', 'connection', 'connect', '{}').requiresApproval).toBe(true);
+  expect(mcp.prepare('chat', 'call', 'connection', 'read', '{}').requiresApproval).toBe(true);
 });
 
 test.each(['open', 'discovery', 'close'])('temporary token is revoked when %s fails', async stage => {
@@ -65,4 +65,41 @@ test('manual testing does not require automatic agent token creation to be enabl
   await mcp.test('connection');
   expect(issuer.issue).toHaveBeenCalledOnce();
   expect(issuer.revoke).toHaveBeenCalledOnce();
+});
+
+
+test('adding an MCP discovers real tools with optional operation restrictions before saving', async () => {
+  const { mcp, store, issuer, client } = fixture();
+  store.state.mcpConnections = [];
+  await mcp.selectFused('version', true, []);
+  expect(issuer.issue).toHaveBeenCalledWith('https://engine.example', 'family', [], expect.any(AbortSignal));
+  expect(issuer.revoke).toHaveBeenCalledOnce();
+  expect(client.callTool).not.toHaveBeenCalled();
+  const connection = store.state.mcpConnections[0];
+  expect(connection.testedAt).toBeTruthy();
+  expect(connection.tools.map(tool => tool.name)).toEqual(['read']);
+  await mcp.setTools(connection.id, { read: 'ask' });
+  expect(mcp.catalog('new-chat')[0].tools.map(tool => tool.name)).toEqual(['read']);
+  expect(() => mcp.prepare('chat', 'legacy', connection.id, 'connect', '{}')).toThrow('not enabled');
+  expect(mcp.prepare('chat', 'read', connection.id, 'read', '{}').arguments.token?.operations).toEqual(['*']);
+});
+
+test('failed add preserves the existing connection and revokes the setup token', async () => {
+  const { mcp, store, issuer, client } = fixture();
+  const before = JSON.stringify(store.state.mcpConnections);
+  client.listTools.mockRejectedValueOnce(new Error('discovery failed'));
+  await expect(mcp.selectFused('version', true, [])).rejects.toThrow('discovery failed');
+  expect(JSON.stringify(store.state.mcpConnections)).toBe(before);
+  expect(issuer.revoke).toHaveBeenCalledOnce();
+});
+
+test('the obsolete synthetic connect tool is hidden, but a server-owned connect tool works', () => {
+  const { mcp, store } = fixture();
+  const tools = store.state.mcpConnections![0].tools;
+  tools[0].name = 'connect';
+  expect(mcp.catalog()[0].tools[0].name).toBe('connect');
+  expect(mcp.prepare('chat', 'real', 'connection', 'connect', '{}').requiresApproval).toBe(true);
+  tools[0].fingerprint = 'fused-native-connect-v1';
+  expect(mcp.catalog()).toEqual([]);
+  expect(() => mcp.prepare('chat', 'legacy', 'connection', 'connect', '{}')).toThrow('not enabled');
 });

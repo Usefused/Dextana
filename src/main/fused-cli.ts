@@ -11,8 +11,9 @@ import type { FusedServer } from '../shared/types';
 export interface FusedToken { token: string; name: string; expiresAt: number; engine: string; mcpId: string }
 export function parseFusedToken(value: unknown, mcpId: string, name: string, operations: string[]): FusedToken {
   const item = value as Record<string, unknown>;
+  const expectedOperations = operations.length ? operations : ['*'];
   const expiry = typeof item?.expires_at === 'string' ? Date.parse(item.expires_at) : NaN;
-  if (!item || item.app_family_id !== mcpId || item.name !== name || typeof item.id !== 'string' || !item.id || typeof item.token !== 'string' || !item.token || item.token.length > 16000 || /[\r\n]/.test(item.token) || !Array.isArray(item.allow) || item.allow.length !== operations.length || !operations.every(operation => item.allow instanceof Array && item.allow.includes(operation)) || !Number.isFinite(expiry) || expiry <= Date.now() || expiry > Date.now() + FUSED_TOKEN_LIFETIME_MS + 30_000) throw new Error('Invalid Fused token response.');
+  if (!item || item.app_family_id !== mcpId || item.name !== name || typeof item.id !== 'string' || !item.id || typeof item.token !== 'string' || !item.token || item.token.length > 16000 || /[\r\n]/.test(item.token) || !Array.isArray(item.allow) || item.allow.length !== expectedOperations.length || !expectedOperations.every(operation => item.allow instanceof Array && item.allow.includes(operation)) || !Number.isFinite(expiry) || expiry <= Date.now() || expiry > Date.now() + FUSED_TOKEN_LIFETIME_MS + 30_000) throw new Error('Invalid Fused token response.');
   return { token: item.token, name, expiresAt: expiry, engine: '', mcpId };
 }
 
@@ -181,7 +182,7 @@ export class FusedCLI {
     }
   }
   async issue(engine: string, mcpId: string, operations: string[], signal: AbortSignal): Promise<FusedToken> {
-    if (this.store.state.fusedWorkspace?.url !== engine || !operations.length || operations.some(value => !value || value.includes('*') || value.includes(','))) throw new Error('Review the Fused workspace and exact operation scope.');
+    if (this.store.state.fusedWorkspace?.url !== engine || operations.some(value => !value || value.includes('*') || value.includes(','))) throw new Error('Review the Fused workspace and exact operation scope.');
     signal.throwIfAborted();
     const name = `dext-${randomUUID()}`;
     let attempted = false;
@@ -194,7 +195,7 @@ export class FusedCLI {
           const identity = JSON.parse(await run(['whoami', '--json', '--engine-url', engine]));
           if (!identity || typeof identity !== 'object' || identity.ok === false) throw new Error('Fused identity unavailable.');
           attempted = true;
-          const result = parseFusedToken(JSON.parse(await run(['mcp', 'token', 'generate', mcpId, name, '--json', '--allow', operations.join(','), '--expires-in', FUSED_TOKEN_LIFETIME, '--engine-url', engine, '--no-input'])), mcpId, name, operations);
+          const result = parseFusedToken(JSON.parse(await run(['mcp', 'token', 'generate', mcpId, name, '--json', ...(operations.length ? ['--allow', operations.join(',')] : []), '--expires-in', FUSED_TOKEN_LIFETIME, '--engine-url', engine, '--no-input'])), mcpId, name, operations);
           signal.throwIfAborted();
           return { ...result, engine };
         } finally { signal.removeEventListener('abort', abort); }

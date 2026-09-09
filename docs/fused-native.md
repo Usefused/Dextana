@@ -16,25 +16,20 @@ included in snapshots, conversations, diagnostics, or agent tools. Disconnect
 runs CLI logout to revoke the CLI login before deleting the encrypted copy.
 Previously entered license-key accounts remain accessible for removal.
 
-Selecting an MCP does not mint a token. Automatic tokens are an explicit per-MCP
-opt-in with an exact operation allowlist. The selected server appears in the
-agent catalog with a `connect` capability. First use requires an exact Harnest
-approval, even if a chat or tool has auto-allow enabled. The approval displays
-operation scope, 24-hour expiry, and the pinned version endpoint. Tokens are
-MCP-wide across versions, so endpoint pinning is separate from token scope.
+Adding an MCP tests its connection and discovers its actual tools before saving it. Setup uses a temporary token, closes the test client, and revokes that token on success or failure. A failed test preserves any existing connection. The **Test connection** button runs the same discovery flow. Neither action executes a service operation or retains an agent token. Connection setup is not an agent tool.
 
-The owner's **Test connection** button uses a separate temporary token with the configured operation allowlist. It discovers tool definitions, closes the test client, and revokes the token on success or failure. No service tool is executed, and no token is retained for an agent chat. This direct settings action does not require an agent approval first; later agent requests still use the approval flow above.
+Allowed operation IDs are optional. Leaving them blank omits `--allow`, using the CLI default `*` for all operations exposed by the MCP. An explicit list restricts access to those exact IDs. Automatic agent tokens can be enabled per MCP; first use of an enabled tool requires approval showing the scope, 24-hour expiry, pinned endpoint, tool, and arguments.
 
 ## Scoped execution tokens
 
 After the exact first-use approval, Dext verifies the CLI identity and invokes
-`mcp token generate <mcp-id> <unique-name> --json --allow <exact-operation-ids>
---expires-in 24h`. It validates the JSON MCP identity, token name, exact allowlist,
+`mcp token generate <mcp-id> <unique-name> --json --expires-in 24h`, adding
+`--allow <exact-operation-ids>` only when restrictions were supplied. It validates the JSON MCP identity, token name, requested scope (including the default `*`),
 secret and bounded expiry before contacting the pinned endpoint. Tokens remain
 in main-process memory, scoped to the connection and chat; they are never saved
 in state.json or sent to the model. New or changed tools are disabled until the
 owner enables them in MCP settings. Subsequent tool calls follow normal approval
-policies. When a token is missing or expired, a direct call to an enabled tool requests approval to create a token and execute that exact action. Enabled tools remain discoverable across chats and restarts; the model does not need to reconnect explicitly. A valid token is reused within its chat. Token issuance always requires approval, even when the tool, chat, or plan otherwise allows automatic execution. The separate `connect` capability remains available for initial discovery, with new tools disabled until reviewed.
+policies. When a token is missing or expired, a direct call to an enabled tool requests approval to create a token and execute that exact action. Enabled tools remain discoverable across chats and restarts; the model does not need to reconnect explicitly. A valid token is reused within its chat. Token issuance always requires approval, even when the tool, chat, or plan otherwise allows automatic execution.
 
 Dext requests revocation when replacing, removing, or disconnecting a connection,
 on expiry, and during shutdown. Revocation is best effort if the Engine is

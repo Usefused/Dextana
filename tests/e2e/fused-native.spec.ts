@@ -23,7 +23,7 @@ test('Fused CLI browser onboarding isolates login and gates native MCP token cre
             arguments: {
               action: 'call',
               server_id: serverId,
-              tool_name: body.messages[last].content.includes('Read tasks') ? 'read_tasks' : 'connect',
+              tool_name: 'read_tasks',
               arguments_json: '{}',
             },
           },
@@ -45,7 +45,7 @@ if(args[0]==='--version'){console.log('fused-cli version 0.29.0');}
 else if(args[0]==='login'){fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(config,JSON.stringify({'api-key':'synthetic-browser-login'}));}
 else if(args[0]==='whoami'){console.log(JSON.stringify({subject_id:'owner'}));}
 else if(args[0]==='mcp' && args[1]==='list'){console.log(JSON.stringify({items:[{status:'active',app_family_id:'family',app_id:'version',name:'Mail',version:'1.0',transport_urls:{versioned_streamable_http:${JSON.stringify(endpoint.url)}}}],total:1}));}
-else if(args[0]==='mcp' && args[1]==='token' && args[2]==='generate'){console.log(JSON.stringify({id:'token-id',app_family_id:args[3],name:args[4],allow:['mail.send'],expires_at:new Date(Date.now()+86400000).toISOString(),token:'synthetic-mcp-token'}));}
+else if(args[0]==='mcp' && args[1]==='token' && args[2]==='generate'){console.log(JSON.stringify({id:'token-id',app_family_id:args[3],name:args[4],allow:args.includes('--allow')?args[args.indexOf('--allow')+1].split(','):['*'],expires_at:new Date(Date.now()+86400000).toISOString(),token:'synthetic-mcp-token'}));}
 else if(args[0]==='mcp' && args[1]==='token' && args[2]==='revoke'){}
 else if(args[0]==='logout'){fs.unlinkSync(config);}
 else process.exit(2);
@@ -84,10 +84,10 @@ else process.exit(2);
     const server = panel.getByRole('region', { name: 'Fused server Mail 1.0' });
     await server.screenshot({ path: info.outputPath('fused-server-compact.png') });
     await server.getByLabel('Automatically create agent tokens').check();
-    await server.getByLabel('Allowed operation IDs').fill('mail.send');
+    await expect(server.getByLabel('Allowed operation IDs (optional)')).toHaveValue('');
     await server.screenshot({ path: info.outputPath('fused-server-expanded.png') });
     await server.getByRole('button', { name: 'Add MCP server' }).click();
-    await expect(server.getByRole('status')).toContainText('selection saved');
+    await expect(server.getByRole('status')).toContainText('Connected and tools discovered');
     serverId = await work.page.evaluate(
       async () => (await window.dextana.snapshot()).mcpConnections!.find((c) => c.fusedNative)!.id,
     );
@@ -102,20 +102,23 @@ else process.exit(2);
     await work.page.getByRole('button', { name: 'Close add connector' }).click();
     const settingsConnection = work.page.getByRole('region', { name: 'MCP connection Mail · 1.0', exact: true });
     await expandConnector(settingsConnection);
-    await settingsConnection.getByRole('button', { name: 'Test connection', exact: true }).click();
+    await settingsConnection.getByRole('button', { name: 'Manage tools', exact: true }).click();
     const discoveredTools = work.page.getByRole('dialog', { name: 'Choose tools', exact: true });
     await expect(discoveredTools).toBeVisible();
     await expect(discoveredTools.getByLabel('Policy for read_tasks')).toHaveValue('disabled');
-    await discoveredTools.getByRole('button', { name: 'Close dialog' }).click();
+    await expect(discoveredTools.getByLabel('Policy for connect', { exact: true })).toHaveCount(0);
+    await discoveredTools.getByLabel('Policy for read_tasks').selectOption('ask');
+    await discoveredTools.getByRole('button', { name: 'Save tool permissions' }).click();
     const testCalls = (await readFile(join(root, 'calls.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
     const testToken = testCalls.find(call => call.args.includes('generate'));
-    expect(testToken.args).toEqual(expect.arrayContaining(['--allow', 'mail.send', '--expires-in', '24h']));
+    expect(testToken.args).not.toContain('--allow');
+    expect(testToken.args).toEqual(expect.arrayContaining(['--expires-in', '24h']));
     expect(testCalls.some(call => call.args.includes('revoke') && call.args.includes(testToken.args[4]))).toBe(true);
     expect(endpoint.calls).toEqual([]);
     await start(work.page, 'Use the Fused Mail server');
     let gate = work.page.getByRole('region', { name: 'Action approval' });
     await expect(gate).toContainText('Create agent token', { timeout: 60_000 });
-    await expect(gate).toContainText('mail.send');
+    await expect(gate).toContainText('*');
     await expect(gate).toContainText('24h');
     await gate.getByRole('button', { name: 'Deny action', exact: true }).click();
     await expect(work.page.getByTestId('activity-status')).toHaveText('Cancelled');
@@ -123,47 +126,21 @@ else process.exit(2);
     gate = work.page.getByRole('region', { name: 'Action approval' });
     await expect(gate).toContainText('Create agent token', { timeout: 30_000 });
     await gate.getByRole('button', { name: 'Allow action', exact: true }).click();
-    await expect(work.page.getByTestId('assistant-message').last()).toContainText(
-      'MCP tools discovered',
-      { timeout: 30_000 },
-    );
-    const calls = (await readFile(join(root, 'calls.jsonl'), 'utf8'))
-      .trim()
-      .split('\n')
-      .map((line) => JSON.parse(line));
-    expect(calls.every((call) => call.root.startsWith(root) && !call.ambient)).toBe(true);
-    expect(calls.filter((call) => call.args.includes('generate'))).toHaveLength(2);
-    expect(calls.find((call) => call.args.includes('generate')).args).toEqual(expect.arrayContaining(['--json', '--allow', 'mail.send', '--expires-in', '24h']));
+    await expect(work.page.getByTestId('activity-status')).toHaveText('Completed', { timeout: 30_000 });
+    const calls = (await readFile(join(root, 'calls.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+    expect(calls.every(call => call.root.startsWith(root) && !call.ambient)).toBe(true);
+    expect(calls.filter(call => call.args.includes('generate'))).toHaveLength(2);
+    expect(calls.filter(call => call.args.includes('generate')).every(call => !call.args.includes('--allow'))).toBe(true);
     expect(await readFile(join(work.directory, 'state.json'), 'utf8')).not.toContain('synthetic-mcp-token');
     expect(JSON.stringify(work.calls)).not.toContain('synthetic-mcp-token');
-    await work.page.getByRole('button', { name: 'Settings', exact: true }).click();
-    await work.page
-      .getByRole('navigation', { name: 'Settings sections' })
-      .getByRole('button', { name: 'Connectors' })
-      .click();
-    const connection = work.page.getByRole('region', { name: 'MCP connection Mail · 1.0', exact: true });
-    await expandConnector(connection);
-    await connection.getByRole('button', { name: 'Manage tools', exact: true }).click();
-    const tools = work.page.getByRole('dialog', { name: 'Choose tools', exact: true });
-    await expect(tools.getByLabel('Policy for read_tasks')).toHaveValue('disabled');
-    await tools.getByLabel('Policy for read_tasks').selectOption('ask');
-    await tools.getByRole('button', { name: 'Save tool permissions' }).click();
-    await expandConnector(connection);
-    await expect(connection.getByRole('status')).toContainText('Tool permissions saved');
-    await work.page.getByRole('button', { name: 'Back to chats' }).click();
-    await work.page.getByLabel('Describe your work').fill('Read tasks using Fused');
-    await work.page.getByRole('button', { name: 'Send message' }).click();
-    await expect(gate).toContainText('read_tasks', { timeout: 30_000 });
-    await gate.getByRole('button', { name: 'Allow action', exact: true }).click();
-    await expect(work.page.getByTestId('assistant-message').last()).toContainText('Connection result', { timeout: 30_000 });
-    expect(endpoint.calls).toContain('read_tasks');
+    expect(endpoint.calls).toEqual(['read_tasks']);
     // A direct tool invocation in a fresh chat must mint its own scoped token,
     // without requiring the model to call a separate connect tool first.
     const generations = async () => (await readFile(join(root, 'calls.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line)).filter(call => call.args.includes('generate') && call.args[4] !== testToken.args[4]).length;
     await start(work.page, 'Read tasks in another Fused chat');
     await expect(gate).toContainText('Create agent token', { timeout: 30_000 });
     await expect(gate).toContainText('read_tasks');
-    await expect(gate).toContainText('mail.send');
+    await expect(gate).toContainText('*');
     expect(await generations()).toBe(1);
     await gate.getByRole('button', { name: 'Deny action', exact: true }).click();
     await expect(work.page.getByTestId('activity-status')).toHaveText('Cancelled');
