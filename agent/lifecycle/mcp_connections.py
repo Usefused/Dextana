@@ -27,8 +27,8 @@ def mcp_connection_routes(agent):
         try:
             data = await request.json()
             return {'id': await mcp_connections.open_connection(data)}
-        except Exception:
-            raise HTTPException(400, 'Could not connect to MCP. Check the server address and credentials.') from None
+        except Exception as error:
+            raise HTTPException(400, mcp_connections.connection_error(error)) from None
 
     @router.post('/request/{connection_id}')
     async def invoke(connection_id: str, request: Request):

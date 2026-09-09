@@ -112,3 +112,35 @@ def test_body_auth_preserves_protocol_and_tool_arguments_and_redacts_echoed_toke
                 module.authentication({'auth': {'type': 'header', 'name': name}}, 'private')
 
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize('status, expected', [
+    (401, 'rejected access'), (403, 'rejected access'),
+    (404, 'endpoint is unavailable'), (410, 'endpoint is unavailable'),
+    (429, 'rate limited'), (500, 'server failed'), (503, 'server failed'),
+    (400, 'rejected connection setup'),
+])
+def test_connection_diagnostics_preserve_status_without_remote_secrets(agent, status, expected):
+    from harnest.lib import mcp_connections as module
+    import httpx
+    request = httpx.Request('POST', 'https://example.test/mcp?key=private-token')
+    cause = httpx.HTTPStatusError('private-token server detail', request=request,
+                                  response=httpx.Response(status, request=request))
+    wrapper = ConnectionError('private-token wrapped error')
+    wrapper.__cause__ = ExceptionGroup('private-token', [cause])
+    message = module.connection_error(wrapper)
+    assert expected in message
+    assert str(status) in message
+    assert 'private-token' not in message
+    assert 'example.test' not in message
+
+
+def test_connection_diagnostics_distinguish_timeout_protocol_and_unknown_failures(agent):
+    from harnest.lib import mcp_connections as module
+    from mcp.shared.exceptions import McpError
+    from mcp.types import ErrorData
+    assert 'timed out' in module.connection_error(TimeoutError('private-token'))
+    message = module.connection_error(McpError(ErrorData(code=-32601, message='private-token')))
+    assert '-32601' in message
+    assert 'private-token' not in message
+    assert 'credentials' not in module.connection_error(RuntimeError('private-token'))

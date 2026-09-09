@@ -12,11 +12,45 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import httpx
+from mcp.shared.exceptions import McpError
 from harnest.mcp import MCPClient
 from harnest.mcp_lifecycle import (
     MCPClientLifecycle, mcp_lifecycle_bindings,
     start_mcp_lifecycles, close_mcp_lifecycles,
 )
+
+
+def connection_error(error):
+    """Describe setup failures without exposing URLs, headers or remote error text."""
+    pending, seen = [error], set()
+    causes = []
+    while pending and len(seen) < 32:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        causes.append(current)
+        pending.extend(getattr(current, 'exceptions', ()))
+        pending.extend(item for item in (current.__cause__, current.__context__) if item)
+    for cause in causes:
+        if isinstance(cause, httpx.HTTPStatusError):
+            status = cause.response.status_code
+            if status in (401, 403):
+                return f'MCP server rejected access (HTTP {status}). Check this MCP version and its execution-token permissions.'
+            if status in (404, 410):
+                return f'MCP endpoint is unavailable (HTTP {status}). Refresh the server list and check that this version is active.'
+            if status == 429:
+                return 'MCP server is rate limited (HTTP 429). Wait before testing again.'
+            if status >= 500:
+                return f'MCP server failed during connection setup (HTTP {status}). Check the Fused Engine or MCP server logs.'
+            return f'MCP server rejected connection setup (HTTP {status}). Check the server configuration.'
+        if isinstance(cause, McpError):
+            return f'MCP protocol error during connection setup (code {cause.error.code}). Check the MCP server logs.'
+    if any(isinstance(cause, (TimeoutError, httpx.TimeoutException)) for cause in causes):
+        return 'MCP connection setup timed out. Check that this MCP server is responding, then test again.'
+    if any(isinstance(cause, httpx.ConnectError) for cause in causes):
+        return 'Could not reach the MCP server. Check its hostname, network connection and TLS certificate.'
+    return 'MCP connection setup failed before tools could be discovered. Check the MCP server logs.'
 
 
 async def reject_redirect(response):
