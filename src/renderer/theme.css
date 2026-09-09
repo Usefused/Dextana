@@ -1,0 +1,34 @@
+/* Keep the warm light palette; use semantic dark colors across every app surface.
+   NativeTheme sets the initial scheme before the first window is created. */
+:root {
+  color-scheme: light dark;
+  --dark-canvas: #171b18;
+  --dark-sidebar: #121714;
+  --dark-surface: #212823;
+  --dark-raised: #2b352e;
+  --dark-tint: #29392e;
+  --dark-border: #3c4940;
+  --dark-border-strong: #627a67;
+  --dark-text: #e4ebe2;
+  --dark-muted: #adbbac;
+  --dark-accent: #a0d0aa;
+  --dark-accent-solid: #416f4f;
+  --dark-on-accent: #f5faf3;
+  --dark-danger: #ffb9aa;
+  --dark-danger-bg: #3d2825;
+  --dark-danger-border: #795047;
+  --dark-warning: #edcf93;
+  --dark-warning-bg: #353023;
+  --dark-warning-border: #76643d;
+  --dark-blue: #accbed;
+}
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+.sidebar { background: var(--dx-sidebar); }
+input, textarea, select { color: light-dark(#45543c, var(--dark-text)); }
+.composer textarea { color: light-dark(#2d332f, var(--dark-text)); }
+.appearance-settings select { max-width: 280px; }
+input::placeholder, textarea::placeholder { color: light-dark(#757575, var(--dark-muted)); }
+button:focus-visible, .reasoning-slider input:focus-visible { outline-color: light-dark(#387357, var(--dark-accent)); }
+.chat-context-switch input:before, .reasoning-slider input::-webkit-slider-thumb { background: light-dark(#fffef9, var(--dark-on-accent)); }
+::selection { background: light-dark(#dce9d8, #456b50); color: light-dark(#263d30, #fff); }

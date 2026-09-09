@@ -1,0 +1,9 @@
+node_modules/
+build/
+dist/
+.git/
+.openai/
+.env
+.env.*
+*.log
+tests/

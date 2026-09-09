@@ -1,10 +1,27 @@
-import { UIReference, ReferenceText } from './UIReference';
-import { type ReactNode } from 'react';
+import { Card } from './ui';
+import { UIReference } from './UIReference';
+import { createElement, type ReactNode } from 'react';
 import { boundValue, parseA2UI, type UISurface } from './a2ui';
+import { MarkdownContent } from './MarkdownContent';
+import { RichTable } from './RichTable';
+import { RichChart } from './RichChart';
+import { RichImage } from './RichImage';
+import { Diagram } from './Diagram';
 
 function renderSurface(surface: UISurface) {
   let count = 0;
   function render(id: unknown, ancestors: string[] = []): ReactNode {
+    try {
+      return renderComponent(id, ancestors);
+    } catch (failure) {
+      return (
+        <p key={typeof id === 'string' ? id : count} className="rich-notice">
+          {(failure as Error).message}
+        </p>
+      );
+    }
+  }
+  function renderComponent(id: unknown, ancestors: string[]): ReactNode {
     if (typeof id !== 'string') throw new Error('Invalid child reference.');
     if (ancestors.includes(id) || ancestors.length > 30 || ++count > 500)
       throw new Error('Invalid or oversized UI tree.');
@@ -34,16 +51,74 @@ function renderSurface(surface: UISurface) {
           typeof component.variant === 'string' && /^(h[1-5]|caption|body)$/.test(component.variant)
             ? component.variant
             : 'body';
+        if (/^h[1-5]$/.test(variant))
+          return createElement(
+            variant,
+            { key: id, className: `ui-text ui-${variant}` },
+            <MarkdownContent content={String(text ?? '')} references inline />,
+          );
         return (
-          <p key={id} className={`ui-text ui-${variant}`}>
-            <ReferenceText text={String(text ?? '')} />
-          </p>
+          <div key={id} className={`ui-text ui-${variant}`}>
+            <MarkdownContent content={String(text ?? '')} references />
+          </div>
         );
+      }
+      case 'Table':
+        return (
+          <RichTable
+            key={id}
+            title={typeof component.title === 'string' ? component.title : undefined}
+            columns={
+              Array.isArray(component.columns)
+                ? component.columns
+                : boundValue(component.columns, surface.data)
+            }
+            rows={
+              Array.isArray(component.rows)
+                ? component.rows
+                : boundValue(component.rows, surface.data)
+            }
+          />
+        );
+      case 'Chart':
+        return (
+          <RichChart
+            key={id}
+            value={{
+              ...component,
+              labels: Array.isArray(component.labels)
+                ? component.labels
+                : boundValue(component.labels, surface.data),
+              series: Array.isArray(component.series)
+                ? component.series
+                : boundValue(component.series, surface.data),
+            }}
+          />
+        );
+      case 'Image': {
+        const src = boundValue(component.url ?? component.src, surface.data);
+        const alt = boundValue(component.description ?? component.alt, surface.data);
+        return (
+          <RichImage
+            key={`${id}:${src}`}
+            src={typeof src === 'string' ? src : ''}
+            alt={typeof alt === 'string' ? alt : 'Image'}
+          />
+        );
+      }
+      case 'Diagram': {
+        const source = boundValue(component.source, surface.data);
+        return <Diagram key={id} source={typeof source === 'string' ? source : ''} />;
       }
       case 'Reference': {
         const target = boundValue(component.target, surface.data);
         const label = boundValue(component.label, surface.data);
-        if (typeof target !== 'string' || target.length > 4096 || (label !== undefined && typeof label !== 'string')) throw new Error('Invalid reference.');
+        if (
+          typeof target !== 'string' ||
+          target.length > 4096 ||
+          (label !== undefined && typeof label !== 'string')
+        )
+          throw new Error('Invalid reference.');
         return <UIReference key={id} target={target} label={label as string | undefined} />;
       }
       case 'Row':
@@ -56,9 +131,9 @@ function renderSurface(surface: UISurface) {
         );
       case 'Card':
         return (
-          <div key={id} className="ui-card">
+          <Card as="div" key={id} className="ui-card">
             {render(component.child, branch)}
-          </div>
+          </Card>
         );
       case 'Divider':
         return <hr key={id} />;
@@ -83,13 +158,20 @@ export function A2UIView({ source, streaming = false }: { source: string; stream
   }
   return (
     <div className="a2ui-view">
-      {error ? <p className="ui-notice">I couldn’t display this result. Ask me for a plain-language summary instead.</p> : content}
+      {error ? (
+        <p className="ui-notice">
+          I couldn’t display this result. Ask me for a plain-language summary instead.
+        </p>
+      ) : (
+        content
+      )}
       {(!result || result.pending) && (
         <p className="ui-pending">
-          {streaming ? 'Preparing results…' : 'This result is incomplete. Ask me to summarize it again.'}
+          {streaming
+            ? 'Preparing results…'
+            : 'This result is incomplete. Ask me to summarize it again.'}
         </p>
       )}
-
     </div>
   );
 }

@@ -1,4 +1,6 @@
+import { Card, CheckboxField, Field, Button, TextInput, Icon } from './ui';
 import { useState } from 'react';
+import { FusedCLISetup } from './FusedCLISetup';
 import type { FusedWorkspace as Workspace, MCPConnection } from '../shared/types';
 export function FusedWorkspace({
   workspace,
@@ -7,6 +9,7 @@ export function FusedWorkspace({
   workspace?: Workspace;
   connections: MCPConnection[];
 }) {
+  const [cliReady, setCLIReady] = useState(false);
   const [url, setUrl] = useState(workspace?.url ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -23,6 +26,7 @@ export function FusedWorkspace({
   }
   return (
     <section className="fused-workspace" aria-label="Fused workspace">
+      <FusedCLISetup ready={setCLIReady}/>
       <h3>{workspace ? 'Your Fused workspace' : 'Connect Fused'}</h3>
       <p>
         Sign in through your browser to find your MCP servers. Dext keeps this login separate from
@@ -32,20 +36,20 @@ export function FusedWorkspace({
         <>
           <p role="status">Connected to {workspace.url}</p>
           <div className="mcp-actions">
-            <button
+            <Button icon={<Icon name="refresh" />} variant="secondary"
               className="secondary"
               disabled={busy}
               onClick={() => void run(() => window.dextana.discoverFused())}
             >
               Refresh MCP servers
-            </button>
-            <button
+            </Button>
+            <Button icon={<Icon name="trash" />} variant="secondary"
               className="secondary"
               disabled={busy}
               onClick={() => void run(() => window.dextana.logoutFused())}
             >
               Disconnect workspace
-            </button>
+            </Button>
           </div>
           {!workspace.servers.length && (
             <p>No active MCP versions found. Refresh after deploying a server in Fused.</p>
@@ -65,28 +69,27 @@ export function FusedWorkspace({
         </>
       ) : (
         <>
-          <label>
-            Fused Engine URL
-            <input
+          <Field variant="card" label="Fused Engine URL">
+            {props => <TextInput {...props}
               value={url}
               onChange={(event) => setUrl(event.target.value)}
               disabled={busy}
               placeholder="https://your-fused-engine"
-            />
-          </label>
-          <button
+            />}
+          </Field>
+          <Button icon={<Icon name="plug" />} variant="primary"
             className="primary"
-            disabled={busy || !url.trim()}
+            disabled={busy || !cliReady || !url.trim()}
             onClick={() => void run(() => window.dextana.loginFused(url))}
           >
             {busy ? 'Waiting for browser sign-in…' : 'Sign in with Fused'}
-          </button>
+          </Button>
         </>
       )}
       {busy && (
-        <button className="secondary" onClick={() => void window.dextana.cancelFusedLogin()}>
+        <Button icon={<Icon name="close" />} variant="secondary" className="secondary" onClick={() => void window.dextana.cancelFusedLogin()}>
           Cancel Fused request
-        </button>
+        </Button>
       )}
       {error && (
         <p role="alert" className="error">
@@ -115,36 +118,32 @@ function Server({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   return (
-    <section
-      className="mcp-connection fused-server"
+    <Card
+      className="fused-server"
       aria-label={`Fused server ${server.name} ${server.version}`}
     >
-      <h3 title={server.name}>
-        {server.name} <span className="optional">{server.version}</span>
-      </h3>
-      <p className="mcp-address" title={server.url}>{server.url}</p>
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={autoToken}
-          disabled={disabled || busy}
-          onChange={(event) => setAutoToken(event.target.checked)}
-        />
-        <span title="Create a scoped 24-hour token after first-use approval">Automatically create agent tokens</span>
-      </label>
+      <div className="fused-server-identity">
+        <h3 title={server.name}>
+          {server.name} <span className="optional">{server.version}</span>
+        </h3>
+        <p className="mcp-address" title={server.url}>{server.url}</p>
+      </div>
+      <CheckboxField label="Automatically create agent tokens"
+        description="Create a scoped 24-hour token after first-use approval."
+        checked={autoToken} disabled={disabled || busy}
+        onChange={event => setAutoToken(event.target.checked)} />
       {autoToken && (
-        <label>
-          Allowed operation IDs
-          <input
+        <Field label="Allowed operation IDs">
+          {props => <TextInput {...props}
             value={operations}
             disabled={disabled || busy}
             placeholder="Exact IDs from Fused, separated by commas"
             onChange={(event) => setOperations(event.target.value)}
-          />
-        </label>
+          />}
+        </Field>
       )}
-      <button
-        className="secondary"
+      <Button icon={<Icon name={connection ? 'check' : 'plus'} />} variant="secondary" size="small"
+        className="fused-server-action"
         disabled={disabled || busy || (autoToken && !operations.trim())}
         onClick={async () => {
           setBusy(true);
@@ -167,8 +166,8 @@ function Server({
         }}
       >
         {connection ? 'Save access preferences' : 'Add MCP server'}
-      </button>
+      </Button>
       {message && <p role="status">{message}</p>}
-    </section>
+    </Card>
   );
 }

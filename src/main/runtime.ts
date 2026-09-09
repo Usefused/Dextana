@@ -4,10 +4,10 @@ import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
-import WebSocket from 'ws';
 
 export class Runtime {
   constructor(private backendRoot = join(__dirname, '../.build/backend'), private workingDirectory = process.cwd()) {}
+  onReady?: () => Promise<void>;
   private process?: ChildProcess;
   private ready?: Promise<void>;
   private url = '';
@@ -43,6 +43,8 @@ export class Runtime {
           ...process.env,
           PYTHONDONTWRITEBYTECODE: '1',
           DEXTANA_RUNTIME_TOKEN: this.token,
+          DEXTANA_RUNTIME_URL: this.url,
+          DEXTANA_STORAGE_DIRECTORY: join(this.workingDirectory, 'agent-state'),
           DEXTANA_SCHEDULER_DIRECTORY: this.workingDirectory,
           LITELLM_LOCAL_MODEL_COST_MAP: 'True',
         },
@@ -63,12 +65,14 @@ export class Runtime {
     for (let attempt = 0; attempt < 240; attempt++) {
       if (failure) throw new Error(failure);
       if (this.stopped) throw new Error('Runtime is shutting down.');
+      let available = false;
       try {
         const response = await this.request('/agent', { signal: AbortSignal.timeout(500) });
-        if (response.ok) return;
+        available = response.ok;
       } catch {
         /* Runtime is still starting. */
       }
+      if (available) { await this.onReady?.(); return; }
       await delay(250);
     }
     this.stop();
@@ -85,89 +89,6 @@ export class Runtime {
         ...init.headers,
       },
       redirect: 'error',
-    });
-  }
-  async stream(
-    sessionId: string,
-    input: string,
-    metadata: Record<string, string>,
-    signal: AbortSignal,
-    consume: (event: any) => void,
-    execute: (tool: any) => Promise<unknown>,
-    decideApproval?: (event: any) => Promise<boolean>,
-  ): Promise<any> {
-    signal.throwIfAborted();
-    const socket = new WebSocket(this.url.replace(/^http/, 'ws') + '/live', {
-      headers: { Authorization: `Bearer ${this.token}` },
-      maxPayload: 2_000_000,
-      handshakeTimeout: 10_000,
-    });
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      let responseId: string | undefined;
-      let sequence = Promise.resolve();
-      const finish = (error?: Error, result?: unknown) => {
-        if (settled) return;
-        settled = true;
-        signal.removeEventListener('abort', abort);
-        if (socket.readyState === WebSocket.OPEN) socket.close();
-        else socket.terminate();
-        if (error) reject(error);
-        else resolve(result);
-      };
-      const abort = () => {
-        if (responseId && socket.readyState === WebSocket.OPEN)
-          socket.send(JSON.stringify({ type: 'response.cancel', responseId }));
-        finish(signal.reason instanceof Error ? signal.reason : new Error('Activity cancelled.'));
-      };
-      signal.addEventListener('abort', abort, { once: true });
-      socket.on('open', () => socket.send(JSON.stringify({ type: 'connect', sessionId })));
-      socket.on('error', (error) => finish(error));
-      socket.on('close', () => {
-        sequence = sequence.then(() =>
-          finish(new Error('The connection ended before the agent completed.')),
-        );
-      });
-      socket.on('message', (data) => {
-        sequence = sequence
-          .then(async () => {
-            if (settled) return;
-            signal.throwIfAborted();
-            const event = JSON.parse(data.toString());
-            if (event.type === 'session.connected') {
-              socket.send(JSON.stringify({ type: 'response.create', input, metadata }));
-              return;
-            }
-            if (event.type === 'response.created') responseId = event.responseId;
-            consume(event);
-            if (event.type === 'error' || event.type === 'response.failed')
-              throw new Error(
-                event.error?.message ?? event.error ?? event.message ?? 'Agent execution failed.',
-              );
-            if (event.type === 'client_tool.requested') {
-              const output = await execute(event.clientTool);
-              signal.throwIfAborted();
-              if (!settled)
-                socket.send(
-                  JSON.stringify({
-                    type: 'client_tool.result',
-                    requestId: event.clientTool.id,
-                    output,
-                  }),
-                );
-            }
-            if (event.type === 'approval.requested') {
-              if (!decideApproval) throw new Error('This runtime approval is unsupported.');
-              const approved = await decideApproval(event);
-              signal.throwIfAborted();
-              if (!settled) socket.send(JSON.stringify({ type: 'approval.decision', responseId: event.responseId, approvalId: event.approval.id, decision: approved ? 'approve' : 'deny' }));
-            }
-            if (event.type === 'response.completed' && event.status !== 'requires_action')
-              finish(undefined, event);
-          })
-          .catch((error) => finish(error));
-      });
-      if (signal.aborted) abort();
     });
   }
   stop() {

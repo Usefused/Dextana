@@ -12,19 +12,50 @@ on:
         'tests/packaged/**',
         'package*.json',
         'electron-builder.yml',
+        'electron-builder.adhoc.cjs',
+        'electron-builder.signed.cjs',
         'playwright.packaged.config.ts',
         '.github/workflows/package.yml',
+        '.gitattributes',
       ]
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      sign_artifacts:
+        description: Sign installer checksum manifests (requires the configured signing key)
+        type: boolean
+        default: true
+      native_signing:
+        description: Require native publisher signatures and Apple notarization
+        type: boolean
+        default: false
+      tested_run:
+        description: Optional successful packaging run to sign without rebuilding
+        type: string
+      tested_commit:
+        description: Exact source commit SHA for tested_run
+        type: string
 permissions:
   contents: read
 concurrency:
   group: package-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  sign_tested:
+    if: github.event_name == 'workflow_dispatch' && inputs.tested_run != ''
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/sign-tested-bundles.yml
+    with:
+      run_id: ${{ inputs.tested_run }}
+      source_sha: ${{ inputs.tested_commit }}
+      native_signing: ${{ inputs.native_signing }}
+    secrets:
+      DEXTANA_ARTIFACT_SIGNING_KEY: ${{ secrets.DEXTANA_ARTIFACT_SIGNING_KEY }}
   package:
+    if: "!inputs.tested_run"
     strategy:
       fail-fast: false
       matrix:
@@ -47,34 +78,62 @@ jobs:
       - run: npm test
       - name: Install pinned build-only compiler
         run: node scripts/install-build-compiler.mjs
+      - name: Test backend with the frozen development lock
+        run: npm run test:backend
       - name: Compile and package the backend and desktop
+        if: "!startsWith(github.ref, 'refs/tags/') && !inputs.native_signing"
         run: npm run dist
+      - name: Compile, sign and verify publisher-signed installers
+        if: startsWith(github.ref, 'refs/tags/') || inputs.native_signing
+        run: npm run dist:signed
+        env:
+          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MACOS_CSC_LINK || '' }}${{ runner.os == 'Windows' && secrets.WINDOWS_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MACOS_CSC_KEY_PASSWORD || '' }}${{ runner.os == 'Windows' && secrets.WINDOWS_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
       - name: Install Linux desktop test libraries
         if: runner.os == 'Linux'
         run: npx playwright install-deps chromium
+      - name: Verify macOS DMG and ZIP signatures and tamper detection
+        if: runner.os == 'macOS'
+        run: npm run test:mac-installers
       - name: Test installed app without Harnest or Python on PATH
         if: runner.os != 'Linux'
         run: npm run test:packaged
       - name: Test installed Linux app without Harnest or Python on PATH
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run test:packaged
+      - name: Create unsigned checksums for CI-only builds
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.sign_artifacts)
+        run: node scripts/artifact-integrity.mjs create
+      - name: Sign and verify installer checksums
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.sign_artifacts)
+        run: node scripts/artifact-integrity.mjs sign
+        env:
+          DEXTANA_ARTIFACT_SIGNING_KEY: ${{ secrets.DEXTANA_ARTIFACT_SIGNING_KEY }}
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
           name: Dextana-${{ runner.os }}-${{ runner.arch }}
           if-no-files-found: error
           retention-days: 14
+          compression-level: 0
           path: |
             release/*.dmg
             release/*.zip
             release/*.exe
             release/*.AppImage
+            release/SHA256SUMS
+            release/SHA256SUMS.sig
       - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: packaging-diagnostics-${{ runner.os }}-${{ runner.arch }}
           if-no-files-found: ignore
+          include-hidden-files: true
           path: |
             test-results/packaged/**
             .build/backend-build.log
+            .build/backend/build.json

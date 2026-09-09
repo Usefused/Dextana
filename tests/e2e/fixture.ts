@@ -10,7 +10,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-type Responder = (body: any, response: ServerResponse) => boolean;
+export type Responder = (body: any, response: ServerResponse) => boolean;
 
 // One real Electron/Harnest workspace per Playwright worker. Each test installs its own
 // provider responder and creates new chats through start(); transcripts are not erased.
@@ -28,7 +28,7 @@ async function launchDesktop() {
     const body = JSON.parse(data || '{}');
     if (req.url === '/api/show')
       return res.end(
-        JSON.stringify({ capabilities: ['completion', 'tools'], model_info: {}, template: '' }),
+        JSON.stringify({ capabilities: ['completion', 'tools', 'thinking', ...(body.model === 'qwen3:8b' ? ['vision'] : [])], model_info: {}, template: '' }),
       );
     if (req.url !== '/api/chat') {
       res.writeHead(404);
@@ -71,9 +71,19 @@ async function launchDesktop() {
   await page.getByLabel('Ollama address').fill(`http://127.0.0.1:${port}`);
   await page.getByRole('button', { name: 'Connect to Ollama' }).click();
   await expect(page.getByText('2 models available')).toBeVisible();
-  await page.getByLabel('Default model').selectOption('qwen3:8b');
   await page.getByRole('button', { name: 'Save settings' }).click();
+  const resetView = async () => {
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].setContentSize(1320, 880),
+    );
+    const back = page.getByRole('button', { name: 'Back to chats' });
+    if (await back.isVisible()) await back.click();
+    await page.getByLabel('Workspace view').selectOption('activities');
+    await page.getByRole('button', { name: 'New activity', exact: true }).click();
+    await page.getByLabel('Describe your work').fill('');
+  };
   return {
+    resetView,
     get page() {
       return page;
     },
@@ -87,8 +97,9 @@ async function launchDesktop() {
     stopResponses: () => {
       for (const response of responses) response.destroy();
     },
-    restart: async () => {
+    restart: async (beforeLaunch?: () => Promise<void>) => {
       await app.close();
+      await beforeLaunch?.();
       page = await launch();
       return page;
     },
@@ -96,12 +107,13 @@ async function launchDesktop() {
       await app.close();
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
-      await rm(directory, { recursive: true, force: true });
+      // Chromium/backend shutdown may finish a final profile write after quit.
+      await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     },
   };
 }
 
-type Desktop = Awaited<ReturnType<typeof launchDesktop>>;
+export type Desktop = Awaited<ReturnType<typeof launchDesktop>>;
 export const test = base.extend<
   {
     workspace: (responder?: Responder) => Promise<Desktop>;
@@ -170,23 +182,15 @@ export const test = base.extend<
         desktop.calls.length = 0;
         desktop.setResponder(responder);
         await beginTrace();
-        await desktop
-          .app()
-          .evaluate(({ BrowserWindow }) =>
-            BrowserWindow.getAllWindows()[0].setContentSize(1320, 880),
-          );
-        const backToChats = desktop.page.getByRole('button', { name: 'Back to chats' });
-        if (await backToChats.isVisible()) await backToChats.click();
-        await desktop.page.getByRole('button', { name: 'New activity', exact: true }).click();
-        await desktop.page.getByLabel('Describe your work').fill('');
+        await desktop.resetView();
         return {
           ...desktop,
           get page() {
             return desktop.page;
           },
-          restart: async () => {
+          restart: async (beforeLaunch?: () => Promise<void>) => {
             await endTrace();
-            const page = await desktop.restart();
+            const page = await desktop.restart(beforeLaunch);
             await beginTrace();
             return page;
           },
@@ -234,7 +238,12 @@ export async function start(page: Page, prompt: string, model?: string) {
   const back = page.getByRole('button', { name: 'Back to chats' });
   if (await back.isVisible()) await back.click();
   await page.getByRole('button', { name: 'New activity', exact: true }).click();
-  if (model) await page.getByLabel('Activity model').selectOption(model);
+  if (model) {
+    await page.getByRole('button', { name: 'Model and reasoning', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Activity model', exact: true }).fill(model);
+    await page.getByRole('combobox', { name: 'Activity model', exact: true }).press('Enter');
+    await page.getByRole('button', { name: 'Model and reasoning', exact: true }).click();
+  }
   await page.getByLabel('Describe your work').fill(prompt);
   await page.getByRole('button', { name: 'Start activity' }).click();
 }

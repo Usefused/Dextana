@@ -1,3 +1,4 @@
+import { TextInput, Button, Select, Icon } from './ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Activity, ConversationFolder } from '../shared/types';
 
@@ -73,9 +74,11 @@ export function ActivityFolders({
           );
         }}
       >
-        <input
+        <TextInput
           autoFocus
           aria-label="Folder name"
+          placeholder="Folder name"
+          className="folder-name-input"
           value={name}
           maxLength={80}
           onChange={(event) => setName(event.target.value)}
@@ -84,12 +87,12 @@ export function ActivityFolders({
           }}
         />
         <div>
-          <button disabled={busy || !name.trim()} type="submit">
+          <Button size="small" variant="secondary" disabled={busy || !name.trim()} type="submit">
             Save
-          </button>
-          <button type="button" onClick={() => setEditing(undefined)}>
+          </Button>
+          <Button size="small" variant="ghost" type="button" onClick={() => setEditing(undefined)}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     );
@@ -101,7 +104,7 @@ export function ActivityFolders({
     <div className="workspace-folders" ref={root}>
       <div className="workspace-label">
         <span>WORKSPACE</span>
-        <button
+        <Button variant="layout"
           aria-label="New folder"
           title="New folder"
           onClick={() => {
@@ -109,11 +112,11 @@ export function ActivityFolders({
             setName('');
           }}
         >
-          ＋
-        </button>
-        <select className="workspace-view" aria-label="Workspace view" title="Switch workspace view" value={view} onChange={event => onViewChange(event.target.value as 'activities' | 'cron')}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+        </Button>
+        <Select className="workspace-view" aria-label="Workspace view" title="Switch workspace view" value={view} onChange={event => onViewChange(event.target.value as 'activities' | 'cron')}>
           <option value="activities">Activities</option><option value="cron">Cron jobs</option>
-        </select>
+        </Select>
       </div>
       {editing === 'new' && editor('new')}
       <div className="folder-list">
@@ -126,7 +129,7 @@ export function ActivityFolders({
               aria-label={`Folder ${folder.name}`}
             >
               <div className="folder-heading">
-                <button
+                <Button variant="layout"
                   className="folder-toggle"
                   aria-expanded={!folder.collapsed}
                   disabled={busy}
@@ -146,17 +149,17 @@ export function ActivityFolders({
                     />
                   </svg>
                   <span className="folder-name">{folder.name}</span>
-                </button>
-                <button className="folder-new-chat" aria-label={`New chat in ${folder.name}`} title="New chat" onClick={() => {
+                </Button>
+                <Button variant="layout" className="folder-new-chat" aria-label={`New chat in ${folder.name}`} title="New chat" onClick={() => {
                   newChat(folder.id);
                   if (folder.collapsed) void run(() => window.dextana.updateFolder(folder.id, { collapsed: false }));
-                }}><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M7 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V9M9.5 3.5l3 3M6 10l1-3 5-5a1.4 1.4 0 0 1 2 2l-5 5-3 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
+                }}><svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M7 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V9M9.5 3.5l3 3M6 10l1-3 5-5a1.4 1.4 0 0 1 2 2l-5 5-3 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg></Button>
                 <details className="folder-menu">
                   <summary aria-label={`Manage folder ${folder.name}`} title="Manage folder">
                     <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="13" cy="8" r="1.2"/></svg>
                   </summary>
                   <div>
-                    <button
+                    <Button variant="layout"
                       onClick={(event) => {
                         event.currentTarget.closest('details')?.removeAttribute('open');
                         setEditing(folder.id);
@@ -165,8 +168,8 @@ export function ActivityFolders({
                     >
                       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m10 3 3 3M3 10l7-7a2.1 2.1 0 0 1 3 3l-7 7-4 1 1-4Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       <span>Rename folder</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="layout"
                       disabled={busy}
                       onClick={() => {
                         void run(
@@ -177,7 +180,7 @@ export function ActivityFolders({
                     >
                       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 4.5h11M6 4V2.5h4V4M4 5l.5 8.5h7L12 5M6.5 7v4M9.5 7v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       <span>Remove folder</span>
-                    </button>
+                    </Button>
                   </div>
                 </details>
               </div>
@@ -214,7 +217,7 @@ export function FolderPicker({
 }: Feedback & { activity: Activity; folders: ConversationFolder[] }) {
   const [busy, setBusy] = useState(false);
   return (
-    <select
+    <Select
       className="folder-picker"
       aria-label="Conversation folder"
       value={activity.folderId ?? ''}
@@ -235,6 +238,6 @@ export function FolderPicker({
           {folder.name}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

@@ -1,7 +1,12 @@
+export type Reasoning = 'default' | 'off' | 'on' | 'low' | 'medium' | 'high' | 'max';
+export type Theme = 'system' | 'light' | 'dark';
 export interface Settings {
+  provider?: 'ollama' | 'openai';
+  connectionId?: string;
+  hasApiKey?: boolean;
   ollamaUrl: string;
   models: string[];
-  defaultModel: string;
+  defaultModel?: string; // Legacy settings; ignored.
 }
 export interface FusedServer { id: string; mcpId: string; name: string; version: string; url: string }
 export interface FusedWorkspace { url: string; connectedAt: string; servers: FusedServer[] }
@@ -39,6 +44,7 @@ export interface WorkPlan {
   };
 }
 export interface Message {
+  reasoning?: Reasoning;
   files?: string[];
   id: string;
   role: 'user' | 'assistant';
@@ -47,6 +53,7 @@ export interface Message {
   thought?: { text: string; steps?: string[]; durationMs: number; runningSince?: number };
 }
 export interface QueuedMessage {
+  reasoning?: Reasoning;
   mode?: ActivityMode;
   files?: string[];
   id: string;
@@ -64,6 +71,10 @@ export interface BrowserPane {
   activityId: string; tabId: string; url: string; tabs: BrowserTab[]; busyTabIds: string[];
 }
 export interface Activity {
+  provider?: 'ollama' | 'openai';
+  connectionId?: string;
+  modelSelection?: { model: string; reasoning: Reasoning };
+  reasoning?: Reasoning;
   mode?: ActivityMode;
   turnMode?: ActivityMode;
   plans?: WorkPlan[];
@@ -93,6 +104,7 @@ export interface ConversationFolder { id: string; name: string; collapsed?: bool
 export interface CronJobInput { name: string; prompt: string; model: string; expression: string; timezone: string; enabled: boolean }
 export interface CronJob extends CronJobInput { id: string; nextRunAt?: string; error?: string; runs: { id: string; startedAt: string; status?: string; activityId?: string; error?: string }[] }
 export interface Snapshot {
+  theme?: Theme;
   cronJobs?: CronJob[];
   cronError?: string;
   fusedWorkspace?: FusedWorkspace;
@@ -106,11 +118,30 @@ export interface Snapshot {
   browser?: BrowserPane;
 }
 export interface LoginConnection { id: string; code: string; origin: string; destination: string }
+export interface FusedCLIInstallation { path: string; version: string; compatible: boolean; directory?: string }
+export interface FusedCLIStatus {
+  phase: 'idle' | 'checking' | 'downloading' | 'verifying' | 'installing' | 'ready' | 'error';
+  recommendedVersion: string; supported: boolean; active?: 'existing' | 'managed';
+  existing?: FusedCLIInstallation; managed?: FusedCLIInstallation;
+  downloaded?: number; total?: number; error?: string; message?: string;
+}
 export interface DesktopAPI {
+  fusedCLIStatus(): Promise<FusedCLIStatus>;
+  checkFusedCLI(): Promise<FusedCLIStatus>;
+  installFusedCLI(): Promise<FusedCLIStatus>;
+  cancelFusedCLIInstall(): Promise<void>;
+  chooseFusedCLI(): Promise<FusedCLIStatus>;
+  useExistingFusedCLI(): Promise<FusedCLIStatus>;
+  useManagedFusedCLI(): Promise<FusedCLIStatus>;
+  copyText(text: string): Promise<void>;
+  loadImage(url: string): Promise<string>;
+  setTheme(theme: Theme): Promise<void>;
   saveCronJob(input: CronJobInput, id?: string): Promise<string>;
   removeCronJob(id: string): Promise<void>;
   runCronJob(id: string): Promise<void>;
   decidePlan(input: { activityId: string; planId: string; approved: boolean }): Promise<void>;
+  resume(activityId: string): Promise<void>;
+  steer(activityId: string, messageId: string): Promise<void>;
   copyLoginCode(id: string): Promise<void>;
   openLoginExtension(id: string): Promise<void>;
   onLoginOffer(callback: (tabId: string) => void): () => void;
@@ -138,14 +169,23 @@ export interface DesktopAPI {
   archiveActivity(id: string, archived: boolean): Promise<void>;
   openLink(url: string): Promise<void>;
   snapshot(): Promise<Snapshot>;
-  models(url: string): Promise<string[]>;
-  saveSettings(settings: Settings): Promise<void>;
-  start(input: { mode?: ActivityMode; files?: string[]; prompt: string; model: string; activityId?: string; folderId?: string }): Promise<string>;
+  skills(): Promise<PersonalSkill[]>;
+  saveSkill(input: PersonalSkillInput): Promise<PersonalSkill>;
+  deleteSkill(id: string): Promise<void>;
+  importSkill(): Promise<PersonalSkillInput | null>;
+  usage(period: '7d' | '30d' | 'all'): Promise<UsageSummary>;
+  models(connection: string | Settings, apiKey?: string): Promise<string[]>;
+  saveSettings(settings: Settings, apiKey?: string): Promise<void>;
+  selectModel(activityId: string, model: string, reasoning: Reasoning): Promise<void>;
+  modelReasoning(url: string, model: string): Promise<'none' | 'toggle' | 'levels' | 'extended'>;
+  start(input: { reasoning?: Reasoning; mode?: ActivityMode; files?: string[]; prompt: string; model: string; activityId?: string; folderId?: string }): Promise<string>;
   cancel(id: string): Promise<void>;
   showBrowser(id: string, tabId?: string): Promise<void>;
   newBrowserTab(id: string, url: string): Promise<void>;
+  refreshBrowserTab(tabId: string): Promise<void>;
   closeBrowserTab(tabId: string): Promise<void>;
   hideBrowser(): Promise<void>;
+  resizeBrowser(width: number | undefined, dragging: boolean): Promise<void>;
   selectActivity(id?: string): Promise<void>;
   saveFusedAccount(input: { url: string; licenseKey: string }): Promise<void>;
   removeFusedAccount(): Promise<void>;
@@ -165,6 +205,7 @@ export interface MCPTool {
   policy: MCPToolPolicy;
 }
 export interface MCPConnection {
+  auth?: MCPAuth;
   fusedNative?: { engine: string; server: FusedServer; autoToken: boolean; operations: string[] };
   id: string;
   name: string;
@@ -179,6 +220,7 @@ export interface MCPConnection {
   tools: MCPTool[];
 }
 export interface MCPConnectionInput {
+  auth?: MCPAuth;
   id?: string;
   name: string;
   transport: 'http' | 'stdio';
@@ -189,8 +231,14 @@ export interface MCPConnectionInput {
   token?: string;
   environment?: Record<string, string>;
 }
+export type MCPAuth = { type: 'none' | 'bearer' } | { type: 'header' | 'body'; name: string };
 declare global {
   interface Window {
     dextana: DesktopAPI;
   }
 }
+
+export interface PersonalSkillInput { id?: string; name: string; description: string; instructions: string; enabled: boolean }
+export interface PersonalSkill extends PersonalSkillInput { id: string; version: string; updatedAt: string }
+export interface UsageCounts { inputTokens: number; outputTokens: number; totalTokens: number; calls: number; reportedCalls: number }
+export interface UsageSummary extends UsageCounts { period: string; models: (UsageCounts & { model: string; provider: string })[] }

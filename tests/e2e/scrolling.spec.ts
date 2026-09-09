@@ -11,6 +11,55 @@ test.afterAll(async () => {
   );
 });
 
+test('keeps a new draft when the previous queued message finishes saving', async ({ page }) => {
+  await page.addInitScript(() => {
+    const snapshot = {
+      settings: { defaultModel: 'test', models: ['test'], ollamaUrl: '' },
+      fused: { enabled: false, url: '', hasToken: false },
+      activities: [{
+        id: 'draft', title: 'Draft preservation', model: 'test', status: 'running',
+        queue: [] as any[], events: [], messages: [],
+      }],
+    };
+    let publish: (value: any) => void;
+    (window as any).dextana = {
+      snapshot: async () => structuredClone(snapshot),
+      subscribe: (callback: any) => { publish = callback; return () => {}; },
+      selectActivity: async () => {},
+      start: (input: any) => new Promise<string>(resolve => {
+        // Hold the acknowledgement so typing during a save is deterministic.
+        (window as any).finishSave = () => {
+          snapshot.activities[0].queue.push({
+            id: String(snapshot.activities[0].queue.length),
+            prompt: input.prompt, model: input.model,
+          });
+          publish(structuredClone(snapshot));
+          resolve('draft');
+        };
+      }),
+    };
+  });
+  await page.goto(server.resolvedUrls!.local[0]);
+  await page.getByRole('button', { name: 'Draft preservation', exact: true }).click();
+  const input = page.getByLabel('Describe your work');
+  const send = page.getByRole('button', { name: 'Send message', exact: true });
+  await input.fill('Keep this queued');
+  await send.click();
+  await expect(send).toBeDisabled();
+  await input.fill('Apply this correction now');
+  await page.evaluate(() => (window as any).finishSave());
+  await expect(send).toBeEnabled();
+  await expect(input).toHaveValue('Apply this correction now');
+  await send.click();
+  await expect(send).toBeDisabled();
+  await page.evaluate(() => (window as any).finishSave());
+  await expect(input).toHaveValue('');
+  await expect(page.getByLabel('Queued messages').locator('.queued-message')).toHaveText([
+    '1.Keep this queuedSteer', '2.Apply this correction nowSteer',
+  ]);
+  await expect(page.getByRole('button', { name: 'Stop activity' })).toBeEnabled();
+});
+
 test('stream follows content, respects manual scrolling, and resumes at latest', async ({
   page,
 }) => {
@@ -26,13 +75,13 @@ test('stream follows content, respects manual scrolling, and resumes at latest',
           status: 'running',
           queue: [] as any[],
           events: [],
-          messages: [{ id: 'reply', role: 'assistant', content: 'Line\n'.repeat(100) }],
+          messages: [{ id: 'reply', role: 'assistant', content: 'Line\n\n'.repeat(100) }],
         },
       ],
     };
     let listener: (value: any) => void;
     (window as any).appendReply = () => {
-      snapshot.activities[0].messages.at(-1)!.content += 'More content\n'.repeat(20);
+      snapshot.activities[0].messages.at(-1)!.content += 'More content\n\n'.repeat(20);
       listener(structuredClone(snapshot));
     };
     (window as any).completeReply = () => {
@@ -221,7 +270,7 @@ test('renders Markdown and streamed results without exposing display payloads', 
         },
       }),
   );
-  await expect(reply).toContainText('I couldn’t display this result');
+  await expect(reply).toContainText('Unsupported component: Button.');
   await expect(reply.locator('pre')).toHaveCount(0);
   await expect(reply).not.toContainText('updateComponents');
   await page.evaluate(
@@ -236,5 +285,5 @@ test('renders Markdown and streamed results without exposing display payloads', 
         },
       }),
   );
-  await expect(reply).toContainText('I couldn’t display this result');
+  await expect(reply).toContainText('Invalid or oversized UI tree.');
 });

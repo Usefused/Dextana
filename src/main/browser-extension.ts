@@ -13,6 +13,7 @@ export const extensionFiles = [
   'popup.css',
   'popup.js',
   'transfer.js',
+  'background.js',
 ];
 export function extensionSource(environment: ExtensionEnvironment) {
   return join(

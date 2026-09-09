@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+  <title>Dextana by Fused — installation instructions</title>
+  <rect width="720" height="480" fill="#FAF9F3"/>
+  <g font-family="Helvetica Neue" text-anchor="middle">
+    <text x="360" y="81" font-size="38" font-weight="700" fill="#213C31">Dextana</text>
+    <text x="360" y="111" font-size="16" fill="#526B5D">by Fused</text>
+    <text x="360" y="161" font-size="19" fill="#283B32">Drag Dextana into Applications to install.</text>
+    <circle cx="184" cy="267" r="91" fill="#E9EDE3"/>
+    <circle cx="536" cy="267" r="91" fill="#E9EDE3"/>
+    <path d="M326 267h68m-16-16 16 16-16 16" fill="none" stroke="#365F4C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M64 385h592" stroke="#DCE2D7"/>
+    <text x="360" y="419" font-size="16" fill="#283B32">Open Dextana from Applications to get started.</text>
+    <text x="360" y="446" font-size="13" fill="#607064">You can eject this disk image after installing.</text>
+  </g>
+</svg>

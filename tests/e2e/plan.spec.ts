@@ -50,6 +50,8 @@ test('Plan mode blocks work, persists approval across restart, groups scoped act
   file = join(work.directory, 'Budget.txt');
   try {
     await work.page.getByLabel('Activity mode', { exact: true }).selectOption('plan');
+    await expect(work.page.getByLabel('Describe your work')).toHaveAttribute('placeholder', 'What would you like to plan?');
+    await expect(work.page.locator('.plan-mode-hint')).toHaveCount(0);
     await work.page.getByLabel('Describe your work').fill('Plan my budget report');
     await work.page.getByRole('button', { name: 'Start activity', exact: true }).click();
     let plan = work.page.getByRole('region', { name: 'Work plan' }).last();
@@ -145,7 +147,7 @@ test('plans can be declined and revised, then share selected MCP approval with w
     return true;
   });
   try {
-    // Existing integration setup is covered by mcp.spec; this flow tests plan consent.
+    // Integration recovery covers MCP setup; this flow tests plan consent.
     connectionId = await work.page.evaluate(async (url) => {
       const id = await window.dextana.saveMCP({
         name: 'Plan tasks',

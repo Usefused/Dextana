@@ -17,6 +17,6 @@ export function ApprovalDetails({ arguments: raw }: { arguments: string }) {
     return <dl>{Object.entries(value).map(([key, child]) => <div key={key}><dt>{fieldLabel(key)}</dt><dd>{fields(child, depth + 1)}</dd></div>)}</dl>;
   }
   let value: unknown;
-  try { value = JSON.parse(raw); } catch { value = 'The action details could not be displayed. Deny this request and ask Dextana to try again.'; }
+  try { value = JSON.parse(raw); } catch { value = 'The action details could not be displayed. Deny this request and ask Dext to try again.'; }
   return <div className={raw.length <= 250 ? "approval-details compact" : "approval-details"}>{fields(value)}</div>;
 }

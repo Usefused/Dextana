@@ -103,6 +103,9 @@ test('native Fused tokens are chat-specific and expiry restores connection appro
   expect(mcp.catalog('chat').find(c => c.id === connection.id)!.tools[0].name).toBe('mail');
   expect(mcp.catalog('another-chat').find(c => c.id === connection.id)!.tools[0].name).toBe('connect');
   token.expiresAt = Date.now() - 1;
-  expect(() => mcp.prepare('chat', 'call', connection.id, 'mail', '{}')).toThrow('expired');
+  connection.tools[0].policy = 'auto';
+  store.state.activities.push({ id: 'chat', allowAllApprovals: true } as any);
+  expect(mcp.prepare('chat', 'call', connection.id, 'mail', '{}').requiresApproval).toBe(true);
+  expect(mcp.catalog('another-chat').find(c => c.id === connection.id)!.tools.some(tool => tool.name === 'mail')).toBe(true);
   expect(mcp.catalog('chat').find(c => c.id === connection.id)!.tools[0].name).toBe('connect');
 });

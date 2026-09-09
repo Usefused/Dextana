@@ -1,6 +1,18 @@
 import { expect, test } from 'vitest';
 import { readableResponse, readableData } from '../../src/shared/readable-results';
 
+test('inline code and escaped brackets remain literal, including while streaming', () => {
+  for (const text of [
+    'Use `[1, 2]` and `{"example": true}` here.',
+    'Use ``a `tick` and [1, 2]``.',
+    'Literal \\[1, 2] stays.',
+    'An unfinished `{"key":',
+  ]) {
+    expect(readableResponse(text)).toBe(text);
+    expect(readableResponse(text, true)).toBe(text);
+  }
+});
+
 test('formats prose-wrapped JSON, nested MCP results, and Excel data without losing values', () => {
   expect(readableResponse('Done: {"total_cost":330,"confirmed":false}')).toContain(
     '**Total cost:** 330',
@@ -67,7 +79,9 @@ test('malformed JSON fences show a readable recovery message rather than payload
 });
 
 test('numeric Markdown links and citation labels remain usable', () => {
-  expect(readableResponse('See [2026](https://example.com/report) and reference [1].')).toBe('See [2026](https://example.com/report) and reference [1].');
+  expect(readableResponse('See [2026](https://example.com/report) and reference [1].')).toBe(
+    'See [2026](https://example.com/report) and reference [1].',
+  );
 });
 
 test('MCP structured details survive even when no text content was returned', () => {

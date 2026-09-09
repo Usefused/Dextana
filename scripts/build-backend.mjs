@@ -16,15 +16,16 @@ import { openSync, closeSync } from 'node:fs';
 
 const root = resolve('.');
 const output = join(root, '.build/backend');
+const release = JSON.parse(await readFile(join(root, 'packaging/harnest-release.json'), 'utf8'));
 const compiler = process.env.HARNEST_COMPILER || 'harnest';
 const version = spawnSync(compiler, ['--version'], { encoding: 'utf8' });
 if (version.error || version.status !== 0)
   throw new Error(
     'Build-time Harnest compiler is missing. Set HARNEST_COMPILER or install Harnest on the build machine. End users do not need it.',
   );
-if (!version.stdout.includes('0.16.0'))
+if (version.stdout.match(/\bharnest version (\S+)/)?.[1] !== release.version)
   throw new Error(
-    'This backend build requires Harnest 0.16.0. Update the compiler pin and locks together.',
+    `This backend build requires Harnest ${release.version}. Update the compiler pin and locks together.`,
   );
 const sourceFiles = [];
 async function walk(directory) {
@@ -125,7 +126,7 @@ try {
     JSON.stringify(
       {
         fingerprint,
-        compiler: '0.16.0',
+        compiler: release.version,
         platform: process.platform,
         arch: process.arch,
         python: runtime.version,

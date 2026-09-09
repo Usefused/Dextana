@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "A local-first desktop work assistant",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -14,24 +14,29 @@
     "build": "tsc --noEmit && vite build && node scripts/build.mjs",
     "start": "npm run backend:build && npm run build && electron .",
     "test": "vitest run",
+    "test:backend": "node scripts/test-backend.mjs",
     "test:e2e": "npm run backend:build && npm run build && playwright test",
     "check": "npm run test && npm run test:e2e",
     "icons": "node scripts/generate-icons.mjs",
+    "installer:artwork": "node scripts/generate-installer-artwork.mjs",
     "backend:build": "node scripts/build-backend.mjs",
-    "pack": "npm run backend:build && npm run build && electron-builder --dir --publish never",
-    "dist": "npm run backend:build && npm run build && electron-builder --publish never",
-    "test:packaged": "node scripts/test-packaged.mjs"
+    "pack": "npm run backend:build && npm run build && electron-builder --config electron-builder.adhoc.cjs --dir --publish never",
+    "dist": "npm run backend:build && npm run build && electron-builder --config electron-builder.adhoc.cjs --publish never",
+    "dist:signed": "node scripts/check-native-signing.mjs && npm run backend:build && npm run build && electron-builder --config electron-builder.signed.cjs --publish never && node scripts/verify-native-signing.mjs",
+    "verify:artifacts": "node scripts/artifact-integrity.mjs verify",
+    "test:packaged": "node scripts/test-packaged.mjs",
+    "test:mac-installers": "node scripts/verify-macos-packaging.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "adm-zip": "^0.6.0",
     "exceljs": "^4.4.0",
     "mammoth": "^1.12.2",
+    "mermaid": "11.17.2",
     "pdfjs-dist": "5.5.207",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
-    "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "ws": "^8.21.3"
   },
@@ -58,5 +63,5 @@
     }
   },
   "productName": "Dextana",
-  "author": "Dextana contributors"
+  "author": "Fused"
 }

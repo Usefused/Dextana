@@ -2,10 +2,9 @@ import { expect, test, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Activities } from '../../src/main/activities';
+import { LocalCapabilities } from '../../src/main/local-capabilities';
 import { Store } from '../../src/main/store';
 import { executionPlan, coversBrowser, prepareWorkPlan } from '../../src/main/plans';
-import type { Runtime } from '../../src/main/runtime';
 import type { Browsers } from '../../src/main/browser';
 import type { Fused } from '../../src/main/fused';
 import type { Activity } from '../../src/shared/types';
@@ -19,133 +18,6 @@ const proposal = {
   mcp_tools: [],
   fused_integrations: [],
 };
-function setup(worker = false) {
-  const store = new Store('/unused');
-  store.state.settings.models = ['test'];
-  vi.spyOn(store, 'save').mockResolvedValue();
-  const execute = vi.fn().mockResolvedValue({ url: 'https://example.com/report' });
-  const deniedDraftActions: unknown[] = [];
-  const runtime = {
-    ensure: async () => {},
-    request: async () => Response.json({ id: 'runtime' }),
-    stream: async (
-      _session: string,
-      prompt: string,
-      _meta: unknown,
-      _signal: AbortSignal,
-      _consume: unknown,
-      tool: (args: unknown) => Promise<unknown>,
-    ) => {
-      const call = (name: string, args: object) => tool({ name, arguments: args });
-      if (prompt.includes('[DEXTANA_PLAN_DRAFT]')) {
-        for (const [name, args] of [
-          ['browser', { action: 'open', url: 'https://example.com' }],
-          ['files', { action: 'read', path: '/private.txt' }],
-          ['delegate', { tasks: [{ prompt: 'Worker' }] }],
-          ['mcp_bridge', { phase: 'prepare' }],
-          ['fused', { action: 'execute' }],
-        ] as const)
-          deniedDraftActions.push(await call(name, args));
-        await call('propose_plan', proposal);
-      } else if (worker && !prompt.endsWith('Worker')) {
-        await call('delegate', { tasks: [{ prompt: 'Worker', model: 'test' }] });
-      } else {
-        await call('browser', { action: 'open', url: 'https://example.com/report' });
-        if (!worker)
-          await call('browser', { action: 'open', url: 'https://outside.example/report' });
-      }
-      return { status: 'completed', outputText: 'Done' };
-    },
-  } as unknown as Runtime;
-  const activities = new Activities(
-    store,
-    runtime,
-    () => {},
-    { execute, prepare: (_id: string, args: unknown) => args } as unknown as Browsers,
-    {} as Fused,
-  );
-  async function draft() {
-    const id = await activities.start({ prompt: 'Research', model: 'test', mode: 'plan' });
-    const activity = store.state.activities.find((item) => item.id === id)!;
-    await vi.waitFor(() => expect(activity.status).toBe('awaiting_plan'));
-    return { activity, input: { activityId: id, planId: activity.plans![0].id, approved: true } };
-  }
-  return { activities, store, execute, draft, deniedDraftActions };
-}
-
-test('planning denies every work channel; approved scope groups actions but outside websites still ask', async () => {
-  const { activities, store, execute, draft, deniedDraftActions } = setup();
-  const { activity, input } = await draft();
-  expect(deniedDraftActions).toHaveLength(5);
-  expect(
-    deniedDraftActions.every((value) => String((value as any).error).includes('Plan mode')),
-  ).toBe(true);
-  expect(execute).not.toHaveBeenCalled();
-  await expect(activities.decidePlan({ ...input, activityId: 'other' })).rejects.toThrow();
-  vi.mocked(store.save).mockRejectedValueOnce(new Error('Disk full'));
-  await expect(activities.decidePlan(input)).rejects.toThrow('Disk full');
-  expect(activity.plans![0].status).toBe('proposed');
-  expect(execute).not.toHaveBeenCalled();
-  await activities.decidePlan(input);
-  await expect(activities.decidePlan(input)).rejects.toThrow();
-  await vi.waitFor(() => expect(activity.approval).toBeDefined());
-  expect(execute).toHaveBeenCalledTimes(1);
-  expect(activity.approval!.arguments).toContain('outside.example');
-  await activities.approve({
-    activityId: activity.id,
-    approvalId: activity.approval!.id,
-    approved: false,
-  });
-  await vi.waitFor(() => expect(activity.status).toBe('cancelled'));
-  expect(activity.plans![0].status).toBe('stopped');
-  expect(activity.activePlanId).toBeUndefined();
-  expect(activity.permissions).toBeUndefined();
-  expect(activity.allowAllApprovals).toBeUndefined();
-});
-
-test('delegated workers share a live approved plan and lose its authority when the owner finishes', async () => {
-  const { activities, store, execute, draft } = setup(true);
-  const { activity, input } = await draft();
-  await activities.decidePlan(input);
-  await vi.waitFor(() => expect(activity.status).toBe('completed'));
-  expect(execute).toHaveBeenCalledTimes(1);
-  const child = store.state.activities.find((item) => item.parentId === activity.id)!;
-  expect(child.status).toBe('completed');
-  expect(child.approval).toBeUndefined();
-  expect(child.events.join('\n')).toContain('covered by approved plan');
-  expect(executionPlan(store.state.activities, child)).toBeUndefined();
-  expect(activity.plans![0].status).toBe('completed');
-});
-
-test('declined and superseded plans cannot execute, while revisions remain in the session', async () => {
-  const { activities, execute, draft } = setup();
-  const { activity, input } = await draft();
-  await activities.decidePlan({ ...input, approved: false });
-  await expect(activities.decidePlan(input)).rejects.toThrow();
-  await activities.start({
-    activityId: activity.id,
-    model: 'test',
-    mode: 'plan',
-    prompt: 'A revised report',
-  });
-  await vi.waitFor(() => expect(activity.status).toBe('awaiting_plan'));
-  const prior = activity.plans!.at(-1)!;
-  await activities.start({
-    activityId: activity.id,
-    model: 'test',
-    mode: 'plan',
-    prompt: 'A smaller report',
-  });
-  await vi.waitFor(() => expect(activity.status).toBe('awaiting_plan'));
-  expect(prior.status).toBe('superseded');
-  expect(activity.plans!.map((plan) => plan.status)).toEqual([
-    'declined',
-    'superseded',
-    'proposed',
-  ]);
-  expect(execute).not.toHaveBeenCalled();
-});
-
 test('saved proposed plans survive restart but approved execution grants do not', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'dextana-plan-store-'));
   try {
@@ -208,22 +80,34 @@ test('plan scopes reject unavailable tools and unsafe websites and match origins
   ).toBe(true);
 });
 
-test('cancelling while plan approval saves prevents execution and records the plan as stopped', async () => {
-  const { activities, store, execute, draft } = setup();
-  const { activity, input } = await draft();
-  let saved = () => {};
-  vi.mocked(store.save).mockImplementationOnce(
-    () =>
-      new Promise<void>((resolve) => {
-        saved = resolve;
-      }),
-  );
-  const decision = activities.decidePlan(input);
-  await vi.waitFor(() => expect(activity.status).toBe('starting'));
-  await activities.cancel(activity.id);
-  saved();
-  await decision;
-  await vi.waitFor(() => expect(activity.plans![0].status).toBe('stopped'));
+
+test('Electron blocks all local work in plan mode and enforces the backend execution scope', async () => {
+  const store = new Store('/unused');
+  vi.spyOn(store, 'save').mockResolvedValue();
+  const execute = vi.fn().mockResolvedValue({ url: 'https://example.com/report' });
+  const local = new LocalCapabilities(store, () => {}, { execute, prepare: (_id: string, args: unknown) => args } as unknown as Browsers, {} as Fused);
+  const activity: Activity = { id: 'owner', title: 'Plan', model: 'test', ollamaUrl: '', status: 'running', turnMode: 'plan', messages: [], events: [] };
+  store.state.activities.push(activity);
+  const signal = new AbortController().signal;
+  for (const name of ['browser', 'files', 'mcp_bridge', 'fused']) {
+    const output = await local.execute(activity, { name, arguments: { action: 'execute', phase: 'prepare' } }, signal);
+    expect((output as any).error).toContain('Plan mode');
+  }
   expect(execute).not.toHaveBeenCalled();
-  expect(activity.activePlanId).toBeUndefined();
+  const plan = await prepareWorkPlan(proposal, 'message', store.state);
+  plan.status = 'approved';
+  activity.plans = [plan]; activity.activePlanId = plan.id; activity.turnMode = 'work';
+  await local.execute(activity, { name: 'browser', arguments: { action: 'open', url: 'https://example.com/report' } }, signal);
+  expect(execute).toHaveBeenCalledOnce();
+  const controller = new AbortController();
+  const outside = local.execute(activity, { name: 'browser', arguments: { action: 'open', url: 'https://outside.example/report' } }, controller.signal);
+  await vi.waitFor(() => expect(activity.approval).toBeDefined());
+  expect(execute).toHaveBeenCalledOnce();
+  controller.abort();
+  await expect(outside).rejects.toThrow();
+  const child = { ...activity, id: 'child', parentId: 'owner', planOwnerId: 'owner', plans: [], approval: undefined };
+  store.state.activities.push(child);
+  expect(executionPlan(store.state.activities, child)).toBe(plan);
+  activity.status = 'completed';
+  expect(executionPlan(store.state.activities, child)).toBeUndefined();
 });

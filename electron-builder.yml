@@ -13,9 +13,11 @@ files:
   - assets/icon.png
   - package.json
 extraResources:
+  - from: LICENSE
+    to: LICENSE
   - from: browser-extension
     to: browser-extension
-    filter: [manifest.json, popup.html, popup.css, popup.js, transfer.js]
+    filter: [manifest.json, popup.html, popup.css, popup.js, transfer.js, background.js]
   - from: .build/backend
     to: backend
 mac:
@@ -24,6 +26,25 @@ mac:
   target: [dmg, zip]
   hardenedRuntime: true
   notarize: false
+  extendInfo:
+    CFBundleGetInfoString: Dextana by Fused
+dmg:
+  title: Dextana by Fused
+  background: assets/dmg-background.png
+  iconSize: 144
+  iconTextSize: 16
+  window:
+    width: 720
+    height: 480
+  contents:
+    - x: 184
+      y: 267
+      type: file
+      name: Dextana.app
+    - x: 536
+      y: 267
+      type: link
+      path: /Applications
 win:
   icon: assets/icon.ico
   target: [nsis, zip]

@@ -1,14 +1,13 @@
 import type { CronJob, CronJobInput } from '../shared/types';
 import type { Store } from './store';
-import type { Activities } from './activities';
 import type { Runtime } from './runtime';
 
-/** Desktop dispatch adapter. Schedule evaluation and persistence belong to the server. */
+/** Schedule settings and snapshots; the backend owns evaluation and dispatch. */
 export class CronJobs {
   private timer?: ReturnType<typeof setInterval>;
   private stopped = false;
   private pending: Promise<unknown> = Promise.resolve();
-  constructor(private store: Store, private activities: Pick<Activities, 'start'>, private publish: () => void, private runtime: Runtime) {}
+  constructor(private store: Store, private publish: () => void, private runtime: Runtime) {}
   private serial<T>(action: () => Promise<T>): Promise<T> {
     const result = this.pending.then(() => { if (this.stopped) throw new Error('Scheduler is stopping.'); return action(); });
     this.pending = result.catch(() => {});
@@ -50,26 +49,6 @@ export class CronJobs {
     });
   }
   remove(id: string) { return this.serial(async () => { await this.request('/' + encodeURIComponent(id), 'DELETE'); await this.refresh(); }); }
-  runNow(id: string) { return this.serial(async () => { await this.request('/' + encodeURIComponent(id) + '/run', 'POST'); await this.dispatch(); await this.refresh(); }); }
-  sync() { return this.serial(async () => {
-    // Reconcile desktop activity outcomes so the server can prevent overlaps.
-    for (const job of this.store.state.cronJobs ?? []) for (const run of job.runs) {
-      const activity = this.store.state.activities.find(a => a.id === run.activityId);
-      if (activity && activity.status !== run.status) await this.request(`/${encodeURIComponent(job.id)}/runs/${encodeURIComponent(run.id)}`, 'PUT', { activityId: activity.id, status: activity.status, error: activity.error });
-    }
-    await this.dispatch(); await this.refresh();
-  }); }
-  private async dispatch() {
-    const claims = await this.request('/claim', 'POST') as { jobId: string; runId: string; prompt: string; model: string }[];
-    for (const claim of claims) {
-      if (this.stopped) return;
-      let result: { activityId?: string; status: string; error?: string };
-      try {
-        // The backend claim is durable before work begins. Never retry a claimed run.
-        const activityId = await this.activities.start({ prompt: claim.prompt, model: claim.model });
-        result = { activityId, status: 'starting' };
-      } catch (error) { result = { status: 'failed', error: (error as Error).message }; }
-      await this.request(`/${encodeURIComponent(claim.jobId)}/runs/${encodeURIComponent(claim.runId)}`, 'PUT', result);
-    }
-  }
+  runNow(id: string) { return this.serial(async () => { await this.request('/' + encodeURIComponent(id) + '/run', 'POST'); await this.refresh(); }); }
+  sync() { return this.serial(() => this.refresh()); }
 }

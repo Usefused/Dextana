@@ -1,13 +1,10 @@
-import { useState } from 'react';
 import { displayTitle } from '../shared/titles';
 import { MessageContent } from './MessageContent';
 import { Thought } from './Thought';
 import { WorkPlan } from './WorkPlan';
-import { ActionApproval, AutomaticAccess, SessionApprovals } from './ActionApproval';
+import { ActionApproval } from './ActionApproval';
 import type { Activity } from '../shared/types';
 export function ActivityView({ activity }: { activity: Activity }) {
-  const [openingBrowser, setOpeningBrowser] = useState(false);
-  const [browserError, setBrowserError] = useState('');
   const running = ['starting', 'running'].includes(activity.status);
   return (
     <section className="activity-view">
@@ -16,29 +13,11 @@ export function ActivityView({ activity }: { activity: Activity }) {
           <div className="eyebrow">{activity.parentId ? 'Delegated activity' : 'ACTIVITY'}</div>
           <h1>{displayTitle(activity.title)}</h1>
         </div>
-        <SessionApprovals key={activity.id} activity={activity} />
         <span className={`status ${activity.status}`} data-testid="activity-status">
           {activity.approval ? 'Needs approval' : activity.status === 'awaiting_plan' ? 'Plan ready' : activity.status[0].toUpperCase() + activity.status.slice(1)}
         </span>
       </div>
-      {activity.browser && (
-        <div className="activity-info">
-          <button
-            className="secondary"
-            disabled={openingBrowser}
-            onClick={async () => {
-              setOpeningBrowser(true); setBrowserError('');
-              try { await window.dextana.showBrowser(activity.id); }
-              catch (error) { setBrowserError((error as Error).message); }
-              finally { setOpeningBrowser(false); }
-            }}
-          >
-            {openingBrowser ? 'Opening browser…' : activity.browser.needsReopen ? 'Reopen browser' : 'Show browser'}
-          </button>
-          {activity.browser.needsReopen && <span className="saved-browser-page" title={activity.browser.url}>Last page: {new URL(activity.browser.url).hostname}</span>}
-          {(browserError || activity.browser.saveError) && <p role="alert" className="error">{browserError || activity.browser.saveError}</p>}
-        </div>
-      )}
+      {activity.browser?.saveError && <p role="alert" className="error">{activity.browser.saveError}</p>}
       <div className="messages">
         {activity.messages.map((message) => (
           <article key={message.id} className={`message ${message.role}`}>
@@ -79,7 +58,6 @@ export function ActivityView({ activity }: { activity: Activity }) {
           </article>
         ))}
       </div>
-      <AutomaticAccess key={activity.id} activity={activity} />
       {activity.events.length > 0 && (
         <details className="activity-events">
           <summary>Activity log · {activity.events.length} events</summary>

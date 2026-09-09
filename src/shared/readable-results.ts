@@ -178,6 +178,20 @@ export function readableResponse(content: string, streaming = false): string {
       index = end + 3;
       continue;
     }
+    // Inline code and escaped punctuation are literal Markdown, never tool data.
+    const ticks = /^`+/.exec(rest)?.[0];
+    if (ticks) {
+      const end = content.indexOf(ticks, index + ticks.length);
+      const stop = end < 0 ? content.length : end + ticks.length;
+      output += content.slice(index, stop);
+      index = stop;
+      continue;
+    }
+    if (rest[0] === '\\' && rest.length > 1) {
+      output += rest.slice(0, 2);
+      index += 2;
+      continue;
+    }
     // Numeric link labels and citations are Markdown, not a data array.
     const link = /^\[[^\]\n]*\]\([^\n]*?\)/.exec(rest);
     const citation = /^\[\d+\](?![\d,])/.exec(rest);

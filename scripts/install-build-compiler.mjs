@@ -9,7 +9,7 @@ if (!platform || !arch) throw new Error('Unsupported compiler build platform.');
 const name = `harnest_${release.version}_${platform}_${arch}.${process.platform === 'win32' ? 'zip' : 'tar.gz'}`;
 const asset = release.assets[name];
 if (!asset) throw new Error(`No pinned compiler asset for ${name}.`);
-const directory = resolve('.build/compiler');
+const directory = resolve('.build/compiler', release.version);
 await mkdir(directory, { recursive: true });
 const response = await fetch(asset.url);
 if (!response.ok) throw new Error(`Cannot download the pinned compiler: HTTP ${response.status}`);

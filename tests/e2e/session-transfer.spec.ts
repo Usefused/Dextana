@@ -11,7 +11,7 @@ test('website login transfer needs approval, imports before scripts, and consume
   const site = createServer((_req, res) => {
     res.setHeader('Content-Type', 'text/html');
     res.end(
-      '<title>Sign in</title><input type="password"><script>document.title = localStorage.getItem("login") === "local-test" && sessionStorage.getItem("login") === "session-test" ? "Signed in" : "Sign in"</script>',
+      '<title>Welcome back</title><label>Email<input type="email" autocomplete="username"></label><button>Continue</button><script>document.title = localStorage.getItem("login") === "local-test" && sessionStorage.getItem("login") === "session-test" ? "Signed in" : "Sign in"</script>',
     );
   });
   await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
@@ -59,6 +59,16 @@ test('website login transfer needs approval, imports before scripts, and consume
     await offer.getByRole('button', { name: 'Use login from my browser' }).click();
 
     const code = await work.page.getByLabel('Browser connection code').inputValue();
+    const previousClipboard = await work.app().evaluate(({ clipboard }) => clipboard.readText());
+    try {
+      await work.page.getByRole('button', { name: 'Copy connection code', exact: true }).click();
+      await expect(work.page.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+      expect(await work.app().evaluate(({ clipboard }) => clipboard.readText())).toBe(code);
+    } finally {
+      await work.app().evaluate(({ clipboard }, previous) => {
+        clipboard.writeText(previous);
+      }, previousClipboard);
+    }
     const [port, token] = code.split('.');
     const endpoint = `http://127.0.0.1:${port}`;
     const headers = {
@@ -106,11 +116,12 @@ test('website login transfer needs approval, imports before scripts, and consume
       ).status,
     ).toBe(200);
     await expect(work.page.getByText('Login state transferred.')).toBeVisible();
-    await work.page.getByRole('button', { name: 'Done', exact: true }).click();
-    const state = await work.app().evaluate(async ({ BrowserWindow }) => {
+    // Leave the completion notice open: another transfer must start with fresh UI state.
+    const transferredState = () => work.app().evaluate(async ({ BrowserWindow }) => {
       const view = BrowserWindow.getAllWindows()[0].contentView.children.at(
         -1,
       ) as import('electron').WebContentsView;
+      if (!view) return undefined;
       return {
         title: view.webContents.getTitle(),
         cookies: (await view.webContents.session.cookies.get({ name: 'login' })).map((c) => ({
@@ -120,7 +131,7 @@ test('website login transfer needs approval, imports before scripts, and consume
         })),
       };
     });
-    expect(state).toEqual({
+    await expect.poll(transferredState).toEqual({
       title: 'Signed in',
       cookies: [{ value: 'cookie-test', httpOnly: true, session: true }],
     });
@@ -211,8 +222,12 @@ for (const openSourceSite of [false, true]) {
           '<title>Signed-in source</title><script>document.title=localStorage.getItem("login") === "from-chrome" && sessionStorage.getItem("tab") === "from-source-tab" ? "Transferred from Chrome" : "Signed-in source";localStorage.setItem("login", "from-chrome");sessionStorage.setItem("tab", "from-source-tab")</script>',
         );
       } else
-        res.end(
-          '<title>Sign in</title><input type="password"><script>document.title=localStorage.getItem("login") === "from-chrome" && sessionStorage.getItem("tab") === "from-source-tab" ? "Transferred from Chrome" : "Sign in"</script>',
+        setTimeout(
+          () =>
+            res.end(
+              '<title>Sign in</title><input type="password"><script>document.title=localStorage.getItem("login") === "from-chrome" && sessionStorage.getItem("tab") === "from-source-tab" ? "Transferred from Chrome" : "Sign in"</script>',
+            ),
+          req.headers.cookie?.includes('extension-login=') ? 1200 : 0,
         );
     });
     await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
@@ -232,7 +247,7 @@ for (const openSourceSite of [false, true]) {
       return true;
     });
     try {
-      const source = await chrome.newPage();
+      let source = await chrome.newPage();
       await source.goto(sourceOrigin + '/source');
       await start(work.page, 'Open real extension transfer test');
       await allowBrowser(work.page);
@@ -266,22 +281,33 @@ for (const openSourceSite of [false, true]) {
       );
       await work.page.locator('summary').filter({ hasText: 'Need the extension?' }).click();
       await work.page.screenshot({ path: testInfo.outputPath('login-transfer-approval.png') });
-      const popup = await chrome.newPage();
+      let popup = await chrome.newPage();
+      await popup.setViewportSize({ width: 392, height: 600 });
       await popup.goto(`chrome-extension://${extensionId}/popup.html`);
       await popup.locator('#code').fill(code);
-      await source.bringToFront();
+      const blank = !openSourceSite ? await chrome.newPage() : undefined;
+      await (blank ?? source).bringToFront();
       // Opening the action popup leaves the source tab active in ordinary Chrome.
       await popup.locator('#connect').evaluate((button: HTMLButtonElement) => button.click());
-      await expect(popup.locator('#approval')).toBeVisible();
+      if (openSourceSite) await expect(popup.locator('#approval')).toBeVisible();
+      else await expect(popup.locator('#approval')).toBeHidden();
       if (!openSourceSite) {
+        await expect(
+          popup.getByRole('button', { name: 'Open requested website', exact: true }),
+        ).toBeInViewport({ ratio: 1 });
         const opened = chrome.waitForEvent('page');
         await popup.getByRole('button', { name: 'Open requested website', exact: true }).click();
         const requested = await opened;
         await expect(requested).toHaveURL(origin + '/');
-        await popup.reload();
-        await expect(popup.locator('#code')).toHaveValue(code);
+        source = requested;
+        await source.goto(sourceOrigin + '/source');
+        // Destroy the popup as Chrome does on navigation, then open a new one.
+        await popup.close();
+        popup = await chrome.newPage();
+        await popup.setViewportSize({ width: 392, height: 600 });
         await source.bringToFront();
-        await popup.locator('#connect').evaluate((button: HTMLButtonElement) => button.click());
+        await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+        await expect(popup.locator('#code')).toHaveValue(code);
         await expect(popup.locator('#approval')).toBeVisible();
       }
 
@@ -300,11 +326,41 @@ for (const openSourceSite of [false, true]) {
         await expect(popup.locator('#status')).toContainText('Approve opening');
         await popup.locator('#open-source-site').check();
       }
+      await popup.screenshot({ path: testInfo.outputPath('extension-approval.png') });
       await popup.locator('#localStorage').check();
       await popup.locator('#sessionStorage').check();
+      await expect(popup.getByRole('button', { name: 'Approve and transfer' })).toBeInViewport({
+        ratio: 1,
+      });
       await popup.getByRole('button', { name: 'Approve and transfer' }).click();
-      await expect(popup.locator('#status')).toContainText('Transferred.', { timeout: 30_000 });
+      if (!openSourceSite) {
+        await expect(popup.locator('#status')).toContainText('Transferring');
+        await expect
+          .poll(() =>
+            popup.evaluate(
+              async () =>
+                (await (window as any).chrome.storage.session.get('transferStatus')).transferStatus
+                  ?.state,
+            ),
+          )
+          .toBe('transferring');
+        // Returning to Dextana closes the action popup. The approved upload must survive.
+        await popup.close();
+      } else
+        await expect(popup.locator('#status')).toContainText('Transferred.', { timeout: 30_000 });
       await expect(work.page.getByText('Login state transferred.')).toBeVisible();
+      await expect(
+        work.page.getByRole('dialog', { name: 'Use login from my browser' }),
+      ).toBeHidden();
+      expect(
+        await work.app().evaluate(({ BrowserWindow }) => {
+          const host = BrowserWindow.getAllWindows().find((w) => !w.getParentWindow())!;
+          return (
+            host.contentView.children.at(-1) as import('electron').WebContentsView
+          ).getVisible();
+        }),
+      ).toBe(true);
+      await work.page.screenshot({ path: testInfo.outputPath('login-transfer-notice.png') });
       await work.page.getByRole('button', { name: 'Done', exact: true }).click();
       const imported = await work.app().evaluate(async ({ BrowserWindow }) => {
         const view = BrowserWindow.getAllWindows()[0].contentView.children.at(
@@ -321,6 +377,14 @@ for (const openSourceSite of [false, true]) {
         await expect(work.page.getByLabel('Activity browser address')).toHaveValue(
           sourceOrigin + '/source',
         );
+      if (!openSourceSite) {
+        popup = await chrome.newPage();
+        await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+        await expect(popup.locator('#status')).toContainText('Transferred.');
+        const saved = await popup.evaluate(() => (window as any).chrome.storage.session.get(null));
+        expect(saved.connectionCode).toBeUndefined();
+        expect(JSON.stringify(saved)).not.toContain('synthetic-http-only');
+      }
       expect(await source.evaluate(() => sessionStorage.getItem('tab'))).toBe('from-source-tab');
       expect(JSON.stringify(work.calls)).not.toContain('synthetic-http-only');
       await work.page.screenshot({ path: testInfo.outputPath('login-transfer-complete.png') });

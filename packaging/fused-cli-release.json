@@ -1,0 +1,42 @@
+{
+  "version": "0.29.0",
+  "repository": "Usefused/cli",
+  "assets": {
+    "darwin-arm64": {
+      "url": "https://github.com/Usefused/cli/releases/download/v0.29.0/fused-cli_Darwin_arm64.tar.gz",
+      "sha256": "a1349f61d0228bcea97aa776a29992058bf398a63383daa4dc4b6f0f3fe448fe",
+      "bytes": 4732774,
+      "format": "tar.gz"
+    },
+    "darwin-x64": {
+      "url": "https://github.com/Usefused/cli/releases/download/v0.29.0/fused-cli_Darwin_x86_64.tar.gz",
+      "sha256": "402017b223137c1a8e71c2dc3d928dc3b2fec38c7a1ddc94af1765412ab684ec",
+      "bytes": 5075002,
+      "format": "tar.gz"
+    },
+    "linux-arm64": {
+      "url": "https://github.com/Usefused/cli/releases/download/v0.29.0/fused-cli_Linux_arm64.tar.gz",
+      "sha256": "cec19f4c58c931d16624062fb98ba109fd45d719ed7f7ed8a4df2a704d1867c3",
+      "bytes": 4517683,
+      "format": "tar.gz"
+    },
+    "linux-x64": {
+      "url": "https://github.com/Usefused/cli/releases/download/v0.29.0/fused-cli_Linux_x86_64.tar.gz",
+      "sha256": "f7772cb59e93978506bfd33ca1cdea25aefd11bb724998ee74d4b08a4f6c3792",
+      "bytes": 4955872,
+      "format": "tar.gz"
+    },
+    "win32-arm64": {
+      "url": "https://github.com/Usefused/cli/releases/download/v0.29.0/fused-cli_Windows_arm64.zip",
+      "sha256": "6a5a45465a117d9d326debceb230f7bf6b315fd544ecfb14f2b5886a630c91a1",
+      "bytes": 4628600,
+      "format": "zip"
+    },
+    "win32-x64": {
+      "url": "https://github.com/Usefused/cli/releases/download/v0.29.0/fused-cli_Windows_x86_64.zip",
+      "sha256": "f345a788f1ff27c24d2597b4fd7e8c218432268b453368635e4970f94842a5fb",
+      "bytes": 5138418,
+      "format": "zip"
+    }
+  }
+}

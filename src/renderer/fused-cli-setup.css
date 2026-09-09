@@ -1,0 +1,13 @@
+.fused-cli-setup { border: 1px solid light-dark(#dce5dc, var(--dark-border)); border-radius: var(--dx-radius-lg); background: light-dark(#f6f8f3, var(--dark-raised)); padding: 20px; margin: 0 0 24px; }
+.fused-cli-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.fused-cli-heading h3 { margin: 0 0 5px; font-size: 15px; }
+.fused-cli-setup p { font-size: 12px; line-height: 1.6; margin: 8px 0; }
+.fused-cli-heading p { margin: 0; }
+.fused-cli-symbol { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--dx-radius-lg); background: light-dark(#e2edde, var(--dark-tint)); font-size: 24px; }
+.fused-cli-ready { margin-left: auto; font-size: 10px; color: light-dark(#3b6548, var(--dark-accent)); }
+.fused-cli-current { font-weight: 550; }
+.fused-cli-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.fused-cli-setup .fused-cli-footnote { font-size: 10px; opacity: .75; margin-bottom: 0; }
+.fused-cli-progress { margin: 16px 0; font-size: 12px; }
+.fused-cli-progress>div { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.fused-cli-progress progress { width: 100%; height: 7px; accent-color: light-dark(#55745c, var(--dark-accent)); }

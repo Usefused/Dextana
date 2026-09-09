@@ -1,5 +1,5 @@
 from typing import Literal
-from harnest.tool import tool
+from harnest.agent import tool
 from harnest.approval import request_human_approval
 from harnest.lib.mcp_bridge import mcp_bridge as _mcp_bridge
 

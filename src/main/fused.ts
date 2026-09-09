@@ -2,8 +2,9 @@ import { safeStorage } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { backendMCP } from './backend-mcp';
+import type { Runtime } from './runtime';
 import type { FusedInput, FusedIntegration } from '../shared/types';
 import { Store } from './store';
 import { endpoint } from './settings';
@@ -14,6 +15,7 @@ export class Fused {
   constructor(
     private store: Store,
     private directory: string,
+    private runtime?: Runtime,
   ) {}
   private path(secretId: string) {
     return join(
@@ -162,34 +164,8 @@ export class Fused {
   private async connect(settings: FusedIntegration) {
     if (!settings.secretId) throw new Error('Save an execution token for this integration.');
     const token = safeStorage.decryptString(await readFile(this.path(settings.secretId)));
-    const client = new Client({ name: 'Dextana', version: '0.1.0' });
-    const transport = new StreamableHTTPClientTransport(new URL(settings.url), {
-      requestInit: { headers: { Authorization: `Bearer ${token}` } },
-      fetch: (url, init) =>
-        fetch(url, {
-          ...init,
-          redirect: 'error',
-          signal: AbortSignal.any([
-            ...(init?.signal ? [init.signal] : []),
-            AbortSignal.timeout(30_000),
-          ]),
-        }),
-      reconnectionOptions: {
-        maxRetries: 0,
-        initialReconnectionDelay: 1000,
-        maxReconnectionDelay: 1000,
-        reconnectionDelayGrowFactor: 1,
-      },
-    });
-    try {
-      await client.connect(transport);
-      return client;
-    } catch {
-      await client.close().catch(() => {});
-      throw new Error(
-        'Could not connect to Fused. Check the integration address, token, and Engine availability.',
-      );
-    }
+    if (!this.runtime) throw new Error('The MCP backend is unavailable.');
+    return backendMCP(this.runtime, { transport: 'http', url: settings.url, token });
   }
   async call(
     activityId: string,

@@ -1,0 +1,10 @@
+node_modules
+build
+dist
+.git
+.openai
+.vercel
+.env
+.env.*
+*.log
+tests

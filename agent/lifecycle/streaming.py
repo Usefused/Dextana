@@ -1,4 +1,4 @@
-from harnest.lifecycle import lifecycle
+from harnest import lifecycle
 
 
 @lifecycle.adk_plugin

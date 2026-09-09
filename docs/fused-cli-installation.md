@@ -1,0 +1,13 @@
+# Optional Fused CLI installation
+
+Settings → Connectors → Fused detects a compatible CLI without downloading anything. **Install for Dextana** downloads the version pinned in `packaging/fused-cli-release.json` only after the owner clicks it. Existing installations can be selected automatically from PATH or explicitly through **Locate installed CLI**. Other connectors do not require the CLI.
+
+The current pin is the standalone [Fused CLI 0.29.0 release](https://github.com/Usefused/cli/releases/tag/v0.29.0). The manifest includes official HTTPS asset URLs, sizes, and SHA-256 digests for macOS, Linux, and Windows on x64 and arm64. Checksums were cross-checked against both GitHub release metadata and the release checksum file. The supported 0.29 CLI family matches the verified login/token JSON contract.
+
+The main process owns download, validation, extraction, and selection. The renderer cannot supply a download URL or checksum. Downloads have a size limit and timeout, and redirects are restricted to GitHub’s release hosts. SHA-256 verification happens before extraction or execution. Only `fused-cli` (or `fused-cli.exe`) is extracted; the installer never starts an Engine, installs skills, invokes a shell script, changes PATH, or uses administrator privileges. macOS/Linux extraction uses the system `/usr/bin/tar`; Windows uses the bundled ZIP reader.
+
+The binary must pass its version check before an atomic selection-file update makes it active. Each private installation has its own directory under the app’s `fused-cli` folder, so failed updates preserve the previous executable. Its file checksum is rechecked before use. Switching to an existing CLI leaves the private copy available. Old private versions remain untouched so active processes can finish safely.
+
+The UI shows download progress, cancellation, verification, retry, and the active installation. A future app release with a newer reviewed pin offers **Update to …**; it never silently installs a moving `latest` release. When changing the pin, update compatibility checks if the CLI contract changes and rerun the Fused onboarding/token E2E flow.
+
+`tests/e2e/fused-cli-install.spec.ts` uses the real pinned release archive (cached by checksum in the temporary directory), serves it through a local download fixture, and tests cancellation, corruption, retry, selecting an existing binary, switching back, and persistence across restart. It needs the official download once per platform cache. Native Fused tests then exercise real CLI dispatch through a synthetic CLI and local MCP server without production credentials.

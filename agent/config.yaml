@@ -2,6 +2,9 @@ apiVersion: harnest.dev/v1alpha1
 kind: Agent
 server:
   live: true
+  http:
+    # Eight runs also need live sockets, control requests and local-tool replies.
+    maxConcurrentRequests: 64
 metadata:
   name: dextana
   displayName: Dextana

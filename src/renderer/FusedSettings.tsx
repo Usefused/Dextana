@@ -1,3 +1,4 @@
+import { Button, CheckboxField, Icon, TextInput } from './ui';
 import { useState } from 'react';
 import type { FusedAccount, FusedIntegration } from '../shared/types';
 
@@ -75,7 +76,7 @@ export function AccountConnection({
       )}
       <label>
         Fused URL
-        <input
+        <TextInput
           value={url}
           placeholder="https://your-fused-engine"
           disabled={busy}
@@ -84,7 +85,7 @@ export function AccountConnection({
       </label>
       <label>
         Fused license key
-        <input
+        <TextInput
           type="password"
           autoComplete="off"
           value={licenseKey}
@@ -98,13 +99,13 @@ export function AccountConnection({
         messages. MCP integrations below use their own execution tokens.
       </p>
       <div className="fused-actions">
-        <button className="primary" disabled={busy || !url.trim()} onClick={() => void run()}>
+        <Button icon={<Icon name="plug" />} variant="primary" disabled={busy || !url.trim()} onClick={() => void run()}>
           {busy ? 'Working…' : account ? 'Update Fused account' : 'Connect Fused account'}
-        </button>
+        </Button>
         {account && (
-          <button className="secondary" disabled={busy} onClick={() => void run(true)}>
+          <Button icon={<Icon name="trash" />} variant="secondary" disabled={busy} onClick={() => void run(true)}>
             Disconnect Fused account
-          </button>
+          </Button>
         )}
       </div>
       {error && (
@@ -150,19 +151,13 @@ function FusedConnection({
     >
       <label>
         Integration name
-        <input value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
+        <TextInput value={name} maxLength={80} onChange={(event) => setName(event.target.value)} />
       </label>
-      <label className="checkbox">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(event) => setEnabled(event.target.checked)}
-        />
-        Enable Fused
-      </label>
+      <CheckboxField label="Enable Fused" description="Make this integration available to Dextana."
+        checked={enabled} onChange={event => setEnabled(event.target.checked)} />
       <label>
         Fused MCP address
-        <input
+        <TextInput
           placeholder="https://your-engine/mcp/your-version-id/mcp"
           value={url}
           onChange={(event) => setUrl(event.target.value)}
@@ -170,7 +165,7 @@ function FusedConnection({
       </label>
       <label>
         Fused execution token
-        <input
+        <TextInput
           type="password"
           autoComplete="off"
           value={token}
@@ -187,12 +182,11 @@ function FusedConnection({
         follow the permissions for each chat.
       </p>
       <div className="fused-actions">
-        <button className="primary" disabled={busy || !name.trim()} onClick={save}>
+        <Button icon={<Icon name="check" />} variant="primary" disabled={busy || !name.trim()} onClick={save}>
           Save Fused connection
-        </button>
+        </Button>
         {config && (
-          <button
-            className="secondary"
+          <Button icon={<Icon name="trash" />} variant="secondary"
             disabled={busy}
             onClick={async () => {
               setBusy(true);
@@ -208,12 +202,12 @@ function FusedConnection({
             }}
           >
             Remove integration
-          </button>
+          </Button>
         )}
         {cancel && (
-          <button className="secondary" onClick={cancel}>
+          <Button icon={<Icon name="close" />} variant="secondary" onClick={cancel}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
       {error && (

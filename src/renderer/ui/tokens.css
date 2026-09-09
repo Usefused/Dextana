@@ -1,0 +1,96 @@
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans/IBMPlexSans-Medium.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans/IBMPlexSans-SemiBold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans/IBMPlexSans-Bold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans/IBMPlexSans-Italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans/IBMPlexSans-BoldItalic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* Dextana's shared foundations. Components consume roles, never palette values. */
+:root {
+  --dx-font: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  --dx-font-mono: 'SFMono-Regular', Consolas, monospace;
+  --dx-text-xs: 12px;
+  --dx-text-sm: 13px;
+  --dx-text-md: 14px;
+  --dx-text-lg: 16px;
+  --dx-text-title: 28px;
+  --dx-leading: 1.6;
+  --dx-space-1: 4px;
+  --dx-space-2: 8px;
+  --dx-space-3: 12px;
+  --dx-space-4: 16px;
+  --dx-space-5: 24px;
+  --dx-space-6: 32px;
+  --dx-space-7: 48px;
+  --dx-radius: 8px;
+  --dx-form-surface: light-dark(#efefed, #292b2a);
+  --dx-input-surface: light-dark(#fafafa, #353736);
+  --dx-radius-sm: var(--dx-radius);
+  --dx-radius-md: var(--dx-radius);
+  --dx-radius-control: var(--dx-radius);
+  --dx-radius-lg: var(--dx-radius);
+  --dx-radius-pill: var(--dx-radius);
+  --dx-control-height: 38px;
+  --dx-duration: 140ms;
+  --dx-shadow: none;
+  --dx-canvas: light-dark(#faf9f6, #171b18);
+  --dx-sidebar: light-dark(#f0efea, #121714);
+  --dx-surface: light-dark(#fffefa, #212823);
+  --dx-surface-hover: light-dark(#f0f2eb, #2b352e);
+  --dx-text: light-dark(#2d332f, #e4ebe2);
+  --dx-muted: light-dark(#626d60, #adbbac);
+  --dx-border: light-dark(#dce1d6, #3c4940);
+  --dx-border-strong: light-dark(#889681, #627a67);
+  --dx-accent: light-dark(#3d654c, #a0d0aa);
+  --dx-accent-solid: light-dark(#3d654c, #416f4f);
+  --dx-accent-hover: light-dark(#30533d, #355e41);
+  --dx-on-accent: #f5faf3;
+  --dx-accent-soft: light-dark(#e7eee3, #29392e);
+  --dx-success-dot: light-dark(#91ae6a, #a0d0aa);
+  --dx-danger: light-dark(#a1372d, #ffb9aa);
+  --dx-danger-soft: light-dark(#fff0ec, #3d2825);
+  --dx-warning: light-dark(#795714, #edcf93);
+  --dx-warning-soft: light-dark(#faf1da, #353023);
+  --dx-focus: light-dark(#387357, #a0d0aa);
+}

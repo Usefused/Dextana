@@ -4,17 +4,29 @@ A single-owner, local-first desktop work assistant built with Electron, React, O
 
 ## Run from source
 
-Requirements: **Node.js 24 LTS** (22.12 or newer also supported), **Harnest 0.16.0**, and a running **Ollama** server. Harnest must be available on `PATH`. Harnest manages the agent's Python environment.
+Requirements: **Node.js 24 LTS** (22.12 or newer also supported), **Harnest 0.18.0**, and either a running **Ollama** server or an **OpenAI-compatible chat API**. Harnest must be available on `PATH`. Harnest manages the agent's Python environment.
+
+The agent backend owns runs, queued messages, steering, delegation, plans and scheduled dispatch. Conversations and checkpoints persist locally in SQLite under the desktop's application-data directory. No separate database server is needed. Completed chats retain their Harnest history after restarting; interrupted actions are not replayed automatically.
 
 ```sh
 npm ci
-harnest env sync agent --profile runtime
+harnest env sync agent --profile runtime --frozen
 npm start
 ```
 
-Open **Settings** from the bottom of the chats panel or the app-name menu (⌘, on macOS; Ctrl+, elsewhere), connect to your Ollama address, select a default chat model, and save. Choose a model with tool-calling support for browser and integration work. Embedding-only models cannot run activities. The model selector can also change the model for a new activity or a follow-up message.
+Open **Settings** from the bottom of the chats panel or the app-name menu (⌘, on macOS; Ctrl+, elsewhere), choose Ollama or OpenAI-compatible, connect to your endpoint, and save. Choose a model with tool-calling support for browser and integration work. Embedding-only models cannot run activities. The model selector can also change the model for a new activity or a follow-up message.
 
-Ollama normally runs at `http://127.0.0.1:11434`. Remote addresses require HTTPS. Cloud models configured through Ollama also work; those models send inference requests to their provider. Dextana does not require an OpenAI account or API key.
+Ollama normally runs at `http://127.0.0.1:11434`. Remote addresses require HTTPS. Cloud models configured through Ollama also work; those models send inference requests to their provider. Local Ollama does not require an OpenAI account or API key.
+
+For OpenRouter and other AI gateways, choose **Settings → Models → Provider → OpenAI-compatible**. Enter the API base URL (for example, `https://openrouter.ai/api/v1`) and API key, then **Fetch models** and save. Both proprietary and open-weight chat models are supported. If discovery is unavailable, add the provider's exact chat model ID manually. Embedding and reranking models identified by metadata or model name are excluded. Endpoints that only return opaque IDs cannot reliably report model capabilities; choose a chat model with tool calling for agent work.
+
+Keys are encrypted with the system keychain and passed to the authenticated backend in memory; they are not stored in chat metadata or plain settings. Leaving the key field blank retains the saved key for the same endpoint. **Remove saved key** clears it for subsequent turns when saved. Changing the base URL never reuses the previous endpoint's key. Existing runs retain their original connection; new turns use the saved connection. Compatible endpoints use their default reasoning behavior; Ollama's reasoning controls remain available.
+
+Settings includes a searchable sidebar for **Appearance**, **Models**, **Usage**, **Skills**, and **Connectors**. Add reusable instructions in Skills or import a `SKILL.md`; changes are available through Harnest's dynamic catalog without rebuilding. Connectors is the home for MCP and Fused connections.
+
+**Usage** shows input, output, and total tokens by model over 7 days, 30 days, or all time. Counts come from Harnest's normalized provider metadata and persist in the backend, including chat, delegated, and scheduled runs. Tracking begins with this feature: missing provider counts and previous history are not estimated. These are recorded usage totals, not billing or account quota limits.
+
+Choose **Settings → Appearance → Color theme** for Light, Dark, or System. Changes apply immediately and persist across restarts, even before connecting Ollama. System follows your device’s appearance automatically.
 
 ## Workflows
 
@@ -39,7 +51,9 @@ Choose **Plan** in the composer to review Dextana's steps before work starts. Ap
 
 ## MCP connections and tool permissions
 
-In **Settings → MCP connections**, add a named **Streamable HTTP** server (with an optional bearer token) or a **local stdio** command (arguments as a JSON array and optional environment variables). Saving a connection does not contact it. **Test connection** starts/connects to the server and retrieves its tools and input/output schemas without executing tools. Local commands run with the owner's account permissions; use environment fields for secrets rather than command arguments.
+Connectors appear as compact rows with their name, type, and status. Search the list or click a row to reveal activation, connection testing, editing, removal, and tool permissions.
+
+In **Settings → Connectors**, use **Add** at the top to add a named **Streamable HTTP** server (with an optional bearer token) or a **local stdio** command (arguments as a JSON array and optional environment variables). Saving a connection does not contact it. **Test connection** starts/connects to the server and retrieves its tools and input/output schemas without executing tools. Local commands run with the owner's account permissions; use environment fields for secrets rather than command arguments.
 
 Each discovered tool starts **Disabled**. Choose **Ask every time** or **Allow automatically**, then **Save tool permissions**. The agent's `mcp` tool lists only enabled tools and connections. “Ask every time” uses Harnest's `request_human_approval` for the exact evaluated call and overrides chat-wide auto-allow. These per-tool policies apply across chats and persist across restarts. Browser and Fused chat permissions continue to work separately.
 
@@ -49,9 +63,9 @@ Changed or newly discovered tools reset to disabled when retested. Execution als
 
 Create and manage physical or Unified operations in your own Fused Engine using Fused's tooling. Dextana connects to an existing Engine-hosted MCP version; it does not provision or modify the Engine.
 
-In Settings, enable Fused and supply its **Streamable HTTP MCP URL** and **MCP execution token**. A fixed token scoped to this owner's connected resources is appropriate for this single-owner app. Dextana supports the `search_docs` and `execute` tools and can retrieve their exact schemas with `list`.
+In Settings → Connectors → Fused, choose **Install for Dextana** to download the verified Fused CLI into Dextana’s own folder. No terminal commands or administrator access are needed. A compatible existing CLI on PATH is detected automatically; **Locate installed CLI** lets you choose one elsewhere. Dextana runs the CLI commands for browser login, server discovery, and scoped execution-token generation. Select an MCP version, enable **Automatically create agent tokens**, and specify the exact allowed operations. Token creation requires an approval showing the scope and 24-hour expiry. A direct call to an enabled tool creates a token when needed and continues the approved action; a valid token is reused in that chat. See [native Fused onboarding](docs/fused-native.md). Existing execution tokens can still be entered through manual setup.
 
-Each activity gets a separate MCP client/session. The execution token is encrypted with Electron `safeStorage` and never sent to the renderer after saving or included in model prompts. Provider credentials remain in Fused. Linux requires a working system keyring; plaintext token storage is refused. Remote MCP endpoints require HTTPS and redirects are refused.
+Each activity gets a separate MCP client/session. HTTP connections and execution run in the agent backend; local stdio launches and credential access remain in Electron. Manually supplied tokens are encrypted with Electron `safeStorage`; CLI-generated execution tokens stay in memory. Neither is included in renderer snapshots or model prompts. Provider credentials remain in Fused. Linux requires a working system keyring; plaintext token storage is refused. Remote MCP endpoints require HTTPS and redirects are refused.
 
 The agent discovers operation schemas before execution. Every browser or Fused action, including discovery, displays its arguments for permission before contacting the browser or MCP client. Choose **Allow action**, **Deny action**, or check **Auto-allow … actions in this chat** before allowing. Browser and MCP permissions are separate and saved with that chat; new chats and delegated workers ask independently. Use **Ask next time** on the in-chat automatic-access confirmation to turn auto-allow off. Denial stops the current turn. Dextana does not automatically replay failed or uncertain executions.
 
@@ -60,15 +74,15 @@ The agent discovers operation schemas before execution. Every browser or Fused a
 ```sh
 npm test                    # TypeScript unit tests
 npm run test:e2e            # Build and launch actual Electron + Harnest
-harnest test agent          # Harnest compiler and authored Python tests
+npm run test:backend       # Frozen Harnest environment and authored Python tests
 npm run check              # Unit tests, typecheck, build, desktop E2E
 ```
 
 The desktop tests launch the real Electron app and the real Harnest ADK runtime. Local HTTP fixtures implement Ollama inference, a browser form, and Fused MCP. Only external providers are substituted: the renderer, IPC, main-process services, Harnest execution, continuation protocol, and browser interactions are real. No downloaded model, live provider credential, or paid model call is required.
 
-E2E coverage includes model discovery and restart persistence, concurrent models, conversation context, cancellation, browser form submission, automatic embedding and cursor display, browser-session isolation, parallel worker delegation, Fused discovery/approval/exactly-once execution, and owner authentication. Compatible desktop tests share one temporary Electron/Harnest workspace per worker and create separate chats. Explicit restart checks reopen that workspace. First-run settings, standalone authentication, and renderer-only checks run in the `isolated` project. Failed runs keep per-test Playwright traces under `test-results/`, including both sides of a restart.
+E2E coverage includes model discovery and restart persistence, concurrent models, conversation context, cancellation, browser form submission, automatic embedding and cursor display, browser-session isolation, parallel worker delegation, Fused discovery/approval/exactly-once execution, and owner authentication. Compatible desktop tests share one temporary Electron/Harnest workspace per worker and create separate chats. Saved chat, browser, and integration scenarios share restart boundaries in `recovery.spec.ts`, reducing desktop restarts from 16 to 6 while retaining their feature assertions. Plan recovery keeps its pending/completed-plan boundaries. First-run settings, compiled-backend authentication, and renderer-only checks run in the `isolated` project. Failed runs keep per-test Playwright traces under `test-results/`, including both sides of a restart.
 
-Run `npm run test:e2e -- --project=desktop` for the shared desktop flows, or `--project=isolated` for the independent checks. Individual spec files and `--grep` still work. The shared fixture resets provider responders and call logs between tests, releases pending work, and restores the window size and composer. Tests that change app-wide settings must restore them. Desktop process IDs and workspace paths appear in test report annotations so reuse is verifiable.
+Run `npm run test:e2e -- --project=desktop` for the shared desktop flows, or `--project=isolated` for the independent checks. Use `tests/e2e/recovery.spec.ts --grep 'saved chat'` for a focused recovery journey. The shared fixture resets provider responders and call logs between tests, releases pending work, and restores the window size and composer. Recovery scenarios keep their own provider logs and named test steps. Tests that change app-wide settings must restore them. Desktop process IDs, workspace paths, and shared restart counts appear in report annotations. See [E2E testing](docs/e2e-testing.md) for the coverage groups and contribution guide.
 
 **Development rule:** write the full E2E flow for every testable feature before moving to the next feature, then run it through the actual app. Do not replace app behavior with test-only IPC shortcuts or bypass the Harnest runtime.
 
@@ -84,7 +98,7 @@ The extension ships with Dextana. Choose **Need the extension? → Open extensio
 
 ## Data and boundaries
 
-The app stores settings, transcripts, and action receipts in `state.json` inside Electron's per-user application-data directory (`~/Library/Application Support/dextana` on macOS). The Fused token is in a separate encrypted file. `DEXTANA_USER_DATA` selects a different workspace for tests or development.
+The backend stores transcripts, action receipts, queues and plans in `agent-state/activities.sqlite`, and Harnest sessions/checkpoints in `agent-state/agent.sqlite`, inside the per-user application-data directory (`~/Library/Application Support/dextana` on macOS). Electron stores settings, browser bookmarks, chat permissions and UI metadata in `state.json`. Legacy transcripts are imported once after the backend commits them. The Fused token is in a separate encrypted file. `DEXTANA_USER_DATA` selects a different workspace for tests or development.
 
 Harnest uses its managed ADK mode and native `ollama_chat` provider. The desktop starts the compiled backend on loopback with a random owner token, using its bundled private Python runtime. Only the trusted top-level renderer has the narrowly scoped preload API. Embedded pages have Chromium sandboxing, no Node.js, no preload bridge, separate persistent browser storage for each chat, denied device permissions, blocked downloads, and blocked popups. Browser tools accept fixed actions and observed element references, not arbitrary model-authored JavaScript.
 
@@ -96,21 +110,25 @@ Browser isolation is Chromium process/session isolation, **not a VM or container
 
 - Native alpha installers include the compiled backend and private Python runtime. Code signing, notarization, and auto-updates are not yet configured. See [packaging and CI](docs/packaging.md).
 - Browser automation supports top-level page navigation, reading, filling, and clicking. Iframes, file uploads/downloads, and OS computer-use are not implemented.
-- Harnest's execution/checkpoint store is process-local. Desktop transcripts and action receipts persist. After restart, a follow-up starts a new Harnest session with the saved conversation as historical context; suspended executions and browser logins are not resumed or replayed.
+- SQLite storage supports one backend process per local workspace. Completed Harnest sessions persist across restarts. Interrupted executions receive a fresh session with historical context; uncertain actions are never replayed automatically.
 - Thinking is shown when the selected Ollama model emits it. It streams in an expanded grey panel, then collapses into “Thought for …” when the answer arrives. Text and thinking continue streaming after desktop tool actions; saved thoughts can be reopened after restart.
-- The desktop enforces eight active runs, a five-minute run deadline, forty desktop actions per run, and bounded delegation. Actual parallel model inference depends on Ollama's configuration and available memory.
+- The backend enforces eight active runs, a five-minute run deadline, forty desktop actions per run, and bounded delegation. Actual parallel model inference depends on Ollama's configuration and available memory.
 - Fused operation authoring and dynamic connected-user selector configuration stay in Fused's tools for now.
 
-See [architecture](docs/architecture.md) for code boundaries and extension points. Licensed under [MIT](LICENSE).
+See [architecture](docs/architecture.md) for code boundaries and extension points. Licensed under the [Dextana No-Resale License](LICENSE). Personal and business use are allowed; selling or repackaging Dextana for resale requires written permission from [Fused](https://usefused.com).
 
 ### Work documents and chat context
 
-Use **Files** beside the message composer to select Excel (`.xlsx`), CSV, or UTF-8 text/Markdown (`.txt`, `.md`) documents. Selecting a file shares its path, not its contents. Ask Dextana to read it; the desktop displays a permission request before the file is opened. The selected Ollama model receives the approved contents (including when you choose an Ollama cloud model).
+Use **Files** beside the message composer or **+** in Context to select Word (`.docx`), PDF, Excel (`.xlsx`), CSV, UTF-8 text/Markdown (`.txt`, `.md`), or PNG, JPEG, GIF and WebP images. Selecting a file shares its path, not its contents. Ask Dextana to read it; the desktop displays a permission request before the file is opened. The selected model receives approved document contents or typed image media. Images require a vision-capable model.
 
 Ask for a budget workbook, contact table, meeting notes, or another work deliverable. Creation shows the destination and a document/table preview before saving. A simple filename saves in **Documents/Dextana**; an absolute path can target an existing folder. Existing files are never overwritten. Use **Show in folder** in the top-right **Context** box to find the result.
 
 Reads and creation have independent **Allow action**, **Deny action**, and chat-scoped **Auto-allow** choices. Revoke automatic access with **Ask next time** on its in-chat confirmation. Ordinary chat permissions do not transfer to other chats or delegated workers; an explicitly approved plan shares only its listed resources with its workers for that run. Cancelling or denying a pending request prevents that action.
 
-The Context box groups references into **Files** and **Links**, both collapsed by default with item counts. It records up to 100 recent file/link references for the selected chat, distinguishing selected-but-unread files, read documents, created documents, referenced URLs, and visited pages. These references survive restart; they are not a claim that a complete document remains in the model's token window. Opening a link from the box uses your default browser. The agent's browser actions remain permission-gated and use Dextana's embedded browser.
+The searchable Context panel groups references into **Files** and **Links**, with counts and read/created statuses. Groups start collapsed; attaching context opens Files, and search reveals matching groups. It records up to 100 recent file/link references for the selected chat. These references survive restart; they are not a claim that a complete document remains in the model's token window. Opening a link uses your default browser. In a narrow split view, Context sits above the conversation without covering messages.
 
-This workflow is for documents and tables: no terminal, project tree, code editor, source-file editing, macros, or formula execution. Excel outputs use formatted headers, frozen header rows, and table filters; formulas in existing workbooks return cached values without recalculation. Supported limits: 5 MB input files, 20 MB expanded workbook data, 20 sheets, 100 columns, 10,000 cells, and 500,000 text characters. CSV creation accepts one structured table and escapes formula-like text. Word/PDF and other file types are not supported yet.
+Excel outputs use formatted headers, frozen header rows, and table filters; formulas in existing workbooks return cached values without recalculation. Supported limits: 5 MB input files, 20 MB expanded workbook data, 20 sheets, 100 columns, 10,000 cells, and 500,000 text characters. CSV creation accepts one structured table and escapes formula-like text. Word and PDF support text extraction; scanned PDFs still require OCR. Creation supports XLSX, CSV, TXT and Markdown.
+
+### Rich replies
+
+Chat Markdown and A2UI text share typography and rendering components. Replies support scrollable tables, image previews, copyable code, bar/line/area charts, and Mermaid diagrams. Charts expose their underlying data; diagrams expose their source. Remote images load only when you choose **Show image**, through a bounded image fetch that sends no browser cookies. An unsupported A2UI component leaves its valid siblings visible.

@@ -1,11 +1,27 @@
-import { expect, test } from 'vitest';
-import { mkdtemp, writeFile, readFile, rm, symlink } from 'node:fs/promises';
+import { expect, test, vi } from 'vitest';
+import * as fs from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm, symlink, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import ExcelJS from 'exceljs';
 import { WorkFiles } from '../../src/main/files';
 
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof fs>();
+  return { ...actual, open: vi.fn(actual.open) };
+});
+
 const signal = () => new AbortController().signal;
+test('image reads return typed media and reject mismatched formats and image creation', () => fixture(async (files, directory) => {
+  const path = join(directory, 'reference.png');
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aMZsAAAAASUVORK5CYII=';
+  await writeFile(path, Buffer.from(png, 'base64'));
+  const result = await files.execute(await files.prepare({ action: 'read', path }), signal());
+  expect('image' in result && result.image).toEqual({ type: 'image', mediaType: 'image/png', data: png });
+  await writeFile(path, '<svg/>');
+  await expect(files.execute(await files.prepare({ action: 'read', path }), signal())).rejects.toThrow('format');
+  await expect(files.prepare({ action: 'create', path: 'new.png' })).rejects.toThrow('supported for reading');
+}));
 async function fixture(run: (files: WorkFiles, directory: string) => Promise<void>) {
   const directory = await mkdtemp(join(tmpdir(), 'dextana-files-unit-'));
   try {
@@ -31,6 +47,23 @@ test('document capabilities reject source files, traversal, symlinks, and oversi
     await expect(
       files.execute(await files.prepare({ action: 'read', path }), signal()),
     ).rejects.toThrow('5 MB');
+  }));
+test('rejects a document replaced between checking its entry and opening the handle', () =>
+  fixture(async (files, directory) => {
+    const path = join(directory, 'brief.txt');
+    await writeFile(path, 'Approved document');
+    const plan = await files.prepare({ action: 'read', path });
+    const { open } = await vi.importActual<typeof fs>('node:fs/promises');
+    const replacement = vi.mocked(fs.open).mockImplementationOnce(async (...args) => {
+      await rename(path, join(directory, 'original.txt'));
+      await writeFile(path, 'Unapproved replacement');
+      return open(...args);
+    });
+    try {
+      await expect(files.execute(plan, signal())).rejects.toThrow('document changed');
+    } finally {
+      replacement.mockImplementation(open);
+    }
   }));
 test('creates literal Excel cells and reads the resulting workbook without running formulas', () =>
   fixture(async (files) => {
@@ -83,6 +116,7 @@ test('CSV escapes cells and neutralizes spreadsheet formulas; cancellation canno
     expect(await readFile(plan.path, 'utf8')).toContain('"-2"');
   }));
 
+// Loading the real document parsers can exceed five seconds on a cold Windows runner.
 test('reads text from attached Word and PDF documents', async () => {
   const { wordDocument, pdfDocument } = await import('../helpers/documents');
   await fixture(async (files, directory) => {
@@ -96,4 +130,4 @@ test('reads text from attached Word and PDF documents', async () => {
     await writeFile(path, pdfDocument(''));
     await expect(files.execute(await files.prepare({ action: 'read', path }), signal())).rejects.toThrow('no readable text layer');
   });
-});
+}, 15_000);

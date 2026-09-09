@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from '../../src/main/store';
-it('restores work as interrupted without reusing a dead runtime session', async () => {
+it('preserves completed runtime sessions while retiring interrupted executions', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'dextana-store-'));
   try {
     const store = new Store(directory);
@@ -18,11 +18,16 @@ it('restores work as interrupted without reusing a dead runtime session', async 
       status: 'running',
       runtimeSessionId: 'dead-session',
     });
+    store.state.activities.push({
+      ...store.state.activities[0], id: 'activity-2', status: 'completed',
+      runtimeSessionId: 'durable-session',
+    });
     await store.save();
     const restored = new Store(directory);
     await restored.load();
     expect(restored.state.activities[0].status).toBe('interrupted');
     expect(restored.state.activities[0].runtimeSessionId).toBeUndefined();
+    expect(restored.state.activities[1].runtimeSessionId).toBe('durable-session');
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

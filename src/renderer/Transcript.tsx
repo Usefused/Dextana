@@ -1,3 +1,4 @@
+import { Button } from './ui';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 export function Transcript({ children, followRequest }: { children: ReactNode; followRequest: number }) {
@@ -67,9 +68,9 @@ export function Transcript({ children, followRequest }: { children: ReactNode; f
         <div className="transcript-content" ref={content}>{children}</div>
       </div>
       {paused && (
-        <button className="jump-latest secondary" onClick={follow}>
+        <Button variant="secondary" className="jump-latest secondary" onClick={follow}>
           Jump to latest ↓
-        </button>
+        </Button>
       )}
     </div>
   );

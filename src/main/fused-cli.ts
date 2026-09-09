@@ -50,6 +50,10 @@ export function parseFusedServers(
   }
   return { servers, total: page.total! };
 }
+class FusedCLIUnavailable extends Error {
+  constructor() { super('Install fused-cli and make it available on PATH, then reopen Dextana to connect Fused.'); }
+}
+
 export class FusedCLI {
   private active?: AbortController;
   private idle: Promise<void> = Promise.resolve();
@@ -67,6 +71,7 @@ export class FusedCLI {
     private store: Store,
     private directory: string,
     private publish: () => void,
+    private executable?: () => Promise<string>,
   ) {}
   cancel() {
     this.active?.abort();
@@ -106,19 +111,21 @@ export class FusedCLI {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         }
       }
+      const executable = this.executable ? await this.executable() : 'fused-cli';
       const run = (args: string[]) =>
         new Promise<string>((resolve, reject) => {
           if (controller.signal.aborted) {
             reject(new Error('Fused request cancelled.'));
             return;
           }
-          const child = spawn('fused-cli', args, {
+          const child = spawn(executable, args, {
             cwd: root,
             env: fusedEnvironment(temporary),
             stdio: ['ignore', 'pipe', 'pipe'],
           });
           let output = '';
           let failed = false;
+          let missing = false;
           const stop = () => {
             child.kill('SIGTERM');
             setTimeout(() => {
@@ -138,13 +145,15 @@ export class FusedCLI {
             }
           });
           child.stderr.resume(); // Never expose CLI diagnostics that might contain credentials.
-          child.on('error', () => {
+          child.on('error', (error: NodeJS.ErrnoException) => {
+            missing = error.code === 'ENOENT';
             failed = true;
           });
           child.on('close', (code) => {
             clearTimeout(timer);
             controller.signal.removeEventListener('abort', stop);
             if (controller.signal.aborted) reject(new Error('Fused request cancelled.'));
+            else if (missing) reject(new FusedCLIUnavailable());
             else if (code !== 0 || failed)
               reject(
                 new Error(
@@ -190,7 +199,8 @@ export class FusedCLI {
           return { ...result, engine };
         } finally { signal.removeEventListener('abort', abort); }
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof FusedCLIUnavailable && !attempted) throw error;
       if (attempted) await this.revoke({ engine, mcpId, name }).catch(() => {});
       throw new Error(attempted ? 'Fused token creation did not complete reliably. Cleanup was attempted; do not automatically retry issuance. Any issued token expires within 24 hours.' : 'Could not verify the Fused account. No token creation was attempted.');
     }

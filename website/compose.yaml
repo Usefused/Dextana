@@ -1,0 +1,14 @@
+services:
+  website:
+    build: .
+    ports:
+      - "${WEBSITE_PORT:-3000}:3000"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

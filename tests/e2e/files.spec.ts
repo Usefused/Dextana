@@ -86,114 +86,6 @@ test('file reads and workbook creation require separate consent and preserve doc
   }
 });
 
-test('context lists attached and read documents, created workbooks, and URLs per chat across restart', async ({
-  workspace,
-}, testInfo) => {
-  test.setTimeout(120_000);
-  let source = '';
-  const work = await workspace((body, res) => {
-    const lastUser = body.messages.findLastIndex((m: any) => m.role === 'user');
-    const prompt = body.messages[lastUser].content;
-    const results = body.messages.slice(lastUser + 1).filter((m: any) => m.role === 'tool');
-    if (prompt.includes('Keep this reference')) reply(body, res, 'Reference noted.');
-    else if (!results.length)
-      reply(body, res, '', [
-        {
-          function: {
-            name: 'files',
-            arguments: prompt.includes('Read')
-              ? { action: 'read', path: source }
-              : {
-                  action: 'create',
-                  path: 'Meeting.txt',
-                  content: 'Meeting decisions: confirm the budget.',
-                },
-          },
-        },
-      ]);
-    else reply(body, res, 'Document ready: ' + results.at(-1).content);
-    return true;
-  });
-  try {
-    source = join(work.directory, 'Context brief.txt');
-    await writeFile(source, 'Context document contents');
-    // Select a real path through the production picker IPC; only the native OS dialog is substituted.
-    await work.app().evaluate(({ dialog }, path) => {
-      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
-    }, source);
-    await work.page.getByRole('button', { name: 'Attach files' }).click();
-    await expect(work.page.getByRole('region', { name: 'Attached files' })).toContainText(
-      'Context brief.txt',
-    );
-    await work.page
-      .getByLabel('Describe your work')
-      .fill('Keep this reference https://example.com/budget');
-    await work.page.getByRole('button', { name: 'Start activity' }).click();
-    await expect(work.page.getByTestId('assistant-message')).toContainText('Reference noted', { timeout: 60_000 });
-    const context = () => work.page.getByRole('region', { name: 'Agent context' });
-    const filesGroup = context().locator('details.context-group').filter({ has: work.page.locator('summary', { hasText: 'Files' }) });
-    const linksGroup = context().locator('details.context-group').filter({ has: work.page.locator('summary', { hasText: 'Links' }) });
-    await expect(filesGroup).not.toHaveAttribute('open', '');
-    await expect(linksGroup).not.toHaveAttribute('open', '');
-    await expect(filesGroup.locator('summary')).toHaveText('Files1');
-    await expect(linksGroup.locator('summary')).toHaveText('Links1');
-    await expect(context().getByRole('button', { name: 'Show Context brief.txt in folder' })).not.toBeVisible();
-    await filesGroup.locator('summary').click();
-    await expect(context().getByRole('button', { name: 'Show Context brief.txt in folder' })).toBeVisible();
-    await expect(linksGroup).not.toHaveAttribute('open', '');
-    await linksGroup.locator('summary').focus();
-    await work.page.keyboard.press('Enter');
-    await expect(linksGroup.getByRole('button')).toBeVisible();
-    await expect(context()).toContainText('Selected · Not read');
-    await expect(work.page.locator('.message.user').first().getByRole('list', { name: 'Message attachments' })).toContainText('Context brief.txt');
-    await expect(context()).toContainText('example.com/budget');
-    expect(JSON.stringify(work.calls)).not.toContain('Context document contents');
-    await work.page.getByLabel('Describe your work').fill('Read the attached brief');
-    await work.page.getByRole('button', { name: 'Send message' }).click();
-    const gate = () => work.page.getByRole('region', { name: 'Action approval' });
-    await expect(gate()).toBeVisible();
-    await gate().getByRole('button', { name: 'Allow action', exact: true }).click();
-    await expect(context()).toContainText('Read');
-    await expect(context()).not.toContainText('Not read');
-    await expect(work.page.getByTestId('assistant-message').last()).toContainText(
-      'Context document contents',
-    );
-    await work.page.getByLabel('Describe your work').fill('Create meeting notes');
-    await work.page.getByRole('button', { name: 'Send message' }).click();
-    await expect(gate()).toBeVisible();
-    await gate().getByRole('button', { name: 'Allow action', exact: true }).click();
-    await expect(context()).toContainText('Meeting.txt');
-    await expect(context()).toContainText('Created');
-    await expect(
-      context().getByRole('button', { name: 'Show Meeting.txt in folder' }),
-    ).toBeVisible();
-    await work.page.screenshot({ path: testInfo.outputPath('document-context.png') });
-    await expect(work.page.getByTestId('activity-status')).toHaveText('Completed');
-    const title = await work.page.evaluate(
-      async () => (await window.dextana.snapshot()).activities[0].title,
-    );
-    await start(work.page, 'Keep this reference for a separate chat');
-    await expect(work.page.getByTestId('assistant-message')).toContainText('Reference noted');
-    await expect(context()).not.toContainText('Meeting.txt');
-    await expect(context()).not.toContainText('example.com/budget');
-    // Simulate a saved chat from the version before context tracking existed.
-    const savedState = JSON.parse(await readFile(join(work.directory, 'state.json'), 'utf8'));
-    delete savedState.activities[0].context;
-    savedState.activities[0].messages[0].content += ' https://example.com/legacy-reference';
-    await writeFile(join(work.directory, 'state.json'), JSON.stringify(savedState));
-    await work.restart();
-    await work.page.getByRole('button', { name: 'Keep this reference for a separate chat', exact: true }).click();
-    await expect(context()).toContainText('example.com/legacy-reference');
-    await work.page.getByRole('button', { name: title, exact: true }).click();
-    await expect(work.page.locator('.message.user').first().getByRole('list', { name: 'Message attachments' })).toContainText('Context brief.txt');
-    await expect(context()).toContainText('Meeting.txt');
-    await expect(context()).toContainText('example.com/budget');
-    await expect(context().locator('details.context-group[open]')).toHaveCount(0);
-  } finally {
-    await work.close();
-  }
-});
-
 test('CSV creation can be denied, auto-allowed in one chat, and cancelled in another', async ({
   workspace,
 }) => {
@@ -297,7 +189,7 @@ test('Context plus attaches documents and the agent reads Word and PDF after app
   } finally { await work.close(); }
 });
 
-test('Context keeps its header fixed and scrolls only expanded lists without a scrollbar', async ({ workspace }) => {
+test('Context keeps its header fixed and scrolls expanded lists with a discoverable scrollbar', async ({ workspace }) => {
   const work = await workspace();
   try {
     const paths = Array.from({ length: 10 }, (_, i) => join(work.directory, `Scroll reference ${i}.txt`));
@@ -310,13 +202,13 @@ test('Context keeps its header fixed and scrolls only expanded lists without a s
     const panel = work.page.getByRole('region', { name: 'Agent context' });
     await panel.getByRole('button', { name: 'Attach context files' }).click();
     await expect(panel.locator('.context-group summary').first()).toContainText('10');
-    await panel.locator('.context-group summary').first().click();
+    await expect(panel.locator('.context-group').first()).toHaveAttribute('open', '');
     const list = panel.getByRole('region', { name: 'Files in context' });
     const header = panel.getByRole('heading', { name: 'Context', exact: true });
     const before = await header.boundingBox();
     expect(await list.evaluate(el => el.clientHeight)).toBeGreaterThan(180);
     expect(await list.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
-    expect(await list.evaluate(el => getComputedStyle(el).scrollbarWidth)).toBe('none');
+    expect(await list.evaluate(el => getComputedStyle(el).scrollbarWidth)).toBe('thin');
     await list.focus();
     await work.page.keyboard.press('End');
     await expect.poll(() => list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);

@@ -1,5 +1,7 @@
+import { AgentPlan, Button, Icon, Notice } from './ui';
 import { useState } from 'react';
 import type { Activity, WorkPlan as Plan } from '../shared/types';
+import { ReviewIcon } from './ReviewIcon';
 
 const labels: Record<Plan['status'], string> = {
   proposed: 'Awaiting approval',
@@ -14,6 +16,7 @@ export function WorkPlan({ plan, activity }: { plan: Plan; activity: Activity })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const pending = plan.status === 'proposed';
+  const scopeCount = Object.values(plan.scope).reduce((count, items) => count + items.length, 0);
   async function decide(approved: boolean) {
     setBusy(true);
     setError('');
@@ -26,76 +29,104 @@ export function WorkPlan({ plan, activity }: { plan: Plan; activity: Activity })
     }
   }
   return (
-    <section className="work-plan" role="region" aria-label="Work plan">
-      <div className="work-plan-heading">
-        <span>PLAN</span>
-        <span className="work-plan-status">{labels[plan.status]}</span>
-      </div>
-      <h3>{plan.title}</h3>
-      <ol>
-        {plan.steps.map((step, index) => (
-          <li key={index}>{step}</li>
-        ))}
-      </ol>
-      <details className="work-plan-scope" open={pending || undefined}>
-        <summary>Included permissions</summary>
-        <p>For this plan’s run and its workers only:</p>
-        <ul>
-          {plan.scope.browserOrigins.map((origin) => (
-            <li key={origin}>Browse and interact with {origin}</li>
-          ))}
-          {plan.scope.files.map((file, index) => (
-            <li key={index}>
-              {file.action === 'read' ? 'Read' : 'Create'}{' '}
-              <span className="plan-file-path">{file.path}</span>
-            </li>
-          ))}
-          {plan.scope.mcpTools.map((tool, index) => (
-            <li key={index}>
-              Use {tool.serverName} · {tool.toolName}
-            </li>
-          ))}
-          {plan.scope.fusedIntegrations.map((integration) => (
-            <li key={integration.id}>Use {integration.name} integration</li>
-          ))}
-        </ul>
-        {!Object.values(plan.scope).some((items) => items.length) && (
-          <p>No browser, file, or integration access requested.</p>
-        )}
-        <p className="muted">
-          Other resources and credential setup still ask. Existing tool restrictions remain in
-          effect.
-        </p>
-      </details>
-      {pending && (
-        <>
-          <p className="muted">To change this plan, send a follow-up in Plan mode.</p>
-          <div className="work-plan-actions">
-            <button
-              className="primary"
+    <AgentPlan
+      title={plan.title}
+      status={plan.status}
+      statusLabel={labels[plan.status]}
+      steps={plan.steps}
+      busy={busy}
+      permissions={
+        <details className="work-plan-scope" open={pending || undefined}>
+          <summary>
+            <ReviewIcon name="shield" />
+            <span>Included permissions</span>
+            <span className="work-plan-scope-count">{scopeCount}</span>
+            <ReviewIcon name="chevron" />
+          </summary>
+          <div className="work-plan-scope-body">
+            <p>For this plan’s run and its workers only.</p>
+            <ul className="work-plan-resources">
+              {plan.scope.browserOrigins.map((origin) => (
+                <li key={origin}>
+                  <ReviewIcon name="browser" />
+                  <div>
+                    <span className="work-plan-resource-label">Browse and interact</span>
+                    <span>{origin}</span>
+                  </div>
+                </li>
+              ))}
+              {plan.scope.files.map((file, index) => (
+                <li key={index}>
+                  <ReviewIcon name="file" />
+                  <div>
+                    <span className="work-plan-resource-label">
+                      {file.action === 'read' ? 'Read file' : 'Create file'}
+                    </span>
+                    <span className="plan-file-path">{file.path}</span>
+                  </div>
+                </li>
+              ))}
+              {plan.scope.mcpTools.map((tool, index) => (
+                <li key={index}>
+                  <ReviewIcon name="integration" />
+                  <div>
+                    <span className="work-plan-resource-label">Use connected tool</span>
+                    <span>
+                      {tool.serverName} · {tool.toolName}
+                    </span>
+                  </div>
+                </li>
+              ))}
+              {plan.scope.fusedIntegrations.map((integration) => (
+                <li key={integration.id}>
+                  <ReviewIcon name="integration" />
+                  <div>
+                    <span className="work-plan-resource-label">Use integration</span>
+                    <span>{integration.name}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {!Object.values(plan.scope).some((items) => items.length) && (
+              <p>No browser, file, or integration access requested.</p>
+            )}
+            <p className="muted">
+              Other resources and credential setup still ask. Existing tool restrictions remain in
+              effect.
+            </p>
+          </div>
+        </details>
+      }
+      actions={
+        pending && (
+          <>
+            <Button
+              icon={<Icon name="check" />}
+              variant="primary"
               disabled={busy || activity.status !== 'awaiting_plan'}
               onClick={() => void decide(true)}
             >
               Approve plan and start
-            </button>
-            <button
-              className="secondary"
+            </Button>
+            <Button
+              icon={<Icon name="close" />}
               disabled={busy || activity.status !== 'awaiting_plan'}
               onClick={() => void decide(false)}
             >
               Decline plan
-            </button>
-          </div>
-        </>
-      )}
-      {plan.approvedAt && (
-        <p className="work-plan-receipt">Approved {new Date(plan.approvedAt).toLocaleString()}</p>
-      )}
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-    </section>
+            </Button>
+          </>
+        )
+      }
+      footer={
+        pending && (
+          <p className="review-footer-note">Want to adjust it? Send a follow-up in Plan mode.</p>
+        )
+      }
+      receipt={
+        plan.approvedAt ? `Approved ${new Date(plan.approvedAt).toLocaleString()}` : undefined
+      }
+      error={error && <Notice tone="danger">{error}</Notice>}
+    />
   );
 }

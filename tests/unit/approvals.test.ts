@@ -1,7 +1,8 @@
 import { expect, test, vi } from 'vitest';
-import { Activities } from '../../src/main/activities';
+import { LocalCapabilities } from '../../src/main/local-capabilities';
+import { randomUUID } from 'node:crypto';
+import type { Activity } from '../../src/shared/types';
 import { Store } from '../../src/main/store';
-import type { Runtime } from '../../src/main/runtime';
 import type { Browsers } from '../../src/main/browser';
 import type { Fused } from '../../src/main/fused';
 
@@ -11,31 +12,24 @@ function setup(name = 'browser') {
   store.state.fusedIntegrations = [{ id: 'integration', name: 'Fused', enabled: true, url: 'https://example.com/mcp', hasToken: true, revision: 'one' }];
   vi.spyOn(store, 'save').mockResolvedValue();
   const execute = vi.fn().mockResolvedValue({ done: true });
-  const runtime = {
-    ensure: async () => {},
-    request: async () => Response.json({ id: 'session' }),
-    stream: async (
-      _session: string,
-      _input: string,
-      _meta: unknown,
-      _signal: AbortSignal,
-      _consume: unknown,
-      tool: (value: unknown) => Promise<unknown>,
-    ) => {
-      await tool({
-        name,
-        arguments: { action: name === 'browser' ? 'read' : 'list', arguments_json: '{}' },
-      });
-      return { status: 'completed', outputText: 'Done' };
-    },
-  } as unknown as Runtime;
-  const activities = new Activities(
-    store,
-    runtime,
-    () => {},
+  const local = new LocalCapabilities(
+    store, () => {},
     { execute, prepare: (_id: string, args: unknown) => args } as unknown as Browsers,
     { call: execute, resolve: () => store.state.fusedIntegrations![0] } as unknown as Fused,
   );
+  const pending = new Map<string, { controller: AbortController; promise: Promise<void> }>();
+  const activities = Object.assign(local, {
+    async start(input: { prompt: string; model: string }, parent?: Activity) {
+      const activity: Activity = { id: randomUUID(), title: input.prompt, model: input.model, ollamaUrl: '', status: 'running', messages: [], events: [], parentId: parent?.id };
+      store.state.activities.push(activity);
+      const controller = new AbortController();
+      const promise = local.execute(activity, { name, arguments: { action: name === 'browser' ? 'read' : 'list', arguments_json: '{}' } }, controller.signal)
+        .then(() => { activity.status = 'completed'; }, () => { activity.status = 'cancelled'; });
+      pending.set(activity.id, { controller, promise });
+      return activity.id;
+    },
+    async cancel(id: string) { const item = pending.get(id); item?.controller.abort(); await item?.promise; },
+  });
   async function start() {
     const id = await activities.start({ prompt: 'Test permission', model: 'test' });
     const activity = store.state.activities.find((item) => item.id === id)!;

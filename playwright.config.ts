@@ -9,11 +9,11 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop',
-      testIgnore: ['**/settings.spec.ts', '**/security.spec.ts', '**/scrolling.spec.ts'],
+      testIgnore: ['**/settings.spec.ts', '**/openai-models.spec.ts', '**/security.spec.ts', '**/scrolling.spec.ts'],
     },
     {
       name: 'isolated',
-      testMatch: ['**/settings.spec.ts', '**/security.spec.ts', '**/scrolling.spec.ts'],
+      testMatch: ['**/settings.spec.ts', '**/openai-models.spec.ts', '**/security.spec.ts', '**/scrolling.spec.ts'],
     },
   ],
 });

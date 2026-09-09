@@ -1,0 +1,27 @@
+.login-transfer-result {
+  position: fixed;
+  z-index: 1000;
+  bottom: 24px;
+  left: 272px;
+  width: 300px;
+  max-width: calc(100vw - 600px);
+  padding: 16px;
+  border: 1px solid light-dark(#ccd7c4, var(--dark-border));
+  border-radius: var(--dx-radius-lg);
+  background: light-dark(#faf9f6, var(--dark-canvas));
+  box-shadow: 0 8px 28px #0002;
+  font-size: 13px;
+}
+.login-transfer-result p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+.login-transfer-result button {
+  padding: 6px 12px;
+  cursor: pointer;
+}
+@media (max-width: 1050px) {
+  .login-transfer-result {
+    left: 231px;
+  }
+}

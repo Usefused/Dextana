@@ -1,5 +1,7 @@
+import { BrowserResize } from './BrowserResize';
+import { BrowserTabs, BrowserToolbar, Button, IconButton, TextInput } from './ui';
 import { LoginTransfer } from './LoginTransfer';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Activity, BrowserPane, LoginConnection } from '../shared/types';
 
 export function BrowserPanel({
@@ -10,10 +12,6 @@ export function BrowserPanel({
   activities: Activity[];
 }) {
   const [connection, setConnection] = useState<LoginConnection>();
-  const selectedTab = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    selectedTab.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [browser.tabId]);
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [address, setAddress] = useState('');
@@ -34,16 +32,23 @@ export function BrowserPanel({
       setBusy(false);
     }
   }
-  useEffect(() => window.dextana.onLoginOffer(id => {
-    if (id === browser.tabId) void act(async () => setConnection(await window.dextana.beginLoginTransfer(id)));
-  }), [browser.tabId]);
+  useEffect(
+    () =>
+      window.dextana.onLoginOffer((id) => {
+        if (id === browser.tabId)
+          void act(async () => setConnection(await window.dextana.beginLoginTransfer(id)));
+      }),
+    [browser.tabId],
+  );
   return (
     <aside className="browser-pane" aria-label="In-app browser">
+      <BrowserResize />
       <div className="browser-pane-title">
         <span>◉ Activity browser</span>
-        <button
+        <IconButton
+          icon="key"
           className="site-login-button"
-          aria-label="Use login from my browser"
+          label="Use login from my browser"
           title="Use login from my browser"
           disabled={busy || browser.busyTabIds.includes(browser.tabId)}
           onClick={() => {
@@ -51,69 +56,51 @@ export function BrowserPanel({
               setConnection(await window.dextana.beginLoginTransfer(browser.tabId)),
             );
           }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="8" cy="9" r="4"/><path d="m11 12 8 8m-3-3 3-3m-6 0 3-3"/></svg>
-        </button>
+        />
         <div>
-          <button
-            aria-label="New browser tab"
+          <IconButton
+            icon="plus"
+            label="New browser tab"
             disabled={busy}
             onClick={() => {
               setAdding(!adding);
               setError('');
             }}
-          >
-            +
-          </button>
-          <button
-            aria-label="Close browser pane"
+          />
+          <IconButton
+            icon="close"
+            label="Close browser pane"
             onClick={() => {
               void window.dextana.hideBrowser();
             }}
-          >
-            ×
-          </button>
+          />
         </div>
       </div>
-      <div className="browser-tabs" role="tablist" aria-label="Browser tabs">
-        {browser.tabs.map((tab) => {
+      <BrowserTabs
+        selectedId={browser.tabId}
+        disabled={busy}
+        tabs={browser.tabs.map((tab) => {
           const owner = activities.find((activity) => activity.id === tab.activityId);
           const working = browser.busyTabIds.includes(tab.id);
-          return (
-            <div
-              className={`browser-tab ${browser.tabId === tab.id ? 'selected' : ''}`}
-              key={tab.id}
-              ref={browser.tabId === tab.id ? selectedTab : undefined}
-            >
-              <button
-                role="tab"
-                aria-selected={browser.tabId === tab.id}
-                aria-label={`${tab.title} · ${owner?.title ?? 'Chat'}${working ? ' · Working' : ''}`}
-                title={`${tab.title}\n${tab.url}\n${owner?.title ?? 'Chat'}${tab.needsReopen ? ' · Saved' : ''}`}
-                onClick={() => {
-                  void act(() => window.dextana.showBrowser(tab.activityId, tab.id));
-                }}
-              >
-                <span>
-                  {working ? '◌ ' : ''}
-                  {tab.title}
-                </span>
-
-              </button>
-              <button
-                aria-label={`Close tab ${tab.title}`}
-                disabled={working || busy}
-                onClick={() => {
-                  void act(() => window.dextana.closeBrowserTab(tab.id));
-                }}
-              >
-                ×
-              </button>
-            </div>
-          );
+          return {
+            id: tab.id,
+            title: tab.title,
+            busy: working,
+            label: `${tab.title} · ${owner?.title ?? 'Chat'}${working ? ' · Working' : ''}`,
+            tooltip: `${tab.title}\n${tab.url}\n${owner?.title ?? 'Chat'}${tab.needsReopen ? ' · Saved' : ''}`,
+          };
         })}
-      </div>
-      <input aria-label="Activity browser address" readOnly value={browser.url} />
+        select={(id) => {
+          const tab = browser.tabs.find((tab) => tab.id === id);
+          if (tab) void act(() => window.dextana.showBrowser(tab.activityId, id));
+        }}
+        close={(id) => void act(() => window.dextana.closeBrowserTab(id))}
+      />
+      <BrowserToolbar
+        url={browser.url}
+        disabled={busy || browser.busyTabIds.includes(browser.tabId)}
+        refresh={() => void act(() => window.dextana.refreshBrowserTab(browser.tabId))}
+      />
       {adding && (
         <form
           className="browser-new-tab"
@@ -126,23 +113,23 @@ export function BrowserPanel({
             });
           }}
         >
-          <label>
-            New tab address
-            <input
-              type="url"
-              aria-label="New tab address"
-              placeholder="https://example.com"
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              required
-            />
-          </label>
-          <button disabled={busy} type="submit">
-            Open new tab
-          </button>
-          <button type="button" onClick={() => setAdding(false)}>
-            Cancel
-          </button>
+          <TextInput
+            compact
+            type="url"
+            aria-label="New tab address"
+            placeholder="https://example.com"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            required
+          />
+          <div className="dx-actions">
+            <Button size="small" variant="primary" disabled={busy} type="submit">
+              Open new tab
+            </Button>
+            <Button size="small" onClick={() => setAdding(false)}>
+              Cancel
+            </Button>
+          </div>
         </form>
       )}
       {error && (
@@ -152,7 +139,11 @@ export function BrowserPanel({
       )}
       <div className="browser-surface" />
       {connection && (
-        <LoginTransfer connection={connection} close={() => setConnection(undefined)} />
+        <LoginTransfer
+          key={connection.id}
+          connection={connection}
+          close={() => setConnection(undefined)}
+        />
       )}
     </aside>
   );

@@ -1,5 +1,5 @@
 from harnest.models.work import WorkItem
-from harnest.tool import client_tool
+from harnest.agent import client_tool
 
 
 @client_tool

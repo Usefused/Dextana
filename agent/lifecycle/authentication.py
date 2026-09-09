@@ -1,7 +1,7 @@
 import os
 from secrets import compare_digest
 from harnest.auth import AuthenticationError, AuthPrincipal
-from harnest.lifecycle import lifecycle
+from harnest import lifecycle
 
 
 @lifecycle.authenticate

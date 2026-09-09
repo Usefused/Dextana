@@ -11,8 +11,8 @@ test('browser approvals show the exact selected page without changing execution 
 
 test('simple permissions are questions without hiding extra action inputs', async () => {
   const { browserPermissionQuestion } = await import('../../src/shared/browser-approval');
-  expect(browserPermissionQuestion('{"action":"list_tabs"}')?.question).toBe('Allow Dextana to view the open tabs in this chat?');
-  expect(browserPermissionQuestion(JSON.stringify({ action: 'read', page: { title: 'Budget', address: 'https://example.com' } }))).toEqual({ question: 'Allow Dextana to read “Budget”?', address: 'https://example.com' });
+  expect(browserPermissionQuestion('{"action":"list_tabs"}')?.question).toBe('Allow Dext to view the open tabs in this chat?');
+  expect(browserPermissionQuestion(JSON.stringify({ action: 'read', page: { title: 'Budget', address: 'https://example.com' } }))).toEqual({ question: 'Allow Dext to read “Budget”?', address: 'https://example.com' });
   expect(browserPermissionQuestion('{"action":"fill","text":"Important input"}')).toBeUndefined();
   expect(browserPermissionQuestion('{"action":"read","selector":"#private"}')).toBeUndefined();
 });

@@ -2,11 +2,17 @@ import { externalURL } from '../shared/links';
 import { rememberReferences } from './context';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Snapshot } from '../shared/types';
+import type { Activity, Snapshot } from '../shared/types';
+
+export function localActivity(activity: Activity) {
+  const { id, browser, browserTabsInitialized, context, folderId, permissions, allowAllApprovals, archived } = activity;
+  return { id, browser, browserTabsInitialized, context, folderId, permissions, allowAllApprovals, archived };
+}
 
 export class Store {
+  backendOwnsActivities = false;
   state: Snapshot = {
-    settings: { ollamaUrl: 'http://127.0.0.1:11434', models: [], defaultModel: '' },
+    settings: { ollamaUrl: 'http://127.0.0.1:11434', models: [] },
     activities: [],
     fused: { enabled: false, url: '', hasToken: false },
   };
@@ -23,6 +29,7 @@ export class Store {
         );
     }
     this.state.activities ??= [];
+    if (!['system', 'light', 'dark'].includes(this.state.theme ?? '')) this.state.theme = 'system';
     this.state.mcpConnections ??= [];
     this.state.folders ??= [];
     const previousBrowser = this.state.browser;
@@ -33,6 +40,8 @@ export class Store {
       : [];
     const tabIds = new Set<string>();
     for (const activity of this.state.activities) {
+      activity.messages ??= [];
+      activity.events ??= [];
       if (!activity.context) {
         activity.context = [];
         for (const message of activity.messages) if (message.content) rememberReferences(activity, message.content);
@@ -60,7 +69,9 @@ export class Store {
       for (const plan of activity.plans ?? []) if (plan.status === 'approved') plan.status = 'interrupted';
       delete activity.activePlanId;
       delete activity.planOwnerId;
-      delete activity.runtimeSessionId;
+      // Completed Harnest sessions are durable. Interrupted work gets a fresh
+      // execution context so uncertain actions cannot resume implicitly.
+      if (!['completed', 'awaiting_plan'].includes(activity.status)) delete activity.runtimeSessionId;
       delete activity.approval;
       for (const message of activity.messages) if (message.thought) delete message.thought.runningSince;
     }
@@ -68,7 +79,7 @@ export class Store {
   flush() { return this.writing; }
   save() {
     const { cronJobs: _serverJobs, cronError: _cronError, ...desktopState } = this.state;
-    const data = JSON.stringify(desktopState, null, 2);
+    const data = JSON.stringify({ ...desktopState, activities: this.backendOwnsActivities ? this.state.activities.map(localActivity) : this.state.activities }, null, 2);
     const operation = this.writing
       .catch(() => {})
       .then(async () => {

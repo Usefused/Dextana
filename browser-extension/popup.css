@@ -1,26 +1,37 @@
+* {
+  box-sizing: border-box;
+}
 body {
-  width: 360px;
+  width: 380px;
+  margin: 0;
   padding: 16px;
-  font: 14px/1.5 system-ui;
+  font: 13px/1.4 system-ui;
   color: #26392e;
   background: #faf9f6;
 }
 h1 {
-  font-size: 20px;
+  font-size: 19px;
+  margin: 0 0 12px;
+}
+p {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
 }
 label {
   display: block;
-  margin: 12px 0;
+  margin: 8px 0;
 }
 #code {
   width: 100%;
-  box-sizing: border-box;
   padding: 8px;
+  font:
+    12px ui-monospace,
+    monospace;
 }
 button {
   border: 1px solid #bacabc;
   border-radius: 6px;
-  padding: 9px;
+  padding: 8px 10px;
   background: #e5eee6;
   color: #26392e;
   cursor: pointer;
@@ -28,6 +39,35 @@ button {
 }
 button:disabled {
   opacity: 0.5;
+  cursor: default;
+}
+summary {
+  cursor: pointer;
+}
+#destination {
+  color: #536653;
+  font-size: 12px;
+  max-height: 52px;
+  overflow: auto;
+}
+#source {
+  font-weight: 600;
+}
+.hint,
+.more {
+  font-size: 12px;
+  color: #536653;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+#approve {
+  background: #426849;
+  color: white;
+}
+.more {
+  margin-top: 10px;
 }
 [hidden] {
   display: none !important;

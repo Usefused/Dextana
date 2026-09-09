@@ -86,7 +86,6 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
       .getByLabel('Ollama address')
       .fill(`http://127.0.0.1:${(site.address() as { port: number }).port}`);
     await page.getByRole('button', { name: 'Connect to Ollama' }).click();
-    await page.getByLabel('Default model').selectOption('qwen3:8b');
     await page.getByRole('button', { name: 'Save settings' }).click();
     await page.getByLabel('Describe your work').fill('Check the packaged backend');
     await page.getByRole('button', { name: 'Start activity' }).click();
@@ -98,6 +97,12 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
       { timeout: 120_000 },
     );
     await expect(page.getByTestId('activity-status')).toHaveText('Completed');
+    for (const name of ['agent.sqlite', 'activities.sqlite']) {
+      const database = await readFile(join(directory, 'agent-state', name));
+      expect(database.subarray(0, 16).toString('ascii')).toBe('SQLite format 3\0');
+    }
+    const localState = JSON.parse(await readFile(join(directory, 'state.json'), 'utf8'));
+    expect(localState.activities.every((activity: any) => !activity.messages && !activity.queue && !activity.plans)).toBe(true);
     await app.evaluate(({ shell, clipboard }) => {
       clipboard.writeText = (text) => {
         (globalThis as any).copiedCode = text;
@@ -119,7 +124,11 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
       .toBe(extensionFolder);
     const manifest = JSON.parse(await readFile(join(extensionFolder, 'manifest.json'), 'utf8'));
     expect(manifest.name).toBe('Dextana Login Transfer');
-    expect(manifest.version).toBe('0.2.0');
+    const sourceManifest = JSON.parse(await readFile('browser-extension/manifest.json', 'utf8'));
+    expect(manifest).toEqual(sourceManifest);
+    expect(await readFile(join(extensionFolder, manifest.background.service_worker), 'utf8')).toBe(
+      await readFile(join('browser-extension', sourceManifest.background.service_worker), 'utf8'),
+    );
     expect(await readFile(join(extensionFolder, 'transfer.js'), 'utf8')).toContain(
       'DextanaTransfer',
     );

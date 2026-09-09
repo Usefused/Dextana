@@ -1,0 +1,73 @@
+name: Sign tested installer checksums
+on:
+  workflow_call:
+    inputs:
+      run_id:
+        description: Successful Package Dextana workflow run ID
+        type: string
+        required: true
+      source_sha:
+        description: Exact tested source commit SHA
+        type: string
+        required: true
+      native_signing:
+        type: boolean
+        default: false
+    secrets:
+      DEXTANA_ARTIFACT_SIGNING_KEY:
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        artifact: [Dextana-macOS-ARM64, Dextana-Linux-X64, Dextana-Windows-X64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify the tested build identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.run_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          NATIVE_SIGNING: ${{ inputs.native_signing }}
+        run: |
+          node --input-type=module - <<'JS'
+          import { execFileSync } from 'node:child_process';
+          const { SOURCE_RUN, SOURCE_SHA, GITHUB_REPOSITORY } = process.env;
+          if (process.env.NATIVE_SIGNING === 'true') throw new Error('Native publisher signing requires rebuilding with native_signing and without tested_run.');
+          if (!/^\d+$/.test(SOURCE_RUN) || !/^[0-9a-f]{40}$/.test(SOURCE_SHA)) throw new Error('Provide an exact run ID and commit SHA.');
+          const run = JSON.parse(execFileSync('gh', ['api', `repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN}`], { encoding: 'utf8' }));
+          if (run.conclusion !== 'success' || run.head_sha !== SOURCE_SHA ||
+              run.head_repository.full_name !== GITHUB_REPOSITORY ||
+              run.path !== '.github/workflows/package.yml' ||
+              !['workflow_dispatch', 'push'].includes(run.event)) {
+            throw new Error('Only successful, matching first-party packaging runs can be signed.');
+          }
+          console.log(`Verified packaging run ${SOURCE_RUN} at ${SOURCE_SHA}.`);
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Sign and verify the tested installers
+        run: node scripts/artifact-integrity.mjs sign
+        env:
+          DEXTANA_ARTIFACT_SIGNING_KEY: ${{ secrets.DEXTANA_ARTIFACT_SIGNING_KEY }}
+      - name: Upload installers with signed checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-signed-checksums
+          path: release/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

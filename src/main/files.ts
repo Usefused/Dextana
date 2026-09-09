@@ -1,10 +1,11 @@
 import { constants } from 'node:fs';
-import { open, mkdir, realpath, stat, unlink } from 'node:fs/promises';
+import { open, mkdir, realpath, stat, lstat, unlink } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path';
 import ExcelJS from 'exceljs';
 import AdmZip from 'adm-zip';
 
-export const documentExtensions = ['txt', 'md', 'csv', 'xlsx', 'docx', 'pdf'];
+export const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+export const documentExtensions = ['txt', 'md', 'csv', 'xlsx', 'docx', 'pdf', ...imageExtensions];
 const maxBytes = 5_000_000;
 const maxText = 500_000;
 type Sheet = { name: string; rows: (string | number | boolean | null)[][] };
@@ -46,9 +47,9 @@ export class WorkFiles {
     const format = extname(path).slice(1).toLowerCase();
     if (!documentExtensions.includes(format))
       throw new Error(
-        'Supported work files: Excel (.xlsx), Word (.docx), PDF, CSV, text (.txt), and Markdown (.md).',
+        'Supported work files: Excel (.xlsx), Word (.docx), PDF, CSV, text, Markdown, PNG, JPEG, GIF and WebP images.',
       );
-    if (action === 'create' && ['pdf', 'docx'].includes(format)) throw new Error('PDF and DOCX are supported for reading. Create an XLSX, CSV, TXT or Markdown document instead.');
+    if (action === 'create' && ['pdf', 'docx', ...imageExtensions].includes(format)) throw new Error('PDF, DOCX and images are supported for reading. Create an XLSX, CSV, TXT or Markdown document instead.');
     let parent = dirname(path);
     let makeDirectory = false;
     try {
@@ -148,12 +149,19 @@ export class WorkFiles {
     )
       throw new Error('The destination folder changed. Request permission again.');
     if (plan.action === 'read') {
+      // Windows does not enforce O_NOFOLLOW. Check the directory entry and
+      // bind the opened handle to that file before reading any document bytes.
+      const entry = await lstat(plan.path);
+      if (!entry.isFile()) throw new Error('Choose a regular document, not a symbolic link.');
       const handle = await open(
         plan.path,
         constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
       );
       try {
         const info = await handle.stat();
+        const current = await lstat(plan.path);
+        if (!current.isFile() || identity(info) !== identity(entry) || identity(current) !== identity(entry))
+          throw new Error('The document changed. Request permission again.');
         if (!info.isFile() || info.size > maxBytes)
           throw new Error('Choose a regular document up to 5 MB.');
         // Bound the actual read even if another process grows the file after stat.
@@ -167,6 +175,13 @@ export class WorkFiles {
         }
         if (size > maxBytes) throw new Error('Document exceeds 5 MB.');
         const data = buffer.subarray(0, size);
+        if (imageExtensions.includes(plan.format)) {
+          const { rasterType } = await import('./images');
+          const mediaType = rasterType(data);
+          const expected = `image/${plan.format === 'jpg' ? 'jpeg' : plan.format}`;
+          if (mediaType !== expected) throw new Error('The image format did not match its file extension.');
+          return { path: plan.path, format: plan.format, image: { type: 'image', mediaType, data: data.toString('base64') } };
+        }
         if (['pdf', 'docx'].includes(plan.format)) {
           const { readDocument } = await import('./read-document');
           return { path: plan.path, format: plan.format, content: await readDocument(data, plan.format, signal) };

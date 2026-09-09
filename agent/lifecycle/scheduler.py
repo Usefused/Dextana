@@ -1,43 +1,21 @@
-import asyncio
-import logging
+"""Authenticated schedule controls; Harnest owns the worker and cron loop."""
 import os
-from contextlib import suppress
 from secrets import compare_digest
 from fastapi import APIRouter, HTTPException, Request, Depends
-from harnest.lifecycle import lifecycle
-from harnest.lib.scheduler import Scheduler
-from harnest.models.schedule import ScheduleInput, RunReport
+from harnest import lifecycle
+from harnest.lib.scheduler import scheduler
+from harnest.models.schedule import ScheduleInput
 
 
 @lifecycle.resource
-async def scheduler_worker():
-    if not os.environ.get('DEXTANA_SCHEDULER_DIRECTORY'):
-        yield None
-        return
-    scheduler = Scheduler()
-    scheduler.initialize()
-
-    async def loop():
-        while True:
-            await asyncio.sleep(5)
-            try:
-                await asyncio.to_thread(scheduler.tick)
-            except Exception:
-                logging.getLogger(__name__).exception('Scheduler tick failed')
-
-    worker = asyncio.create_task(loop())
-    try:
-        yield scheduler
-    finally:
-        worker.cancel()
-        with suppress(asyncio.CancelledError):
-            await worker
+async def schedule_registry():
+    backend = scheduler()
+    await backend.initialize()
+    yield backend
 
 
 @lifecycle.http_routes
 def schedule_routes(agent):
-    # Custom CRUD routes enforce the same private desktop bearer boundary even
-    # when they do not invoke the agent (and hence do not call authenticate).
     def owner(request: Request):
         token = os.environ.get('DEXTANA_RUNTIME_TOKEN', '')
         if not token or not compare_digest(request.headers.get('authorization', ''), 'Bearer ' + token):
@@ -46,40 +24,32 @@ def schedule_routes(agent):
     router = APIRouter(prefix='/dextana/jobs', dependencies=[Depends(owner)])
 
     @router.get('')
-    def list_jobs():
-        return Scheduler().list()
+    async def list_jobs():
+        return await scheduler().list()
 
     @router.post('')
-    def create_job(data: ScheduleInput):
+    async def create_job(data: ScheduleInput):
         try:
-            return Scheduler().save(data.model_dump())
+            return await scheduler().save(data.model_dump())
         except (ValueError, KeyError) as error:
             raise HTTPException(400, str(error)) from None
 
     @router.put('/{job_id}')
-    def update_job(job_id: str, data: ScheduleInput):
+    async def update_job(job_id: str, data: ScheduleInput):
         try:
-            return Scheduler().save(data.model_dump(), job_id)
+            return await scheduler().save(data.model_dump(), job_id)
         except (ValueError, KeyError) as error:
             raise HTTPException(400, str(error)) from None
 
     @router.delete('/{job_id}')
-    def delete_job(job_id: str):
-        Scheduler().remove(job_id)
-
-    @router.post('/claim')
-    def claim():
-        return Scheduler().claim()
+    async def delete_job(job_id: str):
+        await scheduler().remove(job_id)
 
     @router.post('/{job_id}/run')
-    def run_job(job_id: str):
+    async def run_job(job_id: str):
         try:
-            Scheduler().run_now(job_id)
+            await scheduler().run_now(job_id)
         except ValueError as error:
             raise HTTPException(400, str(error)) from None
-
-    @router.put('/{job_id}/runs/{run_id}')
-    def report(job_id: str, run_id: str, data: RunReport):
-        Scheduler().report(job_id, run_id, data.model_dump(exclude_none=True))
 
     return router

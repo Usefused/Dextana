@@ -1,0 +1,89 @@
+/* Settings use a compact, neutral hierarchy with persistent navigation. */
+.settings-shell { --settings-muted: var(--dx-muted); --settings-border: var(--dx-border); font-family: var(--dx-font); }
+.settings-shell .settings-back { font-size: 13px; margin-bottom: 20px; }
+.settings-search { width: 100%; margin: 0 0 25px; padding: 10px 12px; font-size: 13px; background: transparent; border-color: var(--settings-border); }
+.settings-nav { gap: 26px; }
+.settings-nav-group { display: grid; gap: 3px; }
+.settings-nav .settings-nav-title { font-size: 11px; font-weight: 500; color: var(--settings-muted); padding: 0 12px 8px; }
+.settings-nav button { display: flex; align-items: center; gap: 12px; min-height: 41px; font-size: 14px; font-weight: 400; padding: 9px 12px; color: light-dark(#555b52, #c4c8bf); }
+.settings-nav button[aria-current=page] { font-weight: 500; background: light-dark(#e7ebe2, #30362e); color: light-dark(#303b2d, #eceee8); }
+.settings-main > header { height: 60px; min-height: 60px; padding: 0 25px; justify-content: flex-end; border-bottom: 0; }
+.settings-main > header .session-heading, .settings-main > header .privacy, .settings-main > footer { display: none; }
+.settings-close { border: 0; background: transparent; color: inherit; font-size: 26px; line-height: 1; padding: 4px 8px; border-radius: var(--dx-radius-md); }
+.settings-close:hover { background: light-dark(#ecefe8, #30362e); }
+.settings-panel { width: auto; max-width: 960px; margin: 16px auto 64px; padding: 0 48px; }
+.settings-panel h1 { font-family: inherit; font-size: 26px; line-height: 1.3; font-weight: 550; letter-spacing: -.4px; margin: 0 0 9px; }
+.settings-panel > .muted { color: var(--settings-muted); font-size: 14px; line-height: 1.6; margin: 0 0 34px; }
+.settings-panel h2, .settings-dialog h2 { font-family: inherit; font-size: 16px; line-height: 1.4; font-weight: 550; letter-spacing: normal; margin: 0; }
+.settings-panel h3 { font-size: 14px; font-weight: 500; margin: 0; }
+.settings-panel p { line-height: 1.6; }
+.settings-panel .settings-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.settings-panel .settings-card > label { display: grid; gap: 6px; max-width: 600px; padding: 0; margin: 20px 0; font-size: 13px; }
+.settings-panel .settings-card > label > button { justify-self: start; }
+.settings-panel .settings-card > p { margin: 8px 0 22px; color: var(--settings-muted); }
+.settings-panel input:not([type=checkbox]), .settings-panel select, .settings-dialog input, .settings-dialog textarea { min-width: 0; max-width: 100%; font-size: 13px; padding: 10px 12px; color: inherit; border: 1px solid var(--settings-border, light-dark(#dde1d7, #343832)); background: light-dark(#fafbf8, #242922); border-radius: var(--dx-radius-control); }
+.settings-panel .settings-card > button { margin: 3px 10px 16px 0; }
+.settings-panel button.primary, .settings-panel button.secondary { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 26px; padding: 24px 0; border-bottom: 1px solid var(--settings-border); }
+.settings-row-copy { min-width: 0; }
+.settings-row-copy p, .settings-section-heading p { color: var(--settings-muted); font-size: 13px; margin: 5px 0 0; }
+.settings-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px; }
+.settings-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.settings-text-button { border: 0; background: transparent; color: var(--settings-muted); font-size: 12px; padding: 7px 4px; }
+.settings-text-button:hover { color: light-dark(#303b2d, #eceee8); }
+.settings-caption { display: block; color: var(--settings-muted, light-dark(#777b75, #999d97)); font-size: 12px; line-height: 1.5; margin-top: 6px; }
+.settings-footnote { color: var(--settings-muted); font-size: 12px; margin-top: 30px; }
+.settings-empty { text-align: center; padding: 48px 25px; border-top: 1px solid var(--settings-border); border-bottom: 1px solid var(--settings-border); color: var(--settings-muted); font-size: 13px; }
+.settings-empty h3 { color: light-dark(#454c40, #d5dace); margin-bottom: 8px; }
+.settings-switch { appearance: none; position: relative; flex-shrink: 0; width: 34px; height: 20px; padding: 0; margin: 0 0 0 6px; border: 0; border-radius: var(--dx-radius-lg); background: light-dark(#c5cbbf, #51584b); cursor: pointer; }
+.settings-switch:before { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 1px 3px #0002; transition: transform .15s; }
+.settings-switch:checked { background: light-dark(#567850, #719366); }
+.settings-switch:checked:before { transform: translateX(14px); }
+.settings-dialog { width: min(600px, calc(100vw - 40px)); max-height: calc(100vh - 60px); overflow: auto; border: 1px solid light-dark(#dce1d5, #444d3e); border-radius: var(--dx-radius-lg); padding: 26px; color: light-dark(#2d332f, #e3e8de); background: light-dark(#fafbf8, #22271f); box-shadow: 0 18px 80px #0004; }
+.settings-dialog::backdrop { background: #10170c70; }
+.settings-dialog .settings-section-heading { margin-bottom: 12px; }
+.settings-dialog label { font-size: 13px; margin: 18px 0; }
+.settings-dialog textarea { resize: vertical; min-height: 150px; line-height: 1.6; font-family: inherit; }
+.settings-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.settings-confirmation { max-width: 420px; }
+.settings-error { color: light-dark(#a4423c, #f29b92); font-size: 13px; }
+.usage-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--settings-border); border-bottom: 1px solid var(--settings-border); padding: 26px 0; margin-bottom: 15px; }
+.usage-totals > div { display: grid; gap: 12px; padding-left: 24px; border-left: 1px solid var(--settings-border); }
+.usage-totals > div:first-child { padding-left: 0; border: 0; }
+.usage-totals span { font-size: 12px; color: var(--settings-muted); }
+.usage-totals strong { font-size: 27px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.usage-table-wrap { overflow-x: auto; margin-top: 32px; }
+.usage-table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+.usage-table th { font-size: 12px; font-weight: 400; color: var(--settings-muted); }
+.usage-table th, .usage-table td { padding: 16px 10px; border-bottom: 1px solid var(--settings-border); text-align: right; }
+.usage-table th:first-child, .usage-table td:first-child { text-align: left; padding-left: 0; }
+.usage-table td strong { font-weight: 500; overflow-wrap: anywhere; }
+.usage-table td span { display: block; font-size: 11px; color: var(--settings-muted); margin-top: 4px; }
+.settings-panel .mcp-url-card { box-shadow: none; border-radius: var(--dx-radius-md); }
+.settings-panel .mcp-url-card h2 { font-family: inherit; font-size: 18px; letter-spacing: normal; }
+.settings-panel .mcp-connect-icon { display: none; }
+@media (max-width: 1000px) { .settings-panel { padding: 0 30px; } .settings-section-heading { flex-wrap: wrap; } .skill-row { gap: 12px; } }
+@media (max-width: 760px) { .settings-shell { grid-template-columns: 180px minmax(0, 1fr); }  .settings-panel { padding: 0 20px; } .settings-panel .settings-card > label { grid-template-columns: 1fr; } .settings-panel .settings-card > label > button { grid-column: 1; } .skill-row { flex-wrap: wrap; } .usage-totals > div { padding-left: 12px; } .usage-totals strong { font-size: 22px; } }
+
+.settings-panel .dx-page-header h1 { font-size: var(--dx-text-title); margin: 0; }
+.appearance-settings .dx-notice { margin-top: var(--dx-space-4); }
+
+/* Page spacing stays outside the shared button's internal layout. */
+:root .settings-panel .settings-card > .dx-button.dx-button {
+  margin: 3px 10px 16px 0;
+}
+.settings-actions,
+.settings-dialog-actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Forms sit directly on the page; only editable controls have an outline. */
+.model-settings-form { max-width: 780px; gap: 12px; }
+
+.model-settings-form .settings-caption { margin: 0; }
+.model-manual-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.settings-panel .fused-connection { border: 0; border-top: 1px solid var(--dx-border); border-radius: 0; padding: 20px 0; margin: 24px 0 0; }
+.settings-panel .mcp-url-card { border: 0; padding: 0; background: transparent; box-shadow: none; }
+.settings-panel .mcp-url-card h2 { margin-top: 0; }
+@media (max-width: 620px) { .model-manual-entry { grid-template-columns: 1fr; } .model-manual-entry > button { justify-self: start; } }

@@ -39,7 +39,11 @@ export class LoginOffer {
     popup.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     popup.webContents.on('will-navigate', (event, url) => {
       event.preventDefault();
-      if (url === 'https://dextana.invalid/transfer') choose('transfer');
+      if (url === 'https://dextana.invalid/transfer') {
+        parent.focus();
+        parent.webContents.focus();
+        choose('transfer');
+      }
       if (url === 'https://dextana.invalid/dismiss') choose('dismiss');
     });
     popup.once('ready-to-show', () => {

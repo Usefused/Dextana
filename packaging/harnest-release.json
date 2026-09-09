@@ -1,30 +1,30 @@
 {
-  "version": "0.16.0",
+  "version": "0.18.0",
   "repository": "Usefused/harnest",
   "assets": {
-    "harnest_0.16.0_darwin_amd64.tar.gz": {
-      "url": "https://github.com/Usefused/harnest/releases/download/v0.16.0/harnest_0.16.0_darwin_amd64.tar.gz",
-      "sha256": "449ffa4bcf1800b00454b74e3ca679f38adb7e75707a070f4cd8cdc9611694f4"
+    "harnest_0.18.0_darwin_amd64.tar.gz": {
+      "url": "https://github.com/Usefused/harnest/releases/download/v0.18.0/harnest_0.18.0_darwin_amd64.tar.gz",
+      "sha256": "75e9a5bc32e768288ee084cb6db591e79239ce0318d9d55ebc9404670e3bf52d"
     },
-    "harnest_0.16.0_darwin_arm64.tar.gz": {
-      "url": "https://github.com/Usefused/harnest/releases/download/v0.16.0/harnest_0.16.0_darwin_arm64.tar.gz",
-      "sha256": "51c61ba44538335ec7a8a0287ae2f3f636dc82d7e8d0949d97f4c74b308243b7"
+    "harnest_0.18.0_darwin_arm64.tar.gz": {
+      "url": "https://github.com/Usefused/harnest/releases/download/v0.18.0/harnest_0.18.0_darwin_arm64.tar.gz",
+      "sha256": "32f223224e6ca622f1d856b5e3027a24513d652086d5954fe3df37d4208115c8"
     },
-    "harnest_0.16.0_linux_amd64.tar.gz": {
-      "url": "https://github.com/Usefused/harnest/releases/download/v0.16.0/harnest_0.16.0_linux_amd64.tar.gz",
-      "sha256": "b177a79667ee2fb5edfe5010eb3da8e8da55926485f963ba6bc88e5da6d9b4d3"
+    "harnest_0.18.0_linux_amd64.tar.gz": {
+      "url": "https://github.com/Usefused/harnest/releases/download/v0.18.0/harnest_0.18.0_linux_amd64.tar.gz",
+      "sha256": "27301d44fc2dad57e0cd224d021368625533807d5c9076cc6999067d66069618"
     },
-    "harnest_0.16.0_linux_arm64.tar.gz": {
-      "url": "https://github.com/Usefused/harnest/releases/download/v0.16.0/harnest_0.16.0_linux_arm64.tar.gz",
-      "sha256": "8dede2eeffec8938177d514188ebc64c2b8484c6dabe47c045cb2a4d3aef096e"
+    "harnest_0.18.0_linux_arm64.tar.gz": {
+      "url": "https://github.com/Usefused/harnest/releases/download/v0.18.0/harnest_0.18.0_linux_arm64.tar.gz",
+      "sha256": "763f9bbdbe7674d6d8fa40e11edb7e13e11d1d57dba2cd27fbb530d843642c57"
     },
-    "harnest_0.16.0_windows_amd64.zip": {
-      "url": "https://github.com/Usefused/harnest/releases/download/v0.16.0/harnest_0.16.0_windows_amd64.zip",
-      "sha256": "a60befd4fd19114b947a807f89c0a890f71cc89c8c777487fbd6e3b016cf570a"
+    "harnest_0.18.0_windows_amd64.zip": {
+      "url": "https://github.com/Usefused/harnest/releases/download/v0.18.0/harnest_0.18.0_windows_amd64.zip",
+      "sha256": "f3d1297c92a8f03f83e323e9bd70c34c58754c54beb9cc24677ab72871da285d"
     },
-    "harnest_0.16.0_windows_arm64.zip": {
-      "url": "https://github.com/Usefused/harnest/releases/download/v0.16.0/harnest_0.16.0_windows_arm64.zip",
-      "sha256": "9e762c12aee9b54fbc83922fd0f6cc243f9affd9cc4ac13d24a7c0549c34b17e"
+    "harnest_0.18.0_windows_arm64.zip": {
+      "url": "https://github.com/Usefused/harnest/releases/download/v0.18.0/harnest_0.18.0_windows_arm64.zip",
+      "sha256": "d38133e975c6a2995a92ef1a3e4e60ae686b371242aa2a96d22333a2f9103589"
     }
   }
 }

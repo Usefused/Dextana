@@ -1,3 +1,4 @@
+import { Button } from './ui';
 import { Fragment, useEffect, useId, useState } from 'react';
 import type { Message } from '../shared/types';
 
@@ -29,7 +30,7 @@ export function Thought({
   const duration = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
   return (
     <div className="thought">
-      <button
+      <Button variant="layout"
         className="thought-toggle"
         aria-expanded={expanded}
         aria-controls={contentId}
@@ -37,7 +38,7 @@ export function Thought({
       >
         <span aria-hidden="true">{expanded ? '⌄' : '›'}</span>{' '}
         {thinking ? `Thinking · ${duration}` : `Thought for ${duration}`}
-      </button>
+      </Button>
       <div
         id={contentId}
         data-testid="thought-content"

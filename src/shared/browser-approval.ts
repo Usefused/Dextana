@@ -19,11 +19,11 @@ export function browserPermissionQuestion(raw: string): { question: string; addr
   const title = typeof page?.title === 'string' && page.title ? `“${page.title}”` : 'this page';
   const address = typeof args.url === 'string' ? args.url : typeof page?.address === 'string' ? page.address : undefined;
   switch (args.action) {
-    case 'list_tabs': return { question: 'Allow Dextana to view the open tabs in this chat?' };
-    case 'read': return { question: `Allow Dextana to read ${title}?`, address };
-    case 'close_tab': return { question: `Allow Dextana to close ${title}?`, address };
-    case 'open': return { question: 'Allow Dextana to navigate to this website?', address };
-    case 'new_tab': return { question: 'Allow Dextana to open a new browser tab?', address };
+    case 'list_tabs': return { question: 'Allow Dext to view the open tabs in this chat?' };
+    case 'read': return { question: `Allow Dext to read ${title}?`, address };
+    case 'close_tab': return { question: `Allow Dext to close ${title}?`, address };
+    case 'open': return { question: 'Allow Dext to navigate to this website?', address };
+    case 'new_tab': return { question: 'Allow Dext to open a new browser tab?', address };
     default: return;
   }
 }
