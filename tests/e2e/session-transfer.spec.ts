@@ -16,8 +16,12 @@ test('website login transfer needs approval, imports before scripts, and consume
   });
   await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${(site.address() as { port: number }).port}/`;
+  let inspectAfterTransfer = false;
   const work = await workspace((body, res) => {
-    if (!body.messages.some((m: any) => m.role === 'tool'))
+    if (inspectAfterTransfer) {
+      inspectAfterTransfer = false;
+      reply(body, res, '', [{ function: { name: 'browser', arguments: { action: 'read' } } }]);
+    } else if (!body.messages.some((m: any) => m.role === 'tool'))
       reply(body, res, '', [{ function: { name: 'browser', arguments: { action: 'open', url } } }]);
     else reply(body, res, 'Please sign in to the website.');
     return true;
@@ -178,6 +182,13 @@ test('website login transfer needs approval, imports before scripts, and consume
         body: JSON.stringify(payload),
       }),
     ).rejects.toThrow();
+    inspectAfterTransfer = true;
+    await work.page.getByLabel('Describe your work').fill('Inspect the transferred website');
+    await work.page.getByRole('button', { name: 'Send message', exact: true }).click();
+    await expect.poll(() => work.calls.some((body: any) => body.messages?.some((message: any) =>
+      message.role === 'tool' && String(message.content).includes('Signed in') && String(message.content).includes('elements'),
+    ))).toBe(true);
+    await expect(work.page.getByTestId('activity-status')).toHaveText('Completed');
   } finally {
     await work.close();
     site.closeAllConnections();

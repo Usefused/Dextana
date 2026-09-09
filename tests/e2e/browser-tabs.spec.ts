@@ -71,7 +71,8 @@ test('delegated agents work concurrently in separate browser tabs without steali
   await new Promise<void>((resolve) => site.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${(site.address() as { port: number }).port}`;
   const work = await workspace((body, res) => {
-    const prompt = body.messages.filter((m: any) => m.role === 'user').at(-1).content;
+    const prompt = body.messages.filter((m: any) => m.role === 'user').at(-1).content
+      .split('Current owner request:\n').at(-1).split('\n')[0];
     if (body.messages.some((m: any) => m.role === 'tool'))
       reply(body, res, 'Worker work complete.');
     else if (prompt === 'Research with two browser workers')

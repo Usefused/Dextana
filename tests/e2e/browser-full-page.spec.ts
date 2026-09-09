@@ -45,7 +45,6 @@ test('all page targets are reachable across pagination, closed shadow DOM, cross
     const results=body.messages.filter((m:any)=>m.role==='tool');
     if (!results.length) { reply(body,res,'',[{function:{name:'browser',arguments:{action:'open',url}}}]); return true; }
     const page=result(results.at(-1).content);
-    console.log('Full-page step', {results:results.length,pages,step,total:page?.total_elements,next:page?.next_offset,frames:page?.frames,error:page ? undefined : String(results.at(-1).content).slice(0,200)});
     outputs.push(page ?? results.at(-1).content);
     if (page?.elements) {
       for (const e of page.elements) collected.set(`${e.frame}:${e.tag}:${e.label}`,e);
@@ -81,14 +80,71 @@ test('all page targets are reachable across pagination, closed shadow DOM, cross
     await start(work.page,'Interact with the complete test page');
     await allowBrowser(work.page);
     await expect(work.page.getByTestId('assistant-message').last()).toContainText('Whole-page interaction complete.',{timeout:120_000});
-    const native=work.app().windows().find(p=>p.url()===url)!;
-    console.log('Frame geometry',await native.locator('iframe').boundingBox(), await native.frames().find(f=>f.url().includes('/frame'))!.locator('#frame-target').boundingBox(),await native.frames().find(f=>f.url().includes('/frame'))!.locator('input').inputValue());
     expect(pages).toBeGreaterThan(4);
     expect([...collected.values()].some(e=>e.label==='Entry 1099' && e.tag==='span')).toBe(true);
     expect(outputs.some(p=>p?.attributes?.id==='hidden-content' && p.text.includes('Hidden content remains inspectable'))).toBe(true);
     const texts=outputs.map(p=>p?.text??'').join('\n');
     for (const value of ['Plain clicked.','Shadow clicked','Shadow submitted shadow value','Frame clicked','Frame submitted frame value','Vector double-clicked.','Canvas clicked.','END OF LONG PAGE']) expect(texts.includes(value), value).toBe(true);
     expect(outputs.some(p=>p?.screenshot_size?.width>0)).toBe(true);
+    expect(work.calls.some(body=>body.messages.some((m:any)=>m.images?.length))).toBe(true);
     expect(outputs.flatMap(p=>p?.frames??[]).some(f=>f.url.includes('localhost') && !f.error)).toBe(true);
-  } finally { console.log('Full-page diagnostics', {calls:work.calls.length,pages,step,outputs:outputs.length}); await work.close(); site.closeAllConnections(); await new Promise<void>(resolve=>site.close(()=>resolve())); }
+  } finally { await work.close(); site.closeAllConnections(); await new Promise<void>(resolve=>site.close(()=>resolve())); }
+});
+
+test('hover reveals a target and wheel input scrolls the requested region', async ({ workspace }) => {
+  test.setTimeout(90_000);
+  const site=createServer((_req,res)=>{
+    res.setHeader('Content-Type','text/html');
+    res.end(`<style>#hover button{display:none}#hover:hover button{display:block}</style>
+      <div id="hover" style="width:180px;height:90px;border:1px solid">Hover region<button>Revealed action</button></div>
+      <div id="scroll" aria-label="Scroll region" style="width:180px;height:90px;overflow:auto"><p style="height:1500px">Long region</p></div><p id="result"></p>
+      <script>document.querySelector('button').onclick=e=>{if(e.isTrusted) document.querySelector('#result').textContent='Revealed action clicked';};document.querySelector('#scroll').onscroll=()=>{document.querySelector('#result').textContent+=' Region scrolled';};</script>`);
+  });
+  await new Promise<void>(resolve=>site.listen(0,'127.0.0.1',resolve));
+  const url=`http://127.0.0.1:${(site.address() as {port:number}).port}/`;
+  let hidden=false;
+  const work=await workspace((body,res)=>{
+    const results=body.messages.filter((m:any)=>m.role==='tool');
+    const page=results.length?result(results.at(-1).content):undefined;
+    if(results.length===1) hidden=page.elements.some((e:any)=>e.label==='Revealed action' && e.visible===false);
+    const find=(label:string)=>page?.elements.find((e:any)=>e.label===label);
+    const region=find('Scroll region')?.bounds;
+    const steps=[{action:'open',url}, {action:'hover',ref:page?.elements.find((e:any)=>e.tag==='div' && e.label.startsWith('Hover region'))?.ref}, {action:'click',ref:find('Revealed action')?.ref}, {action:'scroll',x:(region?.x??0)+30,y:(region?.y??0)+30,delta_y:-200},{action:'read'}];
+    if(results.length<steps.length) reply(body,res,'',[{function:{name:'browser',arguments:steps[results.length]}}]);
+    else reply(body,res,page?.text??'No page text');
+    return true;
+  });
+  try {
+    await start(work.page,'Reveal and scroll the page controls');await allowBrowser(work.page);
+    const answer=work.page.getByTestId('assistant-message').last();
+    await expect(answer).toContainText('Region scrolled',{timeout:60_000});
+    await expect(answer).toContainText('Revealed action clicked');expect(hidden).toBe(true);
+  } finally { await work.close();site.closeAllConnections();await new Promise<void>(resolve=>site.close(()=>resolve())); }
+});
+
+test('nested frames stay inspectable under an overlay and become clickable when revealed', async ({ workspace }) => {
+  test.setTimeout(90_000);
+  let port=0;
+  const site=createServer((req,res)=>{
+    res.setHeader('Content-Type','text/html');
+    if(req.url==='/inner') return res.end('<span onclick="if(event.isTrusted) this.textContent=\'Nested frame clicked\'">Nested frame target</span>');
+    if(req.url==='/outer') return res.end(`<p>Outer document</p><iframe style="width:240px;height:80px" src="http://localhost:${port}/inner"></iframe>`);
+    res.end(`<iframe style="width:320px;height:220px" src="/outer"></iframe><div style="position:fixed;inset:0;background:white" id="cover"><button onclick="document.querySelector('#cover').remove()">Reveal frames</button></div>`);
+  });
+  await new Promise<void>(resolve=>site.listen(0,resolve));port=(site.address() as {port:number}).port;
+  let page:any;const observed:string[]=[];
+  const work=await workspace((body,res)=>{
+    const results=body.messages.filter((m:any)=>m.role==='tool');
+    if(results.length){observed.push(JSON.stringify(results.at(-1).content));page=result(results.at(-1).content)??page;}
+    const ref=(label:string)=>page?.elements.find((e:any)=>e.label===label && ['span','button'].includes(e.tag))?.ref??'999999';
+    const steps=[{action:'open',url:`http://127.0.0.1:${port}/`},{action:'click',ref:ref('Nested frame target')},{action:'click',ref:ref('Reveal frames')},{action:'click',ref:ref('Nested frame target')}];
+    if(results.length<steps.length) reply(body,res,'',[{function:{name:'browser',arguments:steps[results.length]}}]);
+    else reply(body,res,page?.text??'No content');
+    return true;
+  });
+  try {
+    await start(work.page,'Reveal and click the nested frame');await allowBrowser(work.page);
+    await expect(work.page.getByTestId('assistant-message').last()).toContainText('Nested frame clicked',{timeout:60_000});
+    expect(observed[1]).toContain('covered or clipped');
+  } finally {await work.close();site.closeAllConnections();await new Promise<void>(resolve=>site.close(()=>resolve()));}
 });

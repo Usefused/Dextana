@@ -9,7 +9,24 @@ export class BrowserInspection {
   private ready?: Promise<void>;
   private serial = 0;
   private focusedKey = '';
-  constructor(private contents: WebContents) {}
+  private onMessage = (_event: unknown, method: string, params: any) => {
+    if (method === 'Target.attachedToTarget' && params.targetInfo.type === 'iframe') {
+      this.sessions.add(params.sessionId);
+      void this.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, params.sessionId).catch(() => {});
+    }
+    if (method === 'Target.detachedFromTarget') this.sessions.delete(params.sessionId);
+  };
+  private onDetach = () => { this.ready = undefined; this.sessions.clear(); this.frames.clear(); this.roots.clear(); };
+  constructor(private contents: WebContents) {
+    contents.debugger.on('message', this.onMessage);
+    contents.debugger.on('detach', this.onDetach);
+  }
+  dispose() {
+    if (this.ready && !this.contents.isDestroyed() && this.contents.debugger.isAttached()) this.contents.debugger.detach();
+    this.contents.debugger.removeListener('message', this.onMessage);
+    this.contents.debugger.removeListener('detach', this.onDetach);
+    this.onDetach();
+  }
   private send(method: string, params: Record<string, unknown> = {}, session?: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(`Browser inspection timed out during ${method}. Read the page again.`)), 15000);
@@ -19,14 +36,6 @@ export class BrowserInspection {
   async connect() {
     if (!this.ready) this.ready = (async () => {
       if (!this.contents.debugger.isAttached()) this.contents.debugger.attach('1.3');
-      this.contents.debugger.on('message', (_event, method, params) => {
-        if (method === 'Target.attachedToTarget' && params.targetInfo.type === 'iframe') {
-          this.sessions.add(params.sessionId);
-          void this.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true }, params.sessionId).catch(() => {});
-        }
-        if (method === 'Target.detachedFromTarget') this.sessions.delete(params.sessionId);
-      });
-      this.contents.debugger.on('detach', () => { this.ready = undefined; this.sessions.clear(); this.frames.clear(); });
       await this.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
     })();
     await this.ready;
@@ -53,8 +62,12 @@ export class BrowserInspection {
     }
     for (const id of this.frames.keys()) if (!seen.has(id)) this.frames.delete(id);
   }
-  frame(ref?: string, preserveFocus = false): Frame {
-    if (ref) this.focusedKey = ref.includes(':') ? ref.split(':')[0] : '';
+  async ensure() {
+    if (!this.frames.size) await this.refresh();
+    else await this.connect();
+  }
+  frame(ref?: string, preserveFocus = false, trackFocus = true): Frame {
+    if (ref && trackFocus) this.focusedKey = ref.includes(':') ? ref.split(':')[0] : '';
     const key = !ref && preserveFocus ? this.focusedKey : ref?.includes(':') ? ref.split(':')[0] : '';
     const frame = [...this.frames.values()].find(frame => frame.key === key);
     if (!frame) throw new Error('This frame is stale. Read the page again.');
@@ -169,12 +182,7 @@ export class BrowserInspection {
     await this.send('Input.dispatchKeyEvent', {type:e.type==='char'?'char':e.type==='keyDown'?'rawKeyDown':'keyUp', key:names[key]??key, code:key==='Space'?'Space':names[key]??key, windowsVirtualKeyCode:codes[key]??0, modifiers:e.modifiers?.includes('shift')?8:0, ...(e.type==='char'?{text:e.keyCode,unmodifiedText:e.keyCode}:{})});
   }
   async clickPoint(frame: Frame, local: {x:number;y:number}) {
-    const point = await this.point(frame, local);
-    if (frame.parent) {
-      const hit = await this.send('DOM.getNodeForLocation', { x:Math.round(point.x), y:Math.round(point.y) });
-      if (hit.frameId !== frame.id) throw new Error('This embedded frame is covered or clipped. Reveal it before interacting with its contents. '+JSON.stringify({point,local,frame:frame.id,hit:hit.frameId}));
-    }
-    return point;
+    return this.point(frame, local);
   }
   async insertText(frame: Frame, text: string) {
     await this.send('Input.insertText', { text });
@@ -192,6 +200,13 @@ export class BrowserInspection {
     const q = model.content;
     const x = q[0] + (q[2]-q[0])*point.x/viewport.width + (q[6]-q[0])*point.y/viewport.height;
     const y = q[1] + (q[3]-q[1])*point.x/viewport.width + (q[7]-q[1])*point.y/viewport.height;
+    const hit = await this.send('DOM.getNodeForLocation', {x:Math.round(x),y:Math.round(y)}, parent.session);
+    if (hit.frameId !== frame.id) {
+      // Out-of-process frames are reported as their iframe owner in the parent
+      // target; the child's isolated hit test has already checked its content.
+      const {node} = await this.send('DOM.describeNode', {backendNodeId:hit.backendNodeId}, parent.session);
+      if (node.frameId !== frame.id) throw new Error('This embedded frame is covered or clipped. Reveal it before interacting with its contents.');
+    }
     const parentRoot = this.frames.get(this.roots.get(parent.session ?? '')!)!;
     return this.point(parentRoot, {x,y});
   }

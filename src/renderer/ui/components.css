@@ -918,6 +918,8 @@
 }
 :root .composer > textarea.dx-input {
   width: 100%;
+  min-height: 28px;
+  resize: none;
   border: 0;
   background: transparent;
   padding: 0;

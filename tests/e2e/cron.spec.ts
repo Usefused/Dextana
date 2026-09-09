@@ -54,7 +54,7 @@ test('existing schedules and history migrate to Harnest and remain editable afte
     await expect(job).toContainText('Europe/London');
     await expect(job.locator('.cron-history > div')).toHaveText([/completed/i]);
     await job.getByRole('button', { name: 'Edit', exact: true }).click();
-    await page.getByLabel('Model', { exact: true }).selectOption('qwen3:8b');
+    await page.locator('.cron-editor').getByLabel('Model').selectOption('qwen3:8b');
     await page.getByLabel('Cron expression').fill('30 10 * * 1-5');
     await page.getByRole('button', { name: 'Save job' }).click();
     await job.getByRole('button', { name: 'Run now', exact: true }).click();

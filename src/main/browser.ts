@@ -187,7 +187,12 @@ export class Browsers {
     this.busy.add(target.id);
     this.notify();
     try {
-      await importLogin(this.windows.get(target.id)!.webContents, material.sourceUrl ?? target.url, material);
+      const contents = this.windows.get(target.id)!.webContents;
+      // Transfer temporarily owns DevTools while it installs state before page
+      // scripts run. The next browser action creates fresh frame references.
+      this.inspections.get(contents)?.dispose();
+      this.inspections.delete(contents);
+      await importLogin(contents, material.sourceUrl ?? target.url, material);
     } finally {
       this.importing.delete(target.activityId);
       this.busy.delete(target.id);
@@ -282,6 +287,9 @@ export class Browsers {
       });
       // A tab stays detached and hidden until it is explicitly presented.
       window.setVisible(false);
+      const [hostWidth, hostHeight] = this.host().getContentSize();
+      const paneWidth = browserLayout(hostWidth, this.preferredWidth).width;
+      window.setBounds({x:hostWidth-paneWidth,y:164,width:paneWidth,height:Math.max(100,hostHeight-164)});
       window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       const session = window.webContents.session;
       if (!this.configuredSessions.has(session)) {
@@ -568,8 +576,13 @@ export class Browsers {
       // A read establishes references in every frame's own isolated context.
       if (['open','new_tab','read'].includes(String(args.action)) && !args.ref)
         return { ...await inspection.snapshot(readPage, args), tab_id: id };
-      await inspection.connect();
-      const frame = inspection.frame(typeof args.ref === 'string' ? args.ref : undefined, args.action === 'press');
+      if (args.action === 'screenshot') {
+        const image = await window.webContents.capturePage(undefined, {stayHidden:true,stayAwake:true});
+        const bounds = window.getBounds(), zoom = window.webContents.getZoomFactor();
+        return { tab_id:id, image:{type:'image',mediaType:'image/png',data:image.toPNG().toString('base64')}, screenshot_size:image.getSize(), viewport:{width:bounds.width/zoom,height:bounds.height/zoom} };
+      }
+      await inspection.ensure();
+      const frame = inspection.frame(typeof args.ref === 'string' ? args.ref : undefined, args.action === 'press', ['click','fill','press'].includes(String(args.action)));
       const run = (scripts: Electron.WebSource[]) => inspection!.run(frame, scripts[0].code);
       if (args.action === 'read' && args.ref) {
         const index = inspection.index(args.ref);
@@ -581,10 +594,6 @@ export class Browsers {
         const offset = args.text_offset ?? 0;
         if (typeof offset !== 'number' || !Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid text offset.');
         return { ...detail, text:detail.text.slice(offset,offset+24000), text_total:detail.text.length, next_text_offset:offset+24000<detail.text.length?offset+24000:null, ref:args.ref, tab_id:id };
-      }
-      if (args.action === 'screenshot') {
-        const image = await window.webContents.capturePage();
-        return { tab_id:id, image:{type:'image',mediaType:'image/png',data:image.toPNG().toString('base64')}, screenshot_size:image.getSize(), viewport:await run([{code:'({width:innerWidth,height:innerHeight})'}]) };
       }
       await run([{ code: cursor }]);
       const coordinate = (args.action === 'click' || args.action === 'hover') && !args.ref;
