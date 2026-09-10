@@ -28,7 +28,7 @@ On macOS, keep the packaging output outside iCloud or other synced folders: Find
 
 ## CI
 
-[Package Dextana](../.github/workflows/package.yml) runs on relevant pull requests, `v*` tags, and manual dispatch. Native macOS, Ubuntu, and Windows jobs:
+[Package Dextana](../.github/workflows/package.yml) runs on pushes to `main`, relevant pull requests, `v*` tags, and manual dispatch in the current repository. Main-branch builds create CI installers with unsigned checksums; release tags keep their required publisher signing and notarization. Native macOS, Ubuntu, and Windows jobs:
 
 1. Install Node 24 and locked npm dependencies, then run unit tests.
 2. Download the build-only compiler from [Usefused/harnest v0.18.0](https://github.com/Usefused/harnest/releases/tag/v0.18.0), checking the committed SHA-256 for that OS/architecture in [harnest-release.json](../packaging/harnest-release.json).

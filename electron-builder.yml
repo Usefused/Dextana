@@ -20,7 +20,27 @@ extraResources:
     to: LICENSE
   - from: browser-extension
     to: browser-extension
-    filter: [manifest.json, popup.html, popup.css, popup.js, transfer.js, runtime.js, site-scope.js, site-scope.LICENSE, background.js, control-worker.js, control-session.js, control-tabs.js, control-actions.js, control-page.js, page-semantics.js, control-popup.js]
+    filter:
+      [
+        manifest.json,
+        popup.html,
+        popup.css,
+        popup.js,
+        transfer.js,
+        runtime.js,
+        site-scope.js,
+        site-scope.LICENSE,
+        background.js,
+        control-worker.js,
+        control-session.js,
+        control-tabs.js,
+        control-actions.js,
+        control-screenshot.js,
+        screenshot-targeting.js,
+        control-page.js,
+        page-semantics.js,
+        control-popup.js,
+      ]
   - from: .build/backend
     to: backend
 mac:

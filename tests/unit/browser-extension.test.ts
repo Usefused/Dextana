@@ -44,6 +44,12 @@ it('ships every extension runtime dependency in the packaged app', async () => {
   );
   for (const file of extensionFiles) {
     expect(resource).toContain(file);
-    expect((await readFile(join('browser-extension', file))).length).toBeGreaterThan(0);
+    const source = await readFile(join('browser-extension', file), 'utf8');
+    expect(source.length).toBeGreaterThan(0);
+    // Follow the worker's actual imports so new helpers cannot be omitted from both lists.
+    for (const imports of source.matchAll(/importScripts\(([^)]*)\)/g)) {
+      for (const dependency of imports[1].matchAll(/['"]([^'"]+)['"]/g))
+        expect(extensionFiles, `${file} imports ${dependency[1]}`).toContain(dependency[1]);
+    }
   }
 });

@@ -21,6 +21,8 @@ export const extensionFiles = [
   'control-session.js',
   'control-tabs.js',
   'control-actions.js',
+  'control-screenshot.js',
+  'screenshot-targeting.js',
   'control-page.js',
   'page-semantics.js',
   'control-popup.js',
