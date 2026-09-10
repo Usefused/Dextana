@@ -15,7 +15,7 @@ test('attached input returns the next observation and preserves form metadata at
   scope.controlCurrent = vi.fn(async () => ({ url: snapshot.url }));
   scope.controlInput = vi.fn(async () => {});
   scope.controlPage = vi.fn(async () => snapshot);
-  const session = {};
+  const session = { tab: {} };
   const args = { action: 'fill', ref: 'old:1', text: 'owner@example.com' };
   const result = await scope.controlExecute(session, {
     requestId: 'request',
@@ -30,4 +30,32 @@ test('attached input returns the next observation and preserves form metadata at
     elements: snapshot.elements,
     tab_id: 'tab',
   });
+});
+
+test('the attached bridge preserves screenshot dimensions and binds only authored coordinate inputs', async () => {
+  const { browserArguments } = await import('../../src/main/user-browser/actions');
+  const screenshot_id = '00000000-0000-4000-8000-000000000001';
+  expect(
+    browserResult(
+      {
+        screenshot_id,
+        screenshot_size: { width: 1200, height: 900 },
+        viewport: { width: 800, height: 600 },
+      },
+      'tab',
+    ),
+  ).toMatchObject({ screenshot_id, screenshot_size: { width: 1200, height: 900 } });
+  const args = { action: 'click', screenshot_id, coordinate_space: 'normalized', x: 0.5, y: 0.5 };
+  expect(
+    browserArguments({ ...args, script: 'untrusted', method: 'Runtime.evaluate' }),
+  ).toMatchObject(args);
+  expect(browserArguments({ ...args, script: 'untrusted' })).not.toHaveProperty('script');
+  for (const patch of [
+    { ref: '00000000-0000-4000-8000-000000000002:1' },
+    { coordinate_space: 'viewport' },
+    { screenshot_id: '' },
+    { action: 'fill' },
+    { click_count: 2 },
+  ])
+    expect(() => browserArguments({ ...args, ...patch })).toThrow();
 });

@@ -56,7 +56,7 @@ function desktopFiles() {
     ...readdirSync('src/main/user-browser')
       .filter((name) => name.endsWith('.ts'))
       .map((name) => `src/main/user-browser/${name}`),
-    ...['actions', 'page', 'popup', 'worker', 'tabs', 'session'].map(
+    ...['actions', 'page', 'popup', 'worker', 'tabs', 'session', 'screenshot'].map(
       (name) => `browser-extension/control-${name}.js`,
     ),
     'src/shared/user-browser.ts',

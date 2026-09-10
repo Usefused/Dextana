@@ -48,6 +48,10 @@ const fields = [
   'viewport',
   'focused_ref',
   'image',
+  'screenshot_id',
+  'screenshot_size',
+  'coordinate_mapping',
+  'targeting',
   'message',
   'error',
 ];

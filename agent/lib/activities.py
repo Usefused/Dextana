@@ -488,6 +488,8 @@ class Activities:
 
     async def run(self, activity):
         from harnest.lib.tool_receipts import ToolReceipts
+        from harnest.lib.browser_progress import BrowserProgress
+        browser_progress = BrowserProgress()
         receipts = ToolReceipts(activity)
         message, proposal, session_id = None, None, None
         plan = self.plan(activity)
@@ -595,6 +597,7 @@ class Activities:
                                 except Exception as error:
                                     output = dict(error=str(error))
                                     activity['events'].append(name + ' failed: ' + str(error))
+                                output = browser_progress.observe(name, args, output)
                                 output = receipts.result(name, args, output)
                                 self.commit()  # Persist reference bindings before the model can use them.
                                 await socket.send(json.dumps(dict(type='client_tool.result', requestId=tool['id'], output=output)))

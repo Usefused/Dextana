@@ -1,4 +1,9 @@
-importScripts('control-page.js', 'page-semantics.js');
+importScripts(
+  'control-page.js',
+  'page-semantics.js',
+  'control-screenshot.js',
+  'screenshot-targeting.js',
+);
 const controlKeys = {
   Enter: ['Enter', 13],
   Escape: ['Escape', 27],
@@ -22,7 +27,7 @@ async function controlActive(session) {
   );
   if (active.requestId !== session.commandId) throw new Error('Browser action authority ended.');
 }
-async function controlPage(session, args) {
+async function controlEvaluate(session, expression) {
   await controlActive(session);
   await controlCurrent(session, session.commandURL);
   const tree = await controlCDP(session, 'Page.getFrameTree', {});
@@ -34,7 +39,7 @@ async function controlPage(session, args) {
   // Only this authored function and JSON data can enter the isolated context.
   const evaluated = await controlCDP(session, 'Runtime.evaluate', {
     contextId: world.executionContextId,
-    expression: `(${dextanaControlPage.toString()})(${JSON.stringify(args)}, ${DextanaPage.describeBrowserElements.toString()})`,
+    expression,
     returnByValue: true,
   });
   if (evaluated.exceptionDetails || !evaluated.result?.value)
@@ -43,6 +48,12 @@ async function controlPage(session, args) {
   if (result.error) throw new Error(result.error);
   await controlCurrent(session, result.url);
   return result;
+}
+async function controlPage(session, args) {
+  return controlEvaluate(
+    session,
+    `(${dextanaControlPage.toString()})(${JSON.stringify(args)}, ${DextanaPage.describeBrowserElements.toString()})`,
+  );
 }
 async function controlCurrent(session, expectedURL) {
   if (session.stopped) throw new Error('Browser control stopped.');
@@ -93,6 +104,14 @@ async function controlKey(session, args) {
   await controlCDP(session, 'Input.dispatchKeyEvent', { type: 'keyUp', ...fields });
 }
 async function controlInput(session, args) {
+  if (args.screenshot_id) return controlScreenshotInput(session, args);
+  if (['click', 'hover'].includes(args.action) && !args.ref) {
+    await controlPage(session, { action: 'invalidate' });
+    return controlPointer(session, args.action, args);
+  }
+  return controlRefInput(session, args);
+}
+async function controlRefInput(session, args) {
   if (args.action === 'scroll') {
     const page = await controlPage(session, { action: 'invalidate' });
     if (args.x >= page.viewport.width || args.y >= page.viewport.height)
@@ -129,14 +148,8 @@ async function controlExecute(session, command) {
   if (command.action === 'close_tab') return controlCloseTab(session);
   if (command.action === 'read')
     return controlPage(session, { ...args, action: args.ref ? 'inspect' : 'read' });
-  if (command.action === 'screenshot') {
-    const image = await controlCDP(session, 'Page.captureScreenshot', {
-      format: 'png',
-      captureBeyondViewport: false,
-    });
-    await controlCurrent(session, current.url);
-    return { url: current.url, image: { type: 'image', mediaType: 'image/png', data: image.data } };
-  }
+  if (command.action === 'screenshot') return controlScreenshot(session);
+  if (!args.screenshot_id) session.tab.screenshots?.invalidate(String(session.tabId));
   if (command.action === 'open') {
     await controlPage(session, { action: 'invalidate' });
     await controlCurrent(session, command.expectedURL);

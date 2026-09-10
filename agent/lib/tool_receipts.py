@@ -3,6 +3,8 @@
 MCP payloads, document contents and web page data are business data, not records
 owned by Dextana. Never recursively redact or rename their fields.
 """
+import base64
+import hashlib
 import copy
 import json
 from harnest.lib.tool_references import ToolReferences, fields, desktop_kind
@@ -64,6 +66,9 @@ class ToolReceipts:
                         **fields(item, 'name', 'url')) for item in value['integrations']])
         if name == 'browser':
             value = copy.deepcopy(value)
+            image = value.get('image')
+            if value.get('screenshot_id') and isinstance(image, dict) and image.get('data'):
+                value['screenshot_image_sha256'] = hashlib.sha256(base64.b64decode(image['data'], validate=True)).hexdigest()
             if 'tab_id' in value:
                 value['tab_id'] = self.refs.public('Tab', value['tab_id'])
             if 'tabs' in value:

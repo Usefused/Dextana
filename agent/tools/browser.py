@@ -4,7 +4,7 @@ from harnest.models.browser_result import BrowserResult
 
 
 @client_tool
-def browser(action: Literal["connect_user", "open", "read", "click", "fill", "clear_cookies", "new_tab", "list_tabs", "downloads", "close_tab", "press", "click_outside", "hover", "scroll", "screenshot"], url: str = "", ref: str = "", text: str = "", tab_id: str = "", key: str = "", offset: int = 0, limit: int = 100, text_offset: int = 0, x: float = -1, y: float = -1, delta_x: float = 0, delta_y: float = 0, click_count: int = 1) -> BrowserResult:
+def browser(action: Literal["connect_user", "open", "read", "click", "fill", "clear_cookies", "new_tab", "list_tabs", "downloads", "close_tab", "press", "click_outside", "hover", "scroll", "screenshot"], url: str = "", ref: str = "", text: str = "", tab_id: str = "", key: str = "", offset: int = 0, limit: int = 100, text_offset: int = 0, x: float = -1, y: float = -1, delta_x: float = 0, delta_y: float = 0, click_count: int = 1, screenshot_id: str = "", coordinate_space: Literal["viewport", "screenshot", "normalized"] = "viewport") -> BrowserResult:
     """Operate this chat's browser. Load browser-work before first use; reuse it afterward.
 
     For the owner's Chrome/Edge, use connect_user if disconnected. Never substitute
@@ -27,9 +27,15 @@ def browser(action: Literal["connect_user", "open", "read", "click", "fill", "cl
     offset/limit: Read element pagination, limit 1..1000, default 100. Follow
         next_offset only when needed; act on relevant controls already observed.
     text_offset: Text pagination; follow next_text_offset for more relevant content.
-    x/y: Observed viewport CSS coordinates for scroll, or in-app click/hover.
+    x/y: Observed viewport CSS coordinates by default. Screenshot targeting:
+        use coordinate_space="screenshot" for original image pixels or "normalized"
+        for fractions 0..1 (exclusive upper bound), plus the returned screenshot_id.
+        Normalized points work when the full image was resized. Never use cropped
+        image coordinates. Dex converts to viewport CSS pixels automatically.
+    screenshot_id: Exact ID from a fresh screenshot of this tab. Single-use.
+    coordinate_space: viewport (DOM bounds), screenshot (image pixels), normalized (fractions).
     delta_x/delta_y: Scroll wheel movement; negative delta_y scrolls down.
-    click_count: In-app click count, 1 or 2. Attached supports ref-based single clicks.
+    click_count: In-app click count, 1 or 2. Attached supports single clicks.
     screenshot: Viewport image via the configured interpreter or chat model.
     downloads: In-app download receipts; claim saved only for completed with a path.
     clear_cookies: In-app cookie reset including HttpOnly; may sign this activity out.

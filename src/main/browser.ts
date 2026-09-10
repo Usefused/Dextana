@@ -1,3 +1,4 @@
+import { BrowserScreenshots, screenshotGeometry } from '../shared/browser-screenshot';
 import type { UserBrowser } from './user-browser';
 import { browserResourceAllowed } from './browser-network';
 import { BrowserDownloads, downloadReceipt } from './browser-downloads';
@@ -98,6 +99,7 @@ const cursor = `(() => {
 })()`;
 
 export class Browsers {
+  private screenshots = new BrowserScreenshots();
   private downloads = new BrowserDownloads(() => this.notify());
   private loginOffer = new LoginOffer();
   private dismissedLogins = new Map<string, string>();
@@ -505,6 +507,7 @@ export class Browsers {
       if (this.host().contentView.children.includes(view)) this.host().contentView.removeChildView(view);
     }
     if (view && !view.webContents.isDestroyed()) view.webContents.close();
+    this.screenshots.invalidate(id);
     this.windows.delete(id);
     this.downloads.cancelTab(id);
     this.tabs.delete(id);
@@ -603,6 +606,10 @@ export class Browsers {
     if (!['open', 'new_tab'].includes(String(args.action)) && !this.windows.has(tab.id))
       throw new Error('Reopen this tab or open a page before using it.');
     const id = tab.id;
+    const screenshotPoint = args.coordinate_space && args.coordinate_space !== 'viewport';
+    if (screenshotPoint && (!['click', 'hover', 'scroll'].includes(String(args.action)) || args.ref)) throw new Error('Screenshot coordinates require click, hover, or scroll without an element reference.');
+    if (!screenshotPoint && args.screenshot_id) throw new Error('Choose screenshot or normalized coordinate_space with screenshot_id.');
+    if (!screenshotPoint && !['read', 'screenshot'].includes(String(args.action))) this.screenshots.invalidate(id);
     this.defaults.set(activityId, id);
     this.persist(activityId);
     const window = this.get(id);
@@ -637,9 +644,12 @@ export class Browsers {
       if (['open','new_tab','read'].includes(String(args.action)) && !args.ref)
         return { ...await inspection.snapshot(readPage, args), tab_id: id, downloads: this.downloads.receipts(activityId, id) };
       if (args.action === 'screenshot') {
+        this.screenshots.invalidate(id);
+        const before = await pageScript(window.webContents, [{code: screenshotGeometry}]);
         const image = await window.webContents.capturePage(undefined, {stayHidden:true,stayAwake:true});
-        const bounds = window.getBounds(), zoom = window.webContents.getZoomFactor();
-        return { tab_id:id, image:{type:'image',mediaType:'image/png',data:image.toPNG().toString('base64')}, screenshot_size:image.getSize(), viewport:{width:bounds.width/zoom,height:bounds.height/zoom} };
+        const png = image.toPNG();
+        const after = await pageScript(window.webContents, [{code: screenshotGeometry}]);
+        return { tab_id:id, image:{type:'image',mediaType:'image/png',data:png.toString('base64')}, ...this.screenshots.capture(id, png, before, after) };
       }
       await inspection.ensure();
       const frame = inspection.frame(typeof args.ref === 'string' ? args.ref : undefined, args.action === 'press', ['click','fill','press'].includes(String(args.action)));
@@ -659,7 +669,8 @@ export class Browsers {
       const coordinate = (args.action === 'click' || args.action === 'hover') && !args.ref;
       if (coordinate || args.action === 'scroll') {
         const viewport = await run([{code:'({width:innerWidth,height:innerHeight})'}]);
-        const x = args.x, y = args.y;
+        const location = screenshotPoint ? this.screenshots.point(id, args, await pageScript(window.webContents, [{code: screenshotGeometry}])) : args;
+        const x = location.x, y = location.y;
         if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x >= viewport.width || y >= viewport.height) throw new Error('Choose coordinates inside the browser viewport from the latest screenshot or bounds.');
         const zoom = window.webContents.getZoomFactor();
         const point = {x:Math.round(x*zoom),y:Math.round(y*zoom)};

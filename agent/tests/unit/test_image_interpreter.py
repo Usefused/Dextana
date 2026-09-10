@@ -62,3 +62,33 @@ def test_interpreter_failure_does_not_leak_provider_errors_or_fall_back_to_raw_i
             await ImageInterpreter().describe({}, '', '', {})
         assert 'secret-provider-key' not in str(error.value)
     asyncio.run(check())
+
+
+def test_screenshot_targets_are_normalized_and_invalid_estimates_are_discarded(agent):
+    import json
+    from harnest.lib.image_interpreter import visual_targets
+    result = json.loads(visual_targets(json.dumps(dict(observations='A button', targets=[
+        dict(label='Save', x=.75, y=.25, confidence='high'),
+        dict(label='Outside', x=100, y=30, confidence='high'),
+        dict(label='Uncertain', x=.5, y=.5, confidence='low'),
+        dict(label='Boolean', x=True, y=False, confidence='high'),
+    ]))))
+    assert result['targets'] == [dict(label='Save', x=.75, y=.25, coordinate_space='normalized')]
+    assert 'No verified coordinate candidates' in visual_targets('not JSON')
+
+
+def test_split_tool_media_is_bound_by_image_digest_without_crossing_turns(agent):
+    import base64
+    import hashlib
+    import json
+    from harnest.lib.image_interpreter import screenshot_context
+    data = b'screenshot fixture'
+    image = dict(type='image_url', image_url=dict(url='data:image/png;base64,' + base64.b64encode(data).decode()))
+    metadata = dict(screenshot_id='shot-a', tab_id='Tab 1', screenshot_image_sha256=hashlib.sha256(data).hexdigest())
+    tool = dict(role='tool', content=json.dumps(dict(result=metadata)))
+    media = dict(role='user', content=[image])
+    assert json.loads(screenshot_context([tool, media], 1, image))['screenshot_id'] == 'shot-a'
+    other = dict(role='tool', content=json.dumps(dict(metadata, screenshot_image_sha256='another-image')))
+    assert screenshot_context([other, media], 1, image) == ''
+    assert screenshot_context([tool, dict(role='assistant', content='Done'), media], 2, image) == ''
+    assert screenshot_context([tool, tool, media], 2, image) == ''

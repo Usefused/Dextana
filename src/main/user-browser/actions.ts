@@ -71,8 +71,30 @@ const actions: Record<string, (args: Record<string, unknown>) => Record<string, 
 };
 /** Forward authored action fields only; the model cannot select CDP methods or inject script. */
 export function browserArguments(args: Record<string, unknown>) {
+  if (args.screenshot_id || (args.coordinate_space && args.coordinate_space !== 'viewport'))
+    return screenshotArguments(args);
   const action = String(args.action);
   if (!Object.hasOwn(actions, action))
     throw new Error('This action is unavailable on your attached browser tab.');
   return { action, ...actions[action](args) };
+}
+
+function screenshotArguments(args: Record<string, unknown>) {
+  const action = String(args.action);
+  if (!['click', 'hover', 'scroll'].includes(action) || args.ref)
+    throw new Error('Screenshot targeting requires click, hover or scroll without a ref.');
+  if (!['screenshot', 'normalized'].includes(String(args.coordinate_space)))
+    throw new Error('Choose screenshot or normalized coordinates.');
+  if (typeof args.screenshot_id !== 'string' || !/^[a-f0-9-]{36}$/.test(args.screenshot_id))
+    throw new Error('Use the screenshot_id from a fresh screenshot of this tab.');
+  if (args.click_count !== undefined && args.click_count !== 1)
+    throw new Error('Attached tabs currently support single clicks.');
+  return {
+    action,
+    ...scroll(args),
+    x: number(args.x, 0, 100_000, -1),
+    y: number(args.y, 0, 100_000, -1),
+    screenshot_id: args.screenshot_id,
+    coordinate_space: args.coordinate_space,
+  };
 }

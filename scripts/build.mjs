@@ -1,5 +1,14 @@
 import { build } from 'esbuild';
 await build({
+  entryPoints: ['src/shared/browser-screenshot.ts'],
+  outfile: 'browser-extension/screenshot-targeting.js',
+  bundle: true,
+  platform: 'browser',
+  format: 'iife',
+  globalName: 'DextanaScreenshots',
+  banner: { js: '// Generated from src/shared/browser-screenshot.ts.' },
+});
+await build({
   entryPoints: ['src/shared/browser-semantics.ts'],
   outfile: 'browser-extension/page-semantics.js',
   bundle: true,
