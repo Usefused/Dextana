@@ -1,0 +1,72 @@
+name: Publish desktop downloads
+on:
+  workflow_run:
+    workflows: [Package Dextana]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful main-branch Package Dextana run to publish
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: publish-desktop-alpha
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      # Use the trusted default branch's publishing code, never artifact contents.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Test publication guards
+        run: node --test tests/packaging/public-installers.test.mjs
+      - name: Verify packaging run
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.run_id || github.event.workflow_run.id }}
+        run: |
+          node --input-type=module - <<'JS'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync, writeFileSync } from 'node:fs';
+          import { validatePackagingRun } from './scripts/prepare-public-installers.mjs';
+          const { SOURCE_RUN, GITHUB_REPOSITORY, GITHUB_OUTPUT } = process.env;
+          if (!/^\d+$/.test(SOURCE_RUN)) throw new Error('Provide a numeric packaging run ID.');
+          const run = JSON.parse(execFileSync('gh', ['api', `repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN}`], { encoding: 'utf8' }));
+          validatePackagingRun(run, GITHUB_REPOSITORY);
+          appendFileSync(GITHUB_OUTPUT, `run_id=${SOURCE_RUN}\nsha=${run.head_sha}\n`);
+          writeFileSync('release-notes.md', `Current desktop alpha, built and tested on macOS, Windows, and Linux.\n\nSource: ${run.head_sha}\nBuild: ${run.html_url}\n\nDownload the DMG (Apple silicon), EXE (Windows x64), or AppImage (Linux x64) below. No GitHub login is required. SHA256SUMS records the unsigned checksums of these installers.\n\nThese alpha builds are not Apple-notarized or Windows verified-publisher releases. See the installation guide at https://dextana.vercel.app/guide#installation.\n\nThis rolling alpha is updated only after all three platform builds and packaged-app tests pass.\n`);
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Dextana-*
+          path: tested-installers
+          run-id: ${{ steps.source.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify checksums and prepare direct installers
+        run: node scripts/prepare-public-installers.mjs tested-installers public-installers
+      - name: Publish the rolling desktop alpha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          if gh release view desktop-alpha --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload desktop-alpha public-installers/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/desktop-alpha" -f sha="$SOURCE_SHA" -F force=true
+            gh release edit desktop-alpha --repo "$GITHUB_REPOSITORY" --title 'Dextana desktop alpha' --notes-file release-notes.md --prerelease
+          else
+            gh release create desktop-alpha public-installers/* --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title 'Dextana desktop alpha' --notes-file release-notes.md --prerelease
+          fi

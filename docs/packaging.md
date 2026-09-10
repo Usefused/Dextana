@@ -36,6 +36,8 @@ On macOS, keep the packaging output outside iCloud or other synced folders: Find
 4. On macOS, verify the complete app signature, mount the DMG read-only and extract the ZIP to verify their app signatures, and confirm that changing a resource in a disposable extracted copy invalidates its seal. Launch the packaged app with Harnest and Python removed from `PATH`, connect a local test Ollama server, and run a complete agent response. Linux uses Xvfb.
 5. Upload DMG/ZIP, NSIS/ZIP, or AppImage artifacts only after the packaged test passes. Failures retain traces and compiler logs.
 
+[Publish desktop downloads](../.github/workflows/publish-installers.yml) runs after a successful main-branch packaging run. It validates the run belongs to this repository and workflow, requires all three platform installers, verifies their CI SHA-256 checksums, and publishes only the DMG, EXE, AppImage, and a combined unsigned checksum manifest to the public `desktop-alpha` prerelease. Stable asset names keep the website downloads working across builds; this release and its tag move to the latest tested source revision. Pull request builds and failed or incomplete runs cannot publish. A manual dispatch accepts a successful main-branch run ID to recover publication without rebuilding. GitHub Actions must permit the publishing job's `contents: write` permission.
+
 A release tag must match `package.json` (for example, `v0.1.0`). Changing the compiler version requires updating its pinned asset checksums, the backend build version check, and agent locks together. The release compiler is used only in CI/build directories and is excluded from installers. The included dependency licence metadata and CPython licence files remain with the runtime.
 
 The repository's `.gitattributes` keeps text files in LF format on every runner. Harnest 0.18.0 rejects frozen lock headers converted to Windows CRLF line endings; consistent source bytes also preserve dependency fingerprints.
@@ -68,7 +70,7 @@ The **Package Dextana** workflow's optional `tested_run` and `tested_commit` inp
 
 Native publisher signing is separate. `v*` tags and the manual **native_signing** option use `npm run dist:signed`, fail when credentials are missing, and verify native signatures after packaging. macOS requires a Developer ID Application certificate (`MACOS_CSC_LINK` and `MACOS_CSC_KEY_PASSWORD`) and notarization credentials (`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`). Windows requires a trusted certificate (`WINDOWS_CSC_LINK`, `WINDOWS_CSC_KEY_PASSWORD`); a hardware-backed/cloud signing provider will need its provider integration instead of a certificate file. The Windows hook includes native executables, DLLs and Python extensions in the private backend. macOS verifies the sealed app, Gatekeeper assessment and notarization ticket. Linux uses the signed checksum manifest.
 
-Until Apple and Windows signing credentials are configured, native publisher signing remains unavailable. CI-only bundles can still carry signed checksum manifests, but they are not Apple-notarized or Windows verified-publisher releases. CI does not publish a GitHub release or configure automatic updates.
+Until Apple and Windows signing credentials are configured, native publisher signing remains unavailable. CI-only bundles can still carry signed checksum manifests, but they are not Apple-notarized or Windows verified-publisher releases. The public desktop alpha uses these same signing limitations. Automatic in-app updates are not configured.
 
 ## Dextana licence
 

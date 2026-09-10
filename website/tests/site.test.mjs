@@ -10,10 +10,10 @@ test('the production homepage renders content and download destinations without 
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /text\/html/);
   const html = await response.text();
-  for (const content of ['Research, organise, create', 'macOS', 'Windows', 'Linux', 'Choose your AI', 'notarized', 'platform installer packages']) assert.ok(html.includes(content), `Missing ${content}`);
+  for (const content of ['Research, organise, create', 'macOS', 'Windows', 'Linux', 'Choose your AI', 'notarized', 'No GitHub account required']) assert.ok(html.includes(content), `Missing ${content}`);
   for (const anchor of ['main', 'possibilities', 'how-it-works', 'download']) assert.ok(html.includes(`id="${anchor}"`), `Missing navigation target ${anchor}`);
-  for (const id of ['10080613868', '10080783730', '10080532414']) assert.ok(html.includes(`/actions/runs/34288516486/artifacts/${id}`), `Missing installer package ${id}`);
-  assert.ok(html.includes('https://github.com/Usefused/Dextana/actions/runs/'));
+  for (const file of ['Dextana-mac-arm64.dmg', 'Dextana-win-x64.exe', 'Dextana-linux-x86_64.AppImage']) assert.ok(html.includes(`https://github.com/Usefused/Dextana/releases/download/desktop-alpha/${file}`), `Missing public installer ${file}`);
+  assert.doesNotMatch(html, /actions\/runs\/|artifacts\/|package has expired/);
   assert.ok(html.includes('Dextana No-Resale License'));
   assert.ok(html.includes('Reselling the app or its installer packages requires written permission'));
   assert.doesNotMatch(html, /predate|original MIT|past licen[cs]/);

@@ -1,26 +1,22 @@
 export const repository = 'https://github.com/Usefused/Dextana';
 export const downloads = {
   guide: '/guide#installation',
-  // Installer packages from successful packaging run 34288516486.
-  // Source: 0440ad31e98c6c443cae7a7bf73c1206eca7170c. Refresh before expiry.
+  // Stable public release assets, refreshed only after every platform passes CI.
   platforms: {
     macos: {
-      name: 'macOS', version: '0.1.0', architecture: 'Apple silicon (ARM64)',
-      format: 'ZIP · 506 MB', instructions: 'Unzip the package and open the included DMG installer.',
-      url: `${repository}/actions/runs/34288516486/artifacts/10080613868`,
-      expiresAt: '2026-09-22T23:05:43Z',
+      name: 'macOS', architecture: 'Apple silicon (ARM64)',
+      format: 'DMG', instructions: 'Open the DMG and drag Dextana into Applications.',
+      url: `${repository}/releases/download/desktop-alpha/Dextana-mac-arm64.dmg`,
     },
     windows: {
-      name: 'Windows', version: '0.1.0', architecture: '64-bit (x64)',
-      format: 'ZIP · 470 MB', instructions: 'Unzip the package and run the included EXE installer.',
-      url: `${repository}/actions/runs/34288516486/artifacts/10080783730`,
-      expiresAt: '2026-09-22T23:11:40Z',
+      name: 'Windows', architecture: '64-bit (x64)',
+      format: 'EXE', instructions: 'Run the installer and follow the setup steps.',
+      url: `${repository}/releases/download/desktop-alpha/Dextana-win-x64.exe`,
     },
     linux: {
-      name: 'Linux', version: '0.1.0', architecture: '64-bit (x64)',
-      format: 'ZIP · 280 MB', instructions: 'Unzip the package, make the included AppImage executable, and open it.',
-      url: `${repository}/actions/runs/34288516486/artifacts/10080532414`,
-      expiresAt: '2026-09-22T23:03:00Z',
+      name: 'Linux', architecture: '64-bit (x64)',
+      format: 'AppImage', instructions: 'Allow the AppImage to run as a program, then open it.',
+      url: `${repository}/releases/download/desktop-alpha/Dextana-linux-x86_64.AppImage`,
     },
   },
 };
