@@ -71,6 +71,40 @@ function run(command, args) {
   if (result.error || result.status !== 0)
     throw new Error(`Backend build failed; see ${logPath}. ${result.error?.message ?? ''}`);
 }
+async function pruneRuntime(python, packages, version) {
+  const windows = process.platform === 'win32';
+  const standardLibrary = windows ? join(python, 'Lib') : join(python, 'lib', `python${version}`);
+  const removals = [
+    join(python, 'include'),
+    join(python, 'Include'),
+    join(python, 'share', 'man'),
+    join(python, 'tcl'),
+    join(standardLibrary, 'ensurepip'),
+    join(standardLibrary, 'idlelib'),
+    join(standardLibrary, 'tkinter'),
+    join(standardLibrary, 'turtledemo'),
+    join(packages, 'pip'),
+  ];
+  if (!windows) {
+    // The standalone distribution ships three byte-identical launchers. Dextana
+    // always invokes python3, so retaining the other two wastes about 34 MB.
+    removals.push(join(python, 'bin', 'python'), join(python, 'bin', `python${version}`));
+  }
+  for (const entry of await readdir(packages)) {
+    if (/^pip-.*\.dist-info$/.test(entry)) removals.push(join(packages, entry));
+  }
+  const library = join(python, 'lib');
+  if (!windows) {
+    for (const entry of await readdir(library)) {
+      if (/^(?:i?tcl|tk)|^libtcl/.test(entry)) removals.push(join(library, entry));
+    }
+  }
+  const dynamicLibrary = windows ? join(python, 'DLLs') : join(standardLibrary, 'lib-dynload');
+  for (const entry of await readdir(dynamicLibrary)) {
+    if (entry.startsWith('_tkinter.')) removals.push(join(dynamicLibrary, entry));
+  }
+  await Promise.all(removals.map((path) => rm(path, { recursive: true, force: true })));
+}
 try {
   for (const path of sourceFiles) {
     const target = join(source, relative(join(root, 'agent'), path));
@@ -117,6 +151,9 @@ try {
       : `lib/python${runtime.version}/site-packages`,
   );
   await cp(runtime.packages, packages, { recursive: true, dereference: true, filter });
+  // End users cannot mutate this frozen environment. Remove installers,
+  // development headers, GUI tooling, and duplicate interpreter launchers.
+  await pruneRuntime(python, packages, runtime.version);
   const executable = join(python, process.platform === 'win32' ? 'python.exe' : 'bin/python3');
   run(executable, [
     '-I',

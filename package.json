@@ -31,23 +31,14 @@
     "eval:browser-use": "npm run backend:build && npm run build && tsc -p evals/browser-use/tsconfig.json && playwright test -c evals/browser-use/playwright.config.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
     "@trycua/cua-driver": "0.25.0",
-    "adm-zip": "^0.6.0",
-    "exceljs": "^4.4.0",
     "mammoth": "^1.12.2",
-    "mermaid": "11.17.2",
-    "pdfjs-dist": "5.5.207",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
-    "tldts": "^7.4.12",
-    "ws": "^8.21.3"
+    "pdfjs-dist": "5.5.207"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.8",
     "@babel/traverse": "^7.29.8",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/test": "^1.63.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/adm-zip": "^0.5.8",
@@ -56,13 +47,22 @@
     "@types/react-dom": "^19.2.7",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "adm-zip": "^0.6.0",
     "electron": "^41.10.7",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
+    "exceljs": "^4.4.0",
+    "mermaid": "11.17.2",
     "prettier": "^3.9.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tldts": "^7.4.12",
     "typescript": "^7.0.2",
     "vite": "^6.4.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "ws": "^8.21.3"
   },
   "overrides": {
     "exceljs": {

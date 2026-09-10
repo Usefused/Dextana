@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 const release = resolve(process.env.DEXTANA_RELEASE_DIR || 'release');
@@ -22,17 +22,45 @@ if (process.platform === 'darwin') {
     { stdio: 'inherit' },
   );
   if (signature.error) throw signature.error;
-  if (signature.status !== 0) throw new Error('The packaged macOS app has an invalid bundle signature.');
+  if (signature.status !== 0)
+    throw new Error('The packaged macOS app has an invalid bundle signature.');
 }
 const resources =
   process.platform === 'darwin'
     ? resolve(dirname(executable), '../Resources')
     : join(dirname(executable), 'resources');
-for (const name of ['manifest.json', 'popup.html', 'popup.css', 'popup.js', 'transfer.js', 'background.js']) {
-  if (!existsSync(join(resources, 'browser-extension', name))) throw new Error('The packaged login-transfer extension is incomplete.');
+for (const name of [
+  'manifest.json',
+  'popup.html',
+  'popup.css',
+  'popup.js',
+  'transfer.js',
+  'background.js',
+]) {
+  if (!existsSync(join(resources, 'browser-extension', name)))
+    throw new Error('The packaged login-transfer extension is incomplete.');
 }
 const runtimeRoot = join(resources, 'backend/python');
 const python = join(runtimeRoot, process.platform === 'win32' ? 'python.exe' : 'bin/python3');
+const metadata = JSON.parse(readFileSync(join(resources, 'backend/build.json'), 'utf8'));
+const standardLibrary =
+  process.platform === 'win32'
+    ? join(runtimeRoot, 'Lib')
+    : join(runtimeRoot, 'lib', `python${metadata.python}`);
+for (const path of [
+  join(runtimeRoot, 'include'),
+  join(runtimeRoot, 'Include'),
+  join(standardLibrary, 'ensurepip'),
+  join(standardLibrary, 'idlelib'),
+  join(standardLibrary, 'tkinter'),
+  join(standardLibrary, 'site-packages', 'pip'),
+  ...(process.platform === 'win32'
+    ? []
+    : [join(runtimeRoot, 'bin/python'), join(runtimeRoot, `bin/python${metadata.python}`)]),
+]) {
+  if (existsSync(path))
+    throw new Error(`The packaged runtime contains development-only files: ${path}`);
+}
 const probe = spawnSync(
   python,
   [

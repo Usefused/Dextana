@@ -7,6 +7,7 @@ asarUnpack:
   - node_modules/@ubjs/**
 beforePack: packaging/before-pack.cjs
 npmRebuild: false
+electronLanguages: [en-US, en-GB]
 artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
 directories:
   output: release
@@ -15,6 +16,21 @@ files:
   - dist/**
   - assets/icon.png
   - package.json
+  # Only the Node-facing PDF parser is used. The browser viewers, source maps,
+  # type declarations, fonts, and image decoders otherwise add tens of MB to
+  # every desktop installation.
+  - '!node_modules/pdfjs-dist/build/**'
+  - '!node_modules/pdfjs-dist/cmaps/**'
+  - '!node_modules/pdfjs-dist/iccs/**'
+  - '!node_modules/pdfjs-dist/image_decoders/**'
+  - '!node_modules/pdfjs-dist/standard_fonts/**'
+  - '!node_modules/pdfjs-dist/types/**'
+  - '!node_modules/pdfjs-dist/wasm/**'
+  - '!node_modules/pdfjs-dist/web/**'
+  - '!node_modules/pdfjs-dist/legacy/image_decoders/**'
+  - '!node_modules/pdfjs-dist/legacy/web/**'
+  - '!node_modules/pdfjs-dist/legacy/build/*.map'
+  - '!node_modules/pdfjs-dist/legacy/build/pdf.sandbox*'
 extraResources:
   - from: LICENSE
     to: LICENSE
