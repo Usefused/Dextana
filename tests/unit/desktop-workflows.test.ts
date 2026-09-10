@@ -54,8 +54,10 @@ describe('desktop workflows layer', () => {
     expect(await readFile(from, 'utf8')).toBe('receipt');
     await expect(access(to)).rejects.toThrow();
     const details = await service.prepare('workflow.rename_apply', { id: preview.id }, context);
-    expect(details.preview).toContain(from);
-    expect(details.preview).toContain(to);
+    expect(JSON.parse(details.preview!)).toMatchObject({
+      entries: [{ from, to, completed: false }],
+      status: 'preview',
+    });
     await service.dispose();
     service = new DesktopWorkflows(join(directory, 'state'), host);
     await service.initialize();

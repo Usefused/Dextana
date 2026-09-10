@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { expect, test, vi } from 'vitest';
 vi.mock('electron', () => ({ app: { getPath: () => '/downloads' }, shell: { showItemInFolder: vi.fn() } }));
@@ -18,7 +19,7 @@ test('downloads remain activity-owned, need a save choice, and reveal only compl
   const downloads = new BrowserDownloads(vi.fn());
   const item = transfer();
   downloads.start(item as unknown as DownloadItem, 'owner', 'tab');
-  expect(item.setSaveDialogOptions).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: '/downloads/receipt.pdf' }));
+  expect(item.setSaveDialogOptions).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: join('/downloads', 'receipt.pdf') }));
   expect(downloads.desktopRecords('other')).toEqual([]);
   const record = downloads.desktopRecords('owner')[0];
   expect(record.path).toBeUndefined();
