@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { extensionFiles } from '../../src/main/browser-extension';
 
 test('the packaged Dextana app runs its compiled agent without Harnest or Python on PATH', async () => {
   test.setTimeout(180_000);
@@ -116,7 +117,8 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
         return '';
       };
     });
-    await page.getByRole('button', { name: 'Use login from my browser' }).click();
+    await page.getByRole('button', { name: 'Browser options', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Use login from my browser', exact: true }).click();
     const code = await page.getByLabel('Browser connection code').inputValue();
     await page.getByRole('button', { name: 'Copy connection code', exact: true }).click();
     expect(await app.evaluate(() => (globalThis as any).copiedCode)).toBe(code);
@@ -127,15 +129,14 @@ test('the packaged Dextana app runs its compiled agent without Harnest or Python
       .poll(() => app.evaluate(() => (globalThis as any).openedExtension))
       .toBe(extensionFolder);
     const manifest = JSON.parse(await readFile(join(extensionFolder, 'manifest.json'), 'utf8'));
-    expect(manifest.name).toBe('Dextana Login Transfer');
+    expect(manifest.name).toBe('Dextana Browser');
     const sourceManifest = JSON.parse(await readFile('browser-extension/manifest.json', 'utf8'));
     expect(manifest).toEqual(sourceManifest);
-    expect(await readFile(join(extensionFolder, manifest.background.service_worker), 'utf8')).toBe(
-      await readFile(join('browser-extension', sourceManifest.background.service_worker), 'utf8'),
-    );
-    expect(await readFile(join(extensionFolder, 'transfer.js'), 'utf8')).toContain(
-      'DextanaTransfer',
-    );
+    for (const file of extensionFiles) {
+      expect(await readFile(join(extensionFolder, file), 'utf8'), file).toBe(
+        await readFile(join('browser-extension', file), 'utf8'),
+      );
+    }
     await page.getByRole('button', { name: 'Cancel transfer', exact: true }).click();
     await page.getByRole('button', { name: 'New activity', exact: true }).click();
     await page.getByLabel('Describe your work').fill('Test the packaged reminder');
