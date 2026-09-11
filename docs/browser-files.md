@@ -6,6 +6,8 @@ Click a download link or open an attachment URL to start a transfer. The native 
 
 The agent’s `browser` tool includes `downloads` for checking its own activity’s transfers. A `completed` state with a saved path is the completion evidence; a clicked link or navigation receipt alone is insufficient. Opening an attachment may leave the previous page visible, which is normal. To extract a downloaded PDF’s text, use the file-reading tool and its normal permissions. Download permission does not grant file-reading permission.
 
+Connected Chrome and Edge sessions report the same bounded receipt fields for downloads observed from controlled tabs used by that chat. The extension uses the browser's configured destination behavior and never exposes unrelated download history or another chat's unused-tab receipts. PDF viewer controls may still require a screenshot-targeted click before a transfer starts.
+
 Web pages retain sandboxing, context isolation, no Node integration, and no desktop preload bridge. Only the built-in PDF viewer can load Chromium UI resources. Other privileged URLs remain blocked. Plan-covered browser actions reject download redirects outside the approved origins; the native Save dialog remains required even when a browser action is pre-approved.
 
 Browser file uploads are still unsupported. PDF viewing is not automatic PDF text extraction or OCR. These changes require a rebuilt/restarted desktop app; existing alpha installer artifacts are not updated by changing the source.

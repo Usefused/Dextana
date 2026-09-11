@@ -169,6 +169,95 @@ it('keeps browser pairing available after a task finishes', async () => {
   f.browser.release('chat');
   expect(f.browser.snapshot()[0].state).toBe('connected');
 });
+it('returns only validated downloads observed by the attached browser connection', async () => {
+  const f = await fixture();
+  await f.attach();
+  const path =
+    process.platform === 'win32'
+      ? 'C:\\Users\\Owner\\Downloads\\report.pdf'
+      : '/Users/owner/Downloads/report.pdf';
+  expect(
+    (
+      await f.request('/tabs', {
+        revision: 1,
+        tabs: f.tabs,
+        downloads: [
+          {
+            filename: 'report.pdf',
+            tabId: f.tabId,
+            state: 'completed',
+            receivedBytes: 128,
+            totalBytes: 128,
+            path,
+            internalId: 'must-not-cross',
+            url: 'https://private.example/report.pdf',
+          },
+        ],
+      })
+    ).status,
+  ).toBe(200);
+  expect(await f.run({ action: 'downloads' })).toEqual({
+    browser: 'user',
+    downloads: [
+      {
+        filename: 'report.pdf',
+        state: 'completed',
+        receivedBytes: 128,
+        totalBytes: 128,
+        path,
+      },
+    ],
+    instruction:
+      'Only a completed download with a saved path proves the file is available. Use the files tool with normal read permission to inspect it.',
+  });
+  expect(
+    (
+      await f.request('/tabs', {
+        revision: 2,
+        tabs: f.tabs,
+        downloads: [
+          {
+            filename: 'bad.pdf',
+            tabId: f.tabId,
+            state: 'progressing',
+            receivedBytes: 1,
+            totalBytes: 2,
+            path,
+          },
+        ],
+      })
+    ).status,
+  ).toBe(400);
+});
+it('scopes browser-wide download receipts to tabs used by each chat', async () => {
+  const f = await fixture();
+  await f.request('/attach', {
+    protocol: 4,
+    approved: true,
+    allowNewTabs: true,
+    scope: 'browser',
+    tabs: f.tabs,
+  });
+  await f.request('/tabs', {
+    revision: 1,
+    tabs: f.tabs,
+    downloads: f.tabs.map((tab, index) => ({
+      tabId: tab.id,
+      filename: `report-${index + 1}.pdf`,
+      state: 'completed',
+      receivedBytes: 10,
+      totalBytes: 10,
+      path: `/Downloads/report-${index + 1}.pdf`,
+    })),
+  });
+  expect(((await f.run({ action: 'downloads', tab_id: f.tabId })) as any).downloads).toEqual([
+    expect.objectContaining({ filename: 'report-1.pdf' }),
+  ]);
+  await f.browser.request('second', 'Second chat', new AbortController().signal);
+  const args = f.browser.prepare('second', { action: 'downloads', tab_id: f.secondId });
+  const result = (await f.browser.execute('second', args, new AbortController().signal)) as any;
+  expect(result.downloads).toEqual([expect.objectContaining({ filename: 'report-2.pdf' })]);
+});
 it('rejects an action approved for a replaced connection', async () => {
   const f = await fixture();
   await f.attach();

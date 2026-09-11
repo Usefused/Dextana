@@ -7,6 +7,7 @@ import { browserArguments } from './actions';
 import { UserBrowserTabs } from './tabs';
 import { BrowserRequests } from './requests';
 import { BrowserAttachment } from './attachment';
+import { UserBrowserDownloads } from './downloads';
 
 class ExtensionUpdateRequired extends Error {}
 
@@ -18,6 +19,7 @@ export class UserBrowserConnection {
   private requests = new BrowserRequests();
   private tabs: UserBrowserTabs;
   private attachment = new BrowserAttachment();
+  private downloads = new UserBrowserDownloads();
   private revision = 0;
   private expiry?: ReturnType<typeof setTimeout>;
   private heartbeat?: ReturnType<typeof setTimeout>;
@@ -150,6 +152,7 @@ export class UserBrowserConnection {
       throw new Error('Approve the selected tabs and new tabs for this browser session.');
     this.state.scope = input.scope as 'browser' | 'tabs';
     this.tabs.attach(input.tabs);
+    this.downloads.update(input.downloads);
     clearTimeout(this.expiry);
     this.state.state = 'connected';
     this.attachment.connected();
@@ -162,6 +165,7 @@ export class UserBrowserConnection {
       throw new Error('Invalid tab inventory revision.');
     if (Number(input.revision) <= this.revision) return { ok: true };
     this.tabs.update(input.tabs);
+    this.downloads.update(input.downloads);
     this.revision = Number(input.revision);
     this.requests.closeTabs(
       this.state.tabs.filter((tab) => tab.state === 'closed').map((tab) => tab.id),
@@ -220,6 +224,10 @@ export class UserBrowserConnection {
       throw new Error('Attach your browser again, or switch to the Dext browser.');
     const input: Record<string, unknown> = browserArguments(args);
     if (input.action === 'list_tabs') return { ...input, _userConnection: this.state.id };
+    if (input.action === 'downloads') {
+      const tab = this.tabs.target(args);
+      return { ...input, tab_id: tab.id, _userConnection: this.state.id };
+    }
     const tab = this.tabs.target(args);
     if (input.action === 'close_tab' && !tab.created)
       throw new Error(
@@ -235,10 +243,16 @@ export class UserBrowserConnection {
       ...(target ? { _userTarget: target } : {}),
     };
   }
-  execute(args: Record<string, unknown>, signal: AbortSignal, activityId: string) {
+  execute(
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+    activityId: string,
+    activityTabs: ReadonlySet<string>,
+  ) {
     signal.throwIfAborted();
     if (this.state.state !== 'connected') throw new Error('Attach your browser again.');
     if (args.action === 'list_tabs') return Promise.resolve(this.tabs.list());
+    if (args.action === 'downloads') return Promise.resolve(this.downloads.list(activityTabs));
     this.validateExecution(args);
     const tabId = String(args.tab_id);
     this.requests.assertAvailable(tabId);

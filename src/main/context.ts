@@ -6,7 +6,7 @@ import { externalURL } from '../shared/links';
 export function rememberFile(
   activity: Activity,
   path: string,
-  status: 'selected' | 'read' | 'created',
+  status: 'selected' | 'read' | 'created' | 'edited',
 ) {
   remember(activity, { kind: 'file', location: path, name: basename(path), status });
 }

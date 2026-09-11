@@ -38,7 +38,7 @@ export interface FusedInput { id?: string; name?: string; enabled: boolean; url:
 export interface Approval {
   source?: 'harnest';
   id: string;
-  capability: 'browser' | 'mcp' | 'fileRead' | 'fileCreate' | 'desktop';
+  capability: 'browser' | 'mcp' | 'fileRead' | 'fileCreate' | 'fileEdit' | 'desktop';
   description: string;
   arguments: string;
 }
@@ -95,7 +95,7 @@ export type QueuedMessageUpdate = { activityId: string; messageId: string } &
 export interface ContextItem {
   id: string; kind: 'file' | 'url' | 'desktop'; location: string; name: string;
   desktop?: { work: DesktopWork; resourceId: string; operation: string; state?: string; path?: string };
-  status: 'selected' | 'read' | 'created' | 'referenced' | 'visited';
+  status: 'selected' | 'read' | 'created' | 'edited' | 'referenced' | 'visited';
 }
 export interface BrowserTab {
   id: string; activityId: string; url: string; title: string; needsReopen: boolean;

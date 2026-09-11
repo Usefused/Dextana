@@ -12,6 +12,8 @@ function controlSession(target, scope) {
     stopped: false,
     reconnecting: false,
     needsResume: false,
+    downloads: new Map(),
+    downloadTimer: undefined,
   };
 }
 let controlStorage = Promise.resolve();
@@ -44,6 +46,7 @@ async function saveControlState(session, rememberPairing) {
         created,
         closed,
       })),
+      downloads: [...session.downloads.values()],
     },
   });
   if (rememberPairing && session.scope === 'browser')
@@ -61,6 +64,7 @@ async function controlResume(session) {
   await DextanaTransfer.request(session.target, '/resume', {
     revision: ++session.revision,
     tabs: [...session.tabs.values()].map(controlTabRecord),
+    downloads: controlDownloadRecords(session),
   });
   session.needsResume = false;
   session.reconnecting = false;
@@ -77,12 +81,19 @@ async function restoreBrowserControl() {
   const target = DextanaTransfer.connection(`${port}.${stored.target.token}`);
   const session = controlSession(target, stored.scope === 'browser' ? 'browser' : 'tabs');
   session.revision = stored.revision || 0;
+  controlRestoreDownloads(session, stored.downloads);
   await controlRestoreTabs(session, stored.tabs || []);
   if (epoch !== controlEpoch) return;
   browserControl = session;
   await controlReconnecting(session);
   await chrome.action.setBadgeText({ text: 'ON' });
   void controlLoop(session);
+}
+
+function controlRestoreDownloads(session, records) {
+  for (const download of records || [])
+    if (download && typeof download.guid === 'string')
+      session.downloads.set(download.guid, download);
 }
 
 async function controlRestoreTabs(session, records) {

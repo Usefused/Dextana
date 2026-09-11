@@ -344,6 +344,29 @@
   line-height: 1.65;
   margin-bottom: 0;
 }
+.file-edit-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.file-edit-comparison section { min-width: 0; }
+.file-edit-comparison h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.file-edit-comparison .document-preview {
+  margin: 0;
+  padding: 12px;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+  border: 1px solid var(--review-line);
+  border-radius: var(--dx-radius-lg);
+  background: var(--review-tint);
+}
+@container (max-width: 600px) {
+  .file-edit-comparison { grid-template-columns: minmax(0, 1fr); }
+}
 @container (max-width: 390px) {
   .review-card-header {
     padding: 16px 16px 0;

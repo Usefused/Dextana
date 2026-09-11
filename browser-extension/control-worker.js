@@ -1,8 +1,14 @@
-importScripts('control-actions.js', 'control-tabs.js', 'control-session.js');
+importScripts(
+  'control-actions.js',
+  'control-tabs.js',
+  'control-session.js',
+  'control-downloads.js',
+);
 let browserControl;
 let attaching = false;
 let stopping = false;
 let controlEpoch = 0;
+controlWatchDownloads(() => browserControl);
 async function stopBrowserControl(message) {
   controlEpoch++;
   const session = browserControl;
@@ -20,6 +26,7 @@ async function stopBrowserControl(message) {
   }
 }
 async function finishControlStop(session, message) {
+  controlStopDownloadUpdates(session);
   await chrome.action.setBadgeText({ text: '' });
   await controlForget();
   await Promise.all(
@@ -152,6 +159,7 @@ async function attachControl(message, epoch) {
       allowNewTabs: true,
       scope: session.scope,
       tabs: [...session.tabs.values()].map(controlTabRecord),
+      downloads: controlDownloadRecords(session),
     });
     if (session.stopped) throw new Error('Browser control stopped.');
     const status = controlStatus(session);

@@ -105,7 +105,7 @@ export class UserBrowser {
     const seen = this.usedTabs.get(activityId) ?? new Set<string>();
     if (typeof args.tab_id === 'string') seen.add(args.tab_id);
     this.usedTabs.set(activityId, seen);
-    return connection.execute(args, signal, activityId).then((result) => {
+    return connection.execute(args, signal, activityId, seen).then((result) => {
       const value = result as Record<string, unknown>;
       if (
         !value.error &&

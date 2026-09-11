@@ -37,7 +37,8 @@ def browser(action: Literal["connect_user", "open", "read", "click", "fill", "cl
     delta_x/delta_y: Scroll wheel movement; negative delta_y scrolls down.
     click_count: In-app click count, 1 or 2. Attached supports single clicks.
     screenshot: Viewport image via the configured interpreter or chat model.
-    downloads: In-app download receipts; claim saved only for completed with a path.
+    downloads: Download receipts for Dext's browser or connected Chrome/Edge; claim saved only
+        for completed with a path, then use files with normal read permission.
     clear_cookies: In-app cookie reset including HttpOnly; may sign this activity out.
     """
     ...

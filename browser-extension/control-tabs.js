@@ -32,6 +32,7 @@ async function controlPublish(session) {
   await DextanaTransfer.request(session.target, '/tabs', {
     revision: ++session.revision,
     tabs: [...session.tabs.values()].map(controlTabRecord),
+    downloads: controlDownloadRecords(session),
   });
   for (const [id, tab] of session.tabs)
     if (tab.closed && !session.busy.has(id)) session.tabs.delete(id);
@@ -64,6 +65,7 @@ async function controlEnsureAttached(session, tab) {
       throw error;
     });
   }
+  await chrome.debugger.sendCommand({ tabId: tab.tabId }, 'Page.enable', {});
   tab.attached = true;
   if (session.stopped || tab.closed) {
     await chrome.debugger.detach({ tabId: tab.tabId }).catch(() => {});

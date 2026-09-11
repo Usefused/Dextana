@@ -9,8 +9,11 @@ class FileResult(BaseModel):
     format: str | None = None
     content: str | None = None
     sheets: list[dict[str, Any]] | None = None
+    paragraphs: list[dict[str, Any]] | None = None
     note: str | None = None
     created: bool | None = None
+    edited: bool | None = None
+    revision: str | None = None
     bytes: int | None = None
     error: str | None = None
     image: Annotated[Image, ImageConstraints(max_bytes=5_000_000)] | None = None

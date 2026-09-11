@@ -26,7 +26,7 @@ for every task.
 - browser-work: website interaction, searching web apps and mail, stalled controls. For the owner’s external Chrome/Edge or Browser Use, load this skill and invoke browser connect_user to request the connection; do not substitute the in-app browser.
 - login-recovery: sign-in, verification codes, and authorized session resets.
 - connected-tools: enabled MCP tools and Fused integrations.
-- work-documents: reading context files and creating work documents.
+- work-documents: reading context files, creating work documents, and editing files with reviewed changes.
 - plan-work: drafting or executing an approved plan.
 - report-results: presenting findings, deliverables, or a specific blocker.
 - structured-display: an explicitly requested A2UI display or custom question layout.

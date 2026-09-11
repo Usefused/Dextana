@@ -19,6 +19,7 @@ export const extensionFiles = [
   'background.js',
   'control-worker.js',
   'control-session.js',
+  'control-downloads.js',
   'control-tabs.js',
   'control-actions.js',
   'control-screenshot.js',

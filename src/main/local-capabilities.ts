@@ -88,7 +88,8 @@ export class LocalCapabilities {
   }
   async setBrowserPreferences(input: Parameters<DesktopAPI['setBrowserPreferences']>[0]) {
     if (!input || typeof input.autoAllow !== 'boolean') throw new Error('Invalid browser default.');
-    if (this.browserPreferencesWriting) throw new Error('Browser defaults are already being saved.');
+    if (this.browserPreferencesWriting)
+      throw new Error('Browser defaults are already being saved.');
     this.browserPreferencesWriting = true;
     const previous = this.store.state.browserPreferences;
     this.store.state.browserPreferences = { autoAllow: input.autoAllow };
@@ -106,7 +107,8 @@ export class LocalCapabilities {
     if (
       !input ||
       !['browser', 'mcp', 'fileRead', 'fileCreate', 'desktop'].includes(input.capability) ||
-      (typeof input.autoAllow !== 'boolean' && !(input.capability === 'browser' && input.autoAllow === null))
+      (typeof input.autoAllow !== 'boolean' &&
+        !(input.capability === 'browser' && input.autoAllow === null))
     )
       throw new Error('Invalid permission setting.');
     const activity = this.store.state.activities.find((item) => item.id === input.activityId);
@@ -120,6 +122,7 @@ export class LocalCapabilities {
     capability: Approval['capability'],
     autoAllow: boolean | null,
   ) {
+    if (capability === 'fileEdit') throw new Error('Each file edit requires approval.');
     if (this.permissionWrites.has(activity.id))
       throw new Error('A permission change is already being saved.');
     this.permissionWrites.add(activity.id);
@@ -144,14 +147,24 @@ export class LocalCapabilities {
       throw new Error('This approval is no longer pending.');
     if (input.autoAllow && !input.approved) throw new Error('This approval is no longer pending.');
   }
-  async approve(input: Parameters<DesktopAPI['approve']>[0]) {
-    this.validateApprovalInput(input);
+  private pendingApproval(input: Parameters<DesktopAPI['approve']>[0]) {
     const pending = this.approvals.get(input.approvalId);
     if (!pending || pending.deciding || pending.activityId !== input.activityId)
       throw new Error('This approval is no longer pending.');
-    const activity = this.store.state.activities.find((item) => item.id === pending.activityId)!;
-    if (input.autoAllow && activity.approval?.source === 'harnest')
+    return pending;
+  }
+  private validateAutoAllow(activity: Activity, input: Parameters<DesktopAPI['approve']>[0]) {
+    if (!input.autoAllow) return;
+    if (activity.approval?.capability === 'fileEdit')
+      throw new Error('Each file edit requires review of its exact changes.');
+    if (activity.approval?.source === 'harnest')
       throw new Error('Change this tool’s approval policy in MCP settings.');
+  }
+  async approve(input: Parameters<DesktopAPI['approve']>[0]) {
+    this.validateApprovalInput(input);
+    const pending = this.pendingApproval(input);
+    const activity = this.store.state.activities.find((item) => item.id === pending.activityId)!;
+    this.validateAutoAllow(activity, input);
     pending.deciding = true;
     try {
       if (input.autoAllow) await this.savePermission(activity, activity.approval!.capability, true);
@@ -171,11 +184,25 @@ export class LocalCapabilities {
     );
   }
   private autoAllowed(activity: Activity, capability: Approval['capability']) {
+    if (capability === 'fileEdit') return false;
     const inherited = capability === 'browser' && activity.permissions?.browser === undefined;
     const allowed = inherited
       ? !this.browserPreferencesWriting && this.store.state.browserPreferences?.autoAllow === true
       : activity.permissions?.[capability] === true;
-    return (activity.allowAllApprovals === true || allowed) && !this.permissionWrites.has(activity.id);
+    return (
+      (activity.allowAllApprovals === true || allowed) && !this.permissionWrites.has(activity.id)
+    );
+  }
+  private coveredByApprovedPlan(
+    activity: Activity,
+    capability: Approval['capability'],
+    coveredByPlan: boolean,
+  ) {
+    return (
+      capability !== 'fileEdit' &&
+      coveredByPlan &&
+      !!executionPlan(this.store.state.activities, activity)
+    );
   }
   private async approval(
     activity: Activity,
@@ -187,7 +214,7 @@ export class LocalCapabilities {
     coveredByPlan = false,
   ) {
     signal.throwIfAborted();
-    if (coveredByPlan && executionPlan(this.store.state.activities, activity)) {
+    if (this.coveredByApprovedPlan(activity, capability, coveredByPlan)) {
       activity.events.push(`${description}: covered by approved plan`);
       return true;
     }
@@ -344,7 +371,7 @@ export class LocalCapabilities {
     }
     await this.approval(
       activity,
-      plan.action === 'read' ? 'fileRead' : 'fileCreate',
+      plan.action === 'read' ? 'fileRead' : plan.action === 'edit' ? 'fileEdit' : 'fileCreate',
       `File · ${plan.action} · ${plan.path}`,
       this.files.preview(plan),
       signal,
@@ -355,15 +382,22 @@ export class LocalCapabilities {
     await this.receipt(activity);
     signal.throwIfAborted();
     output = await this.files.execute(plan, signal);
-    rememberFile(activity, plan.path, plan.action === 'read' ? 'read' : 'created');
+    rememberFile(
+      activity,
+      plan.path,
+      plan.action === 'read' ? 'read' : plan.action === 'edit' ? 'edited' : 'created',
+    );
     activity.events.push(`File ${plan.action}: completed · ${plan.path}`);
     return output;
   }
   private async executeBrowser(activity: Activity, tool: any, signal: AbortSignal) {
     let output: unknown;
-    const browserAction = prepareBrowserAction(activity, tool.arguments, args => this.browsers.prepare(activity.id, args));
+    const browserAction = prepareBrowserAction(activity, tool.arguments, (args) =>
+      this.browsers.prepare(activity.id, args),
+    );
     const scopedPlan = executionPlan(this.store.state.activities, activity);
-    const covered = !('_userConnection' in browserAction) && coversBrowser(scopedPlan, activity, browserAction);
+    const covered =
+      !('_userConnection' in browserAction) && coversBrowser(scopedPlan, activity, browserAction);
     await this.approval(
       activity,
       'browser',
@@ -377,15 +411,16 @@ export class LocalCapabilities {
     await this.receipt(activity);
     signal.throwIfAborted();
     assertBrowserDestination(activity, browserAction);
-    output = browserAction.action === 'connect_user'
-      ? await this.browsers.requestUserBrowser(activity.id, activity.title, signal)
-      : await this.browsers.execute(
-      activity.id,
-      browserAction,
-      signal,
-      covered ? scopedPlan!.scope.browserOrigins : undefined,
-    );
-    output = {...output as object, browser: browserAction._userConnection ? 'user' : 'in-app'};
+    output =
+      browserAction.action === 'connect_user'
+        ? await this.browsers.requestUserBrowser(activity.id, activity.title, signal)
+        : await this.browsers.execute(
+            activity.id,
+            browserAction,
+            signal,
+            covered ? scopedPlan!.scope.browserOrigins : undefined,
+          );
+    output = { ...(output as object), browser: browserAction._userConnection ? 'user' : 'in-app' };
     rememberURL(activity, (output as { url?: string })?.url, 'visited');
     activity.events.push(`Browser: ${browserAction.action}`);
     return output;

@@ -70,6 +70,8 @@ export function readableData(input: unknown, depth = 0): string {
       .join('\n\n');
   }
   const data = value as Record<string, unknown>;
+  if (typeof data.path === 'string' && data.edited === true && !data.error)
+    return `Updated **${escape(data.path.split(/[\\/]/).at(-1))}**.\n\nFind it in **Context → Show in folder**.`;
   if (typeof data.path === 'string' && data.created === true && !data.error)
     return `Created **${escape(data.path.split(/[\\/]/).at(-1))}**.\n\nFind it in **Context → Show in folder**.`;
   // MCP content envelopes carry the useful result inside text blocks.

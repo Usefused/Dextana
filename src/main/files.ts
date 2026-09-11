@@ -3,6 +3,8 @@ import { open, mkdir, realpath, stat, lstat, unlink } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path';
 import ExcelJS from 'exceljs';
 import AdmZip from 'adm-zip';
+import { snapshotText, snapshotFile, replaceText, replaceBytes, textRevision, type FileSnapshot, type TextSnapshot } from './file-edits';
+import { prepareOfficeEdit, wordParagraphs, type DocumentChange } from './office-edits';
 
 export const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 export const documentExtensions = ['txt', 'md', 'csv', 'xlsx', 'docx', 'pdf', ...imageExtensions];
@@ -10,7 +12,10 @@ const maxBytes = 5_000_000;
 const maxText = 500_000;
 type Sheet = { name: string; rows: (string | number | boolean | null)[][] };
 export interface FilePlan {
-  action: 'read' | 'create';
+  action: 'read' | 'create' | 'edit';
+  before?: FileSnapshot | TextSnapshot;
+  replacement?: Buffer;
+  changes?: DocumentChange[];
   path: string;
   format: string;
   content: string;
@@ -25,8 +30,8 @@ function identity(info: { dev: number; ino: number }) {
 export class WorkFiles {
   constructor(private outputDirectory: string) {}
   async prepare(args: Record<string, unknown>): Promise<FilePlan> {
-    if (!['read', 'create'].includes(String(args.action)))
-      throw new Error('Choose read or create.');
+    if (!['read', 'create', 'edit'].includes(String(args.action)))
+      throw new Error('Choose read, create or edit.');
     const action = args.action as FilePlan['action'];
     if (
       typeof args.path !== 'string' ||
@@ -37,19 +42,24 @@ export class WorkFiles {
       throw new Error('Provide a document path.');
     if (
       !isAbsolute(args.path) &&
-      (action === 'read' ||
+      (action !== 'create' ||
         basename(args.path) !== args.path ||
         args.path === '.' ||
         args.path === '..')
     )
-      throw new Error('Reading needs an absolute path. Create with a filename or absolute path.');
+      throw new Error('Reading and editing need an absolute path. Create with a filename or absolute path.');
     const path = isAbsolute(args.path) ? resolve(args.path) : join(this.outputDirectory, args.path);
     const format = extname(path).slice(1).toLowerCase();
-    if (!documentExtensions.includes(format))
+    if (action === 'create' && !documentExtensions.includes(format))
       throw new Error(
         'Supported work files: Excel (.xlsx), Word (.docx), PDF, CSV, text, Markdown, PNG, JPEG, GIF and WebP images.',
       );
     if (action === 'create' && ['pdf', 'docx', ...imageExtensions].includes(format)) throw new Error('PDF, DOCX and images are supported for reading. Create an XLSX, CSV, TXT or Markdown document instead.');
+    const officeEdit = action === 'edit' && ['docx', 'xlsx'].includes(format);
+    if (action === 'edit' && ['pdf', ...imageExtensions].includes(format))
+      throw new Error('Editing supports DOCX, XLSX and UTF-8 text files. PDF and image editing require a dedicated editor.');
+    if (action === 'edit' && ((!officeEdit && typeof args.content !== 'string') || typeof args.expected_revision !== 'string' || !/^[a-f0-9]{64}$/.test(args.expected_revision)))
+      throw new Error('Read the file first, then provide its expected_revision and the complete replacement content or edits_json.');
     let parent = dirname(path);
     let makeDirectory = false;
     try {
@@ -72,6 +82,8 @@ export class WorkFiles {
     const content = args.content ?? '';
     if (typeof content !== 'string' || content.length > maxText)
       throw new Error('Document text is limited to 500,000 characters.');
+    if (action === 'edit' && (content.includes('\0') || !content.isWellFormed()))
+      throw new Error('Replacement content must be valid UTF-8 text without null characters.');
     let sheets: Sheet[] = [];
     if (action === 'create' && ['xlsx', 'csv'].includes(format)) {
       if (typeof args.sheets_json !== 'string' || args.sheets_json.length > maxText)
@@ -115,8 +127,14 @@ export class WorkFiles {
         }
       }
     }
+    const before = action === 'edit' ? await (officeEdit ? snapshotFile(canonicalPath) : snapshotText(canonicalPath)) : undefined;
+    if (before && before.revision !== args.expected_revision)
+      throw new Error('The file changed since it was read. Read it again before proposing an edit.');
+    if (before && 'content' in before && before.content === content) throw new Error('The proposed content is unchanged.');
     return {
       action,
+      before,
+      ...(officeEdit && before ? prepareOfficeEdit(before.data, format, args.edits_json) : {}),
       path: canonicalPath,
       format,
       content,
@@ -131,6 +149,7 @@ export class WorkFiles {
       {
         action: plan.action,
         path: plan.path,
+        ...(plan.action === 'edit' ? plan.changes ? { changes: plan.changes, format: plan.format } : { before: (plan.before as TextSnapshot).content, content: plan.content } : {}),
         ...(plan.action === 'create'
           ? plan.sheets.length
             ? { sheets: plan.sheets }
@@ -148,6 +167,13 @@ export class WorkFiles {
       identity(await stat(plan.parent)) !== plan.parentIdentity
     )
       throw new Error('The destination folder changed. Request permission again.');
+    if (plan.action === 'edit') {
+      if (!plan.before) throw new Error('Prepare the edit before requesting approval.');
+      const result = plan.replacement
+        ? await replaceBytes(plan.path, plan.before, plan.replacement, plan.parentIdentity, signal)
+        : await replaceText(plan.path, plan.before, plan.content, plan.parentIdentity, signal);
+      return { ...result, format: plan.format, ...(plan.format === 'xlsx' ? { note: 'Literal cells updated. Formulas are preserved and will recalculate in Excel.' } : {}) };
+    }
     if (plan.action === 'read') {
       // Windows does not enforce O_NOFOLLOW. Check the directory entry and
       // bind the opened handle to that file before reading any document bytes.
@@ -184,14 +210,14 @@ export class WorkFiles {
         }
         if (['pdf', 'docx'].includes(plan.format)) {
           const { readDocument } = await import('./read-document');
-          return { path: plan.path, format: plan.format, content: await readDocument(data, plan.format, signal) };
+          return { path: plan.path, format: plan.format, content: await readDocument(data, plan.format, signal), revision: textRevision(data), ...(plan.format === 'docx' ? { paragraphs: wordParagraphs(data) } : {}) };
         }
         if (plan.format !== 'xlsx') {
-          const text = new TextDecoder('utf-8', { fatal: true }).decode(data);
+          const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(data);
           if (text.includes('\0')) throw new Error('Choose a UTF-8 text document.');
           if (text.length > maxText)
             throw new Error('Document exceeds the 500,000 character reading limit.');
-          return { path: plan.path, format: plan.format, content: text };
+          return { path: plan.path, format: plan.format, content: text, revision: textRevision(data) };
         }
         const entries = new AdmZip(data).getEntries();
         if (
@@ -233,6 +259,7 @@ export class WorkFiles {
         return {
           path: plan.path,
           format: plan.format,
+          revision: textRevision(data),
           sheets,
           note: 'Formula results are cached values; formulas are not recalculated.',
         };

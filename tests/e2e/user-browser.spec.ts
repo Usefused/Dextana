@@ -73,6 +73,43 @@ test('real extension delivers trusted input, rejects stale refs, refreshes navig
   }
 });
 
+test('attached browser reports a completed attachment with its saved path', async () => {
+  test.setTimeout(90_000);
+  const fixture = await browserFixture({
+    html: '<!doctype html><title>Attachment fixture</title><a href="/fixture-download.pdf">Download report</a>',
+  });
+  const browser = new UserBrowser(`chrome-extension://${fixture.id}`, () => {});
+  const run = async (args: Record<string, unknown>) =>
+    (await browser.execute(
+      'downloads',
+      browser.prepare('downloads', args),
+      new AbortController().signal,
+    )) as any;
+  try {
+    const pairing = await browser.begin('downloads', 'Download an attachment');
+    await fixture.attach(pairing.code);
+    const read = await run({ action: 'read' });
+    const link = read.elements.find((element: any) => element.label === 'Download report');
+    expect(link).toBeTruthy();
+    expect((await run({ action: 'click', ref: link.ref })).error).toBeUndefined();
+    await expect
+      .poll(async () => (await run({ action: 'downloads' })).downloads[0], { timeout: 20_000 })
+      .toMatchObject({
+        filename: 'fixture-download.pdf',
+        state: 'completed',
+        receivedBytes: expect.any(Number),
+        totalBytes: expect.any(Number),
+        path: expect.stringMatching(/^[/A-Za-z]/),
+      });
+    const result = await run({ action: 'downloads' });
+    expect(JSON.stringify(result)).not.toContain(fixture.origin + '/fixture-download.pdf');
+    expect(result.instruction).toContain('files tool');
+  } finally {
+    browser.close();
+    await fixture.close();
+  }
+});
+
 test('Harnest uses the attached tab through approvals, shared UI and Context', async ({
   workspace,
 }) => {

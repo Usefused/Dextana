@@ -5,6 +5,7 @@ const labels = {
   selected: 'Not read yet',
   read: 'Read',
   created: 'Created',
+  edited: 'Edited',
   referenced: 'Referenced',
   visited: 'Visited',
 };

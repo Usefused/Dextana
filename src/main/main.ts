@@ -425,7 +425,7 @@ app
     handle('cron:run', id => cron.runNow(id));
     handle('files:attach', (id, paths) => activities.attachContext(id, paths));
     handle('files:pick', async () => {
-      const result = await dialog.showOpenDialog(window, { title: 'Add files to context', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Documents, spreadsheets and images', extensions: documentExtensions }, { name: 'Documents', extensions: ['docx', 'pdf', 'txt', 'md'] }, { name: 'Spreadsheets', extensions: ['xlsx', 'csv'] }, { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }] });
+      const result = await dialog.showOpenDialog(window, { title: 'Add files to context', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Documents, spreadsheets and images', extensions: documentExtensions }, { name: 'Documents', extensions: ['docx', 'pdf', 'txt', 'md'] }, { name: 'Spreadsheets', extensions: ['xlsx', 'csv'] }, { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }, { name: 'All files', extensions: ['*'] }] });
       if (result.canceled) return [];
       if (result.filePaths.length > 20) throw new Error('Attach up to 20 documents at a time.');
       return result.filePaths;

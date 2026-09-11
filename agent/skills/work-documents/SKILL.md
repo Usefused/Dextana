@@ -1,6 +1,6 @@
 ---
 name: work-documents
-description: Read selected context files or create spreadsheets, CSV tables, and text documents with the files tool.
+description: Read, create and edit documents, workbooks and UTF-8 text files with reviewed changes.
 ---
 
 - Use files to read or create Excel workbooks (.xlsx), CSV tables, and text/Markdown
@@ -17,6 +17,23 @@ description: Read selected context files or create spreadsheets, CSV tables, and
   Compute requested totals yourself and store their values; no formula execution is
   supported. Reading a workbook returns values and cached formula results, not styling.
 - Creation never replaces an existing document. Use a new descriptive filename.
+  To update an existing UTF-8 text file of any extension (including JSON, YAML,
+  configuration and source files), read it first, then use files
+  with action=edit, its absolute path, expected_revision copied from the read result,
+  and the complete replacement content. Preserve unrelated content and line endings.
+  The owner sees current and proposed text and must approve each edit; session access
+  and plan approval never bypass this review. If the file changed, read it again
+  and propose a fresh edit. An empty replacement intentionally empties the file.
+  For DOCX, read returns numbered paragraphs. Send edits_json with paragraph, find,
+  and replace fields. Find must match once; replacement inherits the first matched
+  run's formatting, while unrelated text and document parts remain intact.
+  For XLSX, send edits_json with sheet, cell (such as B2), and value fields. Update
+  existing literal cells only, using null to clear. Styles and formulas elsewhere
+  stay intact. Excel recalculates when opened; Dext does not execute formulas.
+  DOCX/XLSX use expected_revision and receive the same mandatory before/after review.
+  Complex Word paragraphs, protected files/sheets, formula cells, legacy DOC/XLS,
+  PDFs, images and other binary formats require an appropriate external editor.
+  Do not claim universal binary-file editing or silently convert formats.
   Default filenames save to the owner's Dextana documents folder. Mention the filename
   after success; the Context panel provides Show in folder. Do not claim a file
   was created or read without a successful tool result. PDF and DOCX text extraction are supported for reading. Scanned PDFs require OCR, which this tool does not provide. Creation supports XLSX, CSV, TXT, and Markdown only.

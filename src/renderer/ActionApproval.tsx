@@ -11,8 +11,64 @@ const capabilityLabel = {
   mcp: 'MCP actions',
   fileRead: 'file reads',
   fileCreate: 'file creation',
+  fileEdit: 'file edits',
   desktop: 'desktop actions',
 };
+
+function ApprovalTarget({
+  approval,
+  question,
+}: {
+  approval: Approval;
+  question: ReturnType<typeof browserPermissionQuestion> | undefined;
+}) {
+  if (question)
+    return question.address ? (
+      <div className="permission-target">
+        <ReviewIcon name="browser" />
+        <span>{question.address}</span>
+      </div>
+    ) : null;
+  if (['fileRead', 'fileCreate', 'fileEdit'].includes(approval.capability))
+    return <FileApprovalPreview arguments={approval.arguments} />;
+  return (
+    <ApprovalDetails arguments={approval.arguments} desktop={approval.capability === 'desktop'} />
+  );
+}
+
+function ApprovalFooter({
+  approval,
+  busy,
+  error,
+  allowAll,
+}: {
+  approval: Approval;
+  busy: boolean;
+  error: string;
+  allowAll: () => void;
+}) {
+  const sessionAccess = approval.source !== 'harnest' && approval.capability !== 'fileEdit';
+  return (
+    <>
+      {sessionAccess && (
+        <div className="review-session-access">
+          <span>Allow all {capabilityLabel[approval.capability]} in this session</span>
+          <Button
+            icon={<Icon name="check" />}
+            size="small"
+            variant="ghost"
+            disabled={busy}
+            title={`Allow all ${capabilityLabel[approval.capability]} in this session`}
+            onClick={allowAll}
+          >
+            Allow all
+          </Button>
+        </div>
+      )}
+      {error && <Notice tone="danger">{error}</Notice>}
+    </>
+  );
+}
 
 export function ActionApproval({
   activityId,
@@ -30,8 +86,10 @@ export function ActionApproval({
     mcp: 'Connected service',
     fileRead: 'Read a file',
     fileCreate: 'Create a file',
+    fileEdit: 'Edit a file',
     desktop: 'Use your desktop',
   }[approval.capability];
+  const fileEdit = approval.capability === 'fileEdit';
   async function decide(approved: boolean, autoAllow = false) {
     setBusy(true);
     setError('');
@@ -66,46 +124,23 @@ export function ActionApproval({
             disabled={busy}
             onClick={() => void decide(true)}
           >
-            Allow action
+            {fileEdit ? 'Apply changes' : 'Allow action'}
           </Button>
           <Button icon={<Icon name="close" />} disabled={busy} onClick={() => void decide(false)}>
-            Deny action
+            {fileEdit ? 'Keep original' : 'Deny action'}
           </Button>
         </>
       }
       footer={
-        <>
-          {approval.source !== 'harnest' && (
-            <div className="review-session-access">
-              <span>Allow all {capabilityLabel[approval.capability]} in this session</span>
-              <Button
-                icon={<Icon name="check" />}
-                size="small"
-                variant="ghost"
-                disabled={busy}
-                title={`Allow all ${capabilityLabel[approval.capability]} in this session`}
-                onClick={() => void decide(true, true)}
-              >
-                Allow all
-              </Button>
-            </div>
-          )}
-          {error && <Notice tone="danger">{error}</Notice>}
-        </>
+        <ApprovalFooter
+          approval={approval}
+          busy={busy}
+          error={error}
+          allowAll={() => void decide(true, true)}
+        />
       }
     >
-      {question ? (
-        question.address && (
-          <div className="permission-target">
-            <ReviewIcon name="browser" />
-            <span>{question.address}</span>
-          </div>
-        )
-      ) : ['fileRead', 'fileCreate'].includes(approval.capability) ? (
-        <FileApprovalPreview arguments={approval.arguments} />
-      ) : (
-        <ApprovalDetails arguments={approval.arguments} desktop={approval.capability === 'desktop'} />
-      )}
+      <ApprovalTarget approval={approval} question={question} />
     </PermissionCard>
   );
 }
@@ -117,7 +152,7 @@ export function AutomaticAccess({ activity }: { activity: Activity }) {
     (capability) => activity.permissions?.[capability] === true,
   );
   if (!allowed.length || activity.allowAllApprovals) return null;
-  async function askNextTime(capability: Approval['capability']) {
+  async function askNextTime(capability: Exclude<Approval['capability'], 'fileEdit'>) {
     setBusy(true);
     setError('');
     try {
@@ -174,7 +209,7 @@ export function SessionApprovals({ activity }: { activity: Activity }) {
         aria-label="Session approvals"
         value={activity.allowAllApprovals ? 'allow' : 'ask'}
         disabled={busy || !!activity.approval}
-        title="Applies to this session. Fused token creation still requires approval."
+        title="Applies to this session. File edits and Fused token creation still require approval."
         onChange={async (event) => {
           const allow = event.target.value === 'allow';
           setBusy(true);

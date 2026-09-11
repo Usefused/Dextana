@@ -1,25 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Dextana Browser",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Connect an approved browser tab to Dextana, or transfer a website login.",
-  "permissions": [
-    "activeTab",
-    "scripting",
-    "storage",
-    "debugger",
-    "tabs"
-  ],
-  "optional_permissions": [
-    "cookies"
-  ],
-  "host_permissions": [
-    "http://127.0.0.1/*"
-  ],
-  "optional_host_permissions": [
-    "https://*/*",
-    "http://*/*"
-  ],
+  "permissions": ["activeTab", "scripting", "storage", "debugger", "tabs", "downloads"],
+  "optional_permissions": ["cookies"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": {
     "service_worker": "background.js"
   },

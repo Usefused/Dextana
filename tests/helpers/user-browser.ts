@@ -4,7 +4,17 @@ import { resolve } from 'node:path';
 
 /** Real packaged extension and a disposable browser profile; no personal browser data. */
 export async function browserFixture(options: { html?: string; offline?: boolean } = {}) {
-  const server = createServer((_req, res) => {
+  const server = createServer((req, res) => {
+    if (req.url === '/fixture-download.pdf') {
+      const body = Buffer.from('%PDF-1.4\n% Dextana browser download fixture\n%%EOF\n');
+      res.writeHead(200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="fixture-download.pdf"',
+        'Content-Length': body.length,
+      });
+      res.end(body);
+      return;
+    }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(
       options.html ??
