@@ -10,6 +10,7 @@ class FileResult(BaseModel):
     content: str | None = None
     sheets: list[dict[str, Any]] | None = None
     paragraphs: list[dict[str, Any]] | None = None
+    form_fields: list[dict[str, Any]] | None = None
     note: str | None = None
     created: bool | None = None
     edited: bool | None = None

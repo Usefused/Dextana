@@ -33,7 +33,6 @@
   "dependencies": {
     "@trycua/cua-driver": "0.25.0",
     "mammoth": "^1.12.2",
-    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "5.5.207"
   },
   "devDependencies": {
@@ -55,6 +54,7 @@
     "esbuild": "^0.28.2",
     "exceljs": "^4.4.0",
     "mermaid": "11.17.2",
+    "pdf-lib": "^1.17.1",
     "prettier": "^3.9.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

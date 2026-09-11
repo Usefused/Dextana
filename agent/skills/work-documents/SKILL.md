@@ -30,10 +30,16 @@ description: Read, create and edit documents, workbooks and UTF-8 text files wit
   For XLSX, send edits_json with sheet, cell (such as B2), and value fields. Update
   existing literal cells only, using null to clear. Styles and formulas elsewhere
   stay intact. Excel recalculates when opened; Dext does not execute formulas.
-  DOCX/XLSX use expected_revision and receive the same mandatory before/after review.
+  For a fillable PDF, read returns form_fields with exact names, types, current values,
+  available choices, and read-only/required flags. Send edits_json with field and value,
+  for example [{"field":"Applicant name","value":"Alex Morgan"}]. Text fields use
+  text or null, checkboxes use booleans, and choice fields use an existing option (or an
+  array for a multiselect list). The saved PDF stays interactive. XFA, encrypted, signed,
+  read-only, ambiguous, button and signature fields require a compatible PDF editor.
+  DOCX/XLSX/PDF edits use expected_revision and receive the same mandatory before/after review.
   Complex Word paragraphs, protected files/sheets, formula cells, legacy DOC/XLS,
-  PDFs, images and other binary formats require an appropriate external editor.
+  non-form PDFs, images and other binary formats require an appropriate external editor.
   Do not claim universal binary-file editing or silently convert formats.
   Default filenames save to the owner's Dextana documents folder. Mention the filename
   after success; the Context panel provides Show in folder. Do not claim a file
-  was created or read without a successful tool result. PDF and DOCX text extraction are supported for reading. Scanned PDFs require OCR, which this tool does not provide. Creation supports XLSX, CSV, TXT, and Markdown only.
+  was created or read without a successful tool result. PDF and DOCX text extraction are supported for reading. Fillable PDF fields are returned even without page text; scanned non-form PDFs require OCR, which this tool does not provide. Creation supports XLSX, CSV, TXT, and Markdown only.

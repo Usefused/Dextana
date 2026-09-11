@@ -3,8 +3,17 @@ import { open, mkdir, realpath, stat, lstat, unlink } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path';
 import ExcelJS from 'exceljs';
 import AdmZip from 'adm-zip';
-import { snapshotText, snapshotFile, replaceText, replaceBytes, textRevision, type FileSnapshot, type TextSnapshot } from './file-edits';
+import {
+  snapshotText,
+  snapshotFile,
+  replaceText,
+  replaceBytes,
+  textRevision,
+  type FileSnapshot,
+  type TextSnapshot,
+} from './file-edits';
 import { prepareOfficeEdit, wordParagraphs, type DocumentChange } from './office-edits';
+import { inspectPdfForm, preparePdfEdit } from './pdf-edits';
 
 export const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 export const documentExtensions = ['txt', 'md', 'csv', 'xlsx', 'docx', 'pdf', ...imageExtensions];
@@ -47,19 +56,33 @@ export class WorkFiles {
         args.path === '.' ||
         args.path === '..')
     )
-      throw new Error('Reading and editing need an absolute path. Create with a filename or absolute path.');
+      throw new Error(
+        'Reading and editing need an absolute path. Create with a filename or absolute path.',
+      );
     const path = isAbsolute(args.path) ? resolve(args.path) : join(this.outputDirectory, args.path);
     const format = extname(path).slice(1).toLowerCase();
     if (action === 'create' && !documentExtensions.includes(format))
       throw new Error(
         'Supported work files: Excel (.xlsx), Word (.docx), PDF, CSV, text, Markdown, PNG, JPEG, GIF and WebP images.',
       );
-    if (action === 'create' && ['pdf', 'docx', ...imageExtensions].includes(format)) throw new Error('PDF, DOCX and images are supported for reading. Create an XLSX, CSV, TXT or Markdown document instead.');
-    const officeEdit = action === 'edit' && ['docx', 'xlsx'].includes(format);
-    if (action === 'edit' && ['pdf', ...imageExtensions].includes(format))
-      throw new Error('Editing supports DOCX, XLSX and UTF-8 text files. PDF and image editing require a dedicated editor.');
-    if (action === 'edit' && ((!officeEdit && typeof args.content !== 'string') || typeof args.expected_revision !== 'string' || !/^[a-f0-9]{64}$/.test(args.expected_revision)))
-      throw new Error('Read the file first, then provide its expected_revision and the complete replacement content or edits_json.');
+    if (action === 'create' && ['pdf', 'docx', ...imageExtensions].includes(format))
+      throw new Error(
+        'PDF, DOCX and images are supported for reading. Create an XLSX, CSV, TXT or Markdown document instead.',
+      );
+    const structuredEdit = action === 'edit' && ['docx', 'xlsx', 'pdf'].includes(format);
+    if (action === 'edit' && imageExtensions.includes(format))
+      throw new Error(
+        'Editing supports PDF forms, DOCX, XLSX and UTF-8 text files. Images require a dedicated editor.',
+      );
+    if (
+      action === 'edit' &&
+      ((!structuredEdit && typeof args.content !== 'string') ||
+        typeof args.expected_revision !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(args.expected_revision))
+    )
+      throw new Error(
+        'Read the file first, then provide its expected_revision and the complete replacement content or edits_json.',
+      );
     let parent = dirname(path);
     let makeDirectory = false;
     try {
@@ -127,14 +150,26 @@ export class WorkFiles {
         }
       }
     }
-    const before = action === 'edit' ? await (officeEdit ? snapshotFile(canonicalPath) : snapshotText(canonicalPath)) : undefined;
+    const before =
+      action === 'edit'
+        ? await (structuredEdit ? snapshotFile(canonicalPath) : snapshotText(canonicalPath))
+        : undefined;
     if (before && before.revision !== args.expected_revision)
-      throw new Error('The file changed since it was read. Read it again before proposing an edit.');
-    if (before && 'content' in before && before.content === content) throw new Error('The proposed content is unchanged.');
+      throw new Error(
+        'The file changed since it was read. Read it again before proposing an edit.',
+      );
+    if (before && 'content' in before && before.content === content)
+      throw new Error('The proposed content is unchanged.');
+    const prepared =
+      structuredEdit && before
+        ? format === 'pdf'
+          ? await preparePdfEdit(before.data, args.edits_json)
+          : prepareOfficeEdit(before.data, format, args.edits_json)
+        : {};
     return {
       action,
       before,
-      ...(officeEdit && before ? prepareOfficeEdit(before.data, format, args.edits_json) : {}),
+      ...prepared,
       path: canonicalPath,
       format,
       content,
@@ -149,7 +184,11 @@ export class WorkFiles {
       {
         action: plan.action,
         path: plan.path,
-        ...(plan.action === 'edit' ? plan.changes ? { changes: plan.changes, format: plan.format } : { before: (plan.before as TextSnapshot).content, content: plan.content } : {}),
+        ...(plan.action === 'edit'
+          ? plan.changes
+            ? { changes: plan.changes, format: plan.format }
+            : { before: (plan.before as TextSnapshot).content, content: plan.content }
+          : {}),
         ...(plan.action === 'create'
           ? plan.sheets.length
             ? { sheets: plan.sheets }
@@ -172,7 +211,15 @@ export class WorkFiles {
       const result = plan.replacement
         ? await replaceBytes(plan.path, plan.before, plan.replacement, plan.parentIdentity, signal)
         : await replaceText(plan.path, plan.before, plan.content, plan.parentIdentity, signal);
-      return { ...result, format: plan.format, ...(plan.format === 'xlsx' ? { note: 'Literal cells updated. Formulas are preserved and will recalculate in Excel.' } : {}) };
+      return {
+        ...result,
+        format: plan.format,
+        ...(plan.format === 'xlsx'
+          ? { note: 'Literal cells updated. Formulas are preserved and will recalculate in Excel.' }
+          : plan.format === 'pdf'
+            ? { note: 'PDF form fields updated. The form remains interactive.' }
+            : {}),
+      };
     }
     if (plan.action === 'read') {
       // Windows does not enforce O_NOFOLLOW. Check the directory entry and
@@ -186,7 +233,11 @@ export class WorkFiles {
       try {
         const info = await handle.stat();
         const current = await lstat(plan.path);
-        if (!current.isFile() || identity(info) !== identity(entry) || identity(current) !== identity(entry))
+        if (
+          !current.isFile() ||
+          identity(info) !== identity(entry) ||
+          identity(current) !== identity(entry)
+        )
           throw new Error('The document changed. Request permission again.');
         if (!info.isFile() || info.size > maxBytes)
           throw new Error('Choose a regular document up to 5 MB.');
@@ -205,19 +256,63 @@ export class WorkFiles {
           const { rasterType } = await import('./images');
           const mediaType = rasterType(data);
           const expected = `image/${plan.format === 'jpg' ? 'jpeg' : plan.format}`;
-          if (mediaType !== expected) throw new Error('The image format did not match its file extension.');
-          return { path: plan.path, format: plan.format, image: { type: 'image', mediaType, data: data.toString('base64') } };
+          if (mediaType !== expected)
+            throw new Error('The image format did not match its file extension.');
+          return {
+            path: plan.path,
+            format: plan.format,
+            image: { type: 'image', mediaType, data: data.toString('base64') },
+          };
         }
         if (['pdf', 'docx'].includes(plan.format)) {
           const { readDocument } = await import('./read-document');
-          return { path: plan.path, format: plan.format, content: await readDocument(data, plan.format, signal), revision: textRevision(data), ...(plan.format === 'docx' ? { paragraphs: wordParagraphs(data) } : {}) };
+          if (plan.format === 'pdf') {
+            const form = await inspectPdfForm(data);
+            const form_fields = form.fields;
+            let content = '';
+            try {
+              content = await readDocument(data, plan.format, signal);
+            } catch (error) {
+              if (
+                (!form_fields.length && !form.xfa) ||
+                !/no readable text layer/i.test((error as Error).message)
+              )
+                throw error;
+            }
+            return {
+              path: plan.path,
+              format: plan.format,
+              content,
+              revision: textRevision(data),
+              form_fields,
+              ...(form.xfa
+                ? { note: 'This PDF uses an XFA form, which requires a compatible PDF editor.' }
+                : content
+                  ? {}
+                  : {
+                      note: 'This fillable PDF has no readable page-text layer; form fields are listed separately.',
+                    }),
+            };
+          }
+          return {
+            path: plan.path,
+            format: plan.format,
+            content: await readDocument(data, plan.format, signal),
+            revision: textRevision(data),
+            paragraphs: wordParagraphs(data),
+          };
         }
         if (plan.format !== 'xlsx') {
           const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(data);
           if (text.includes('\0')) throw new Error('Choose a UTF-8 text document.');
           if (text.length > maxText)
             throw new Error('Document exceeds the 500,000 character reading limit.');
-          return { path: plan.path, format: plan.format, content: text, revision: textRevision(data) };
+          return {
+            path: plan.path,
+            format: plan.format,
+            content: text,
+            revision: textRevision(data),
+          };
         }
         const entries = new AdmZip(data).getEntries();
         if (

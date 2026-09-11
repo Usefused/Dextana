@@ -1,4 +1,5 @@
 import AdmZip from 'adm-zip';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 export function wordDocument(text: string): Buffer {
   const zip = new AdmZip();
   zip.addFile(
@@ -36,4 +37,34 @@ export function pdfDocument(text: string): Buffer {
     .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
     .join('')}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return Buffer.from(body);
+}
+
+export async function pdfFormDocument(pageText = true): Promise<Buffer> {
+  const document = await PDFDocument.create({ updateMetadata: false });
+  const page = document.addPage([612, 792]);
+  const font = await document.embedFont(StandardFonts.Helvetica);
+  if (pageText) page.drawText('Application form', { x: 50, y: 745, size: 18, font });
+  const form = document.getForm();
+  const name = form.createTextField('Applicant name');
+  name.setText('Original applicant');
+  name.addToPage(page, { x: 50, y: 680, width: 240, height: 24, font });
+  const consent = form.createCheckBox('Consent');
+  consent.addToPage(page, { x: 50, y: 630, width: 18, height: 18 });
+  const delivery = form.createRadioGroup('Delivery');
+  delivery.addOptionToPage('Email', page, { x: 50, y: 580, width: 18, height: 18 });
+  delivery.addOptionToPage('Post', page, { x: 100, y: 580, width: 18, height: 18 });
+  delivery.select('Email');
+  const country = form.createDropdown('Country');
+  country.setOptions(['France', 'United Kingdom', 'United States']);
+  country.select('France');
+  country.addToPage(page, { x: 50, y: 525, width: 180, height: 24, font });
+  const interests = form.createOptionList('Interests');
+  interests.setOptions(['Design', 'Engineering', 'Research']);
+  interests.enableMultiselect();
+  interests.select(['Design']);
+  interests.addToPage(page, { x: 50, y: 400, width: 180, height: 90, font });
+  form.updateFieldAppearances(font);
+  return Buffer.from(
+    await document.save({ updateFieldAppearances: false, useObjectStreams: false }),
+  );
 }

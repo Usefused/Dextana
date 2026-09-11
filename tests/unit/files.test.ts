@@ -237,7 +237,7 @@ test('editing rejects missing content, binary formats, links, and unchanged prop
       'unchanged',
     );
     await expect(
-      files.prepare({ ...args, path: join(directory, 'Notes.pdf'), content: '' }),
+      files.prepare({ ...args, path: join(directory, 'Notes.png'), content: '' }),
     ).rejects.toThrow('Editing supports');
     await symlink(path, join(directory, 'Link.csv'));
     await expect(
