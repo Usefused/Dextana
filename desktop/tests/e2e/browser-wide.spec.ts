@@ -77,8 +77,17 @@ test('browser-wide activation discovers future tabs, survives task release and r
     expect(
       browser.snapshot().every((state) => state.id === pairing.id && state.state === 'connected'),
     ).toBe(true);
-    browser.stop('second');
+    const disconnect = browser.prepare('second', { action: 'disconnect_user' });
+    await expect(
+      browser.execute('second', disconnect, new AbortController().signal),
+    ).resolves.toEqual({
+      message: 'External browser connection closed. Your browser tabs were left open.',
+    });
     expect(browser.snapshot().every((state) => state.state === 'stopped')).toBe(true);
+    await expect(fixture.popup.locator('#browser-control')).toBeHidden({ timeout: 5_000 });
+    await expect
+      .poll(() => fixture.worker.evaluate(() => (globalThis as any).chrome.action.getBadgeText({})))
+      .toBe('');
   } finally {
     browser.close();
     await fixture.close();

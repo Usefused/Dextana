@@ -179,11 +179,12 @@ export class UserBrowserTabs {
         'open',
         'new_tab',
         'close_tab',
+        'disconnect_user',
         'list_tabs',
         'downloads',
       ],
       limits:
-        'When tabs is empty, use new_tab with a website URL; approval is required under the chat browser permission policy. Use explicit tab_id for multi-tab work. References are scoped to each tab. New tabs, cross-website navigation and download receipts are supported. Only Dext-created tabs can be closed by the agent. Top document and open shadow roots only.',
+        'When tabs is empty, use new_tab with a website URL; approval is required under the chat browser permission policy. Use explicit tab_id for multi-tab work. References are scoped to each tab. New tabs, cross-website navigation and download receipts are supported. Only Dext-created tabs can be closed by the agent. disconnect_user revokes the external-browser connection for every chat sharing it without closing tabs. Top document and open shadow roots only.',
     };
   }
 }

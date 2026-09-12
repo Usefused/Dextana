@@ -687,6 +687,8 @@ export class Browsers {
   prepare(activityId: string, args: Record<string, unknown>): Record<string, unknown> {
     if (args.action === 'connect_user')
       return { action: 'connect_user', _userConnection: 'request' };
+    if (args.action === 'disconnect_user' && !this.userBrowser?.has(activityId))
+      throw new Error('No external browser connection is active in this chat.');
     if (this.userBrowser?.has(activityId)) return this.userBrowser.prepare(activityId, args);
     return this.prepareInApp(activityId, args);
   }

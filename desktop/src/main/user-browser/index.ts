@@ -132,6 +132,6 @@ export class UserBrowser {
   }
   close() {
     for (const connection of new Set([...this.connections.values(), this.paired]))
-      connection?.stop('Dextana closed.');
+      connection?.stop('Dextana closed.', false);
   }
 }

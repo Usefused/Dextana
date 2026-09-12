@@ -2,6 +2,8 @@ import type { BrowserTab } from './types';
 
 export function browserApprovalDetails(args: Record<string, unknown>, tabs: BrowserTab[]) {
   if (args.action === 'connect_user') return { action: 'connect_user' };
+  if (args.action === 'disconnect_user')
+    return { action: 'disconnect_user', browser: 'Your attached browser' };
   const { tab_id, _userConnection, _userURL, _userTitle, _userTarget, ...details } = args;
   if (_userConnection) {
     const { ref, ...action } = details;
@@ -46,6 +48,10 @@ export function browserPermissionQuestion(
   switch (args.action) {
     case 'connect_user':
       return { question: 'Allow Dext to request access to your Chrome or Edge browser?' };
+    case 'disconnect_user':
+      return {
+        question: 'Allow Dext to disconnect the attached Chrome or Edge browser? Tabs stay open.',
+      };
     case 'list_tabs':
       return { question: 'Allow Dext to view the open tabs in this chat?' };
     case 'read':

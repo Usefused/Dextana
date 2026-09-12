@@ -66,6 +66,13 @@ it('preserves attached tab handles and rejects stale in-app approvals after a co
   expect(() => assertBrowserDestination(chat, connected)).not.toThrow();
 });
 
+it('never converts an explicit browser disconnect into a connection request', () => {
+  const chat = activity([message('Use my browser')]);
+  expect(
+    prepareBrowserAction(chat, { action: 'disconnect_user' }, (args) => ({ ...args })),
+  ).toEqual({ action: 'disconnect_user' });
+});
+
 it('a newer refusal to use the external browser overrides an older selection', () => {
   expect(
     requestedBrowser(activity([message('Use my browser'), message("Don't use my browser")])),

@@ -223,7 +223,8 @@ export class UserBrowserConnection {
     if (this.state.state !== 'connected')
       throw new Error('Attach your browser again, or switch to the Dext browser.');
     const input: Record<string, unknown> = browserArguments(args);
-    if (input.action === 'list_tabs') return { ...input, _userConnection: this.state.id };
+    if (['list_tabs', 'disconnect_user'].includes(String(input.action)))
+      return { ...input, _userConnection: this.state.id };
     if (input.action === 'downloads') {
       const tab = this.tabs.target(args);
       return { ...input, tab_id: tab.id, _userConnection: this.state.id };
@@ -252,6 +253,12 @@ export class UserBrowserConnection {
     signal.throwIfAborted();
     if (this.state.state !== 'connected') throw new Error('Attach your browser again.');
     if (args.action === 'list_tabs') return Promise.resolve(this.tabs.list());
+    if (args.action === 'disconnect_user') {
+      this.stop('Disconnected by Dext. Your browser tabs were left open.');
+      return Promise.resolve({
+        message: 'External browser connection closed. Your browser tabs were left open.',
+      });
+    }
     if (args.action === 'downloads') return Promise.resolve(this.downloads.list(activityTabs));
     this.validateExecution(args);
     const tabId = String(args.tab_id);
@@ -281,7 +288,7 @@ export class UserBrowserConnection {
   release(activityId: string) {
     this.requests.release(activityId);
   }
-  stop(message: string) {
+  stop(message: string, announceRevocation = true) {
     if (this.state.state === 'stopped') return;
     this.state.state = 'stopped';
     this.state.message = message;
@@ -290,11 +297,21 @@ export class UserBrowserConnection {
     clearTimeout(this.heartbeat);
     this.requests.stop(message);
     this.attachment.stopped(message);
-    this.server?.close();
-    // Polling can otherwise keep an HTTP keep-alive socket usable after the
-    // desktop session has ended, leaving the extension badge falsely ON. Let
-    // an in-flight terminal response flush before severing the transport.
-    if (this.server) setImmediate(() => this.server?.closeAllConnections());
+    const server = this.server;
+    this.server = undefined;
+    // Keep the revoked endpoint alive briefly so the extension's next poll gets
+    // an explicit 403 and clears its badge immediately. No request is authorized
+    // after the token is erased; the unref'd timer cannot hold Dext open.
+    if (server && announceRevocation) {
+      const close = setTimeout(() => {
+        server.close();
+        server.closeAllConnections();
+      }, 1_000);
+      close.unref();
+    } else if (server) {
+      server.close();
+      setImmediate(() => server.closeAllConnections());
+    }
     this.changed();
   }
 }

@@ -69,6 +69,7 @@ const actions: Record<string, (args: Record<string, unknown>) => Record<string, 
   open: (args) => ({ url: httpURL(args.url) }),
   new_tab: (args) => ({ url: httpURL(args.url) }),
   close_tab: () => ({}),
+  disconnect_user: () => ({}),
 };
 /** Forward authored action fields only; the model cannot select CDP methods or inject script. */
 export function browserArguments(args: Record<string, unknown>) {

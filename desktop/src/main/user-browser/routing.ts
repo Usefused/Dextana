@@ -48,7 +48,7 @@ export function prepareBrowserAction(
   args: Arguments,
   prepare: (args: Arguments) => Arguments,
 ) {
-  if (args.action === 'connect_user') return prepare(args);
+  if (['connect_user', 'disconnect_user'].includes(String(args.action))) return prepare(args);
   if (requestedBrowser(activity) === 'user') {
     const inventory = prepare({ action: 'list_tabs' });
     if (!inventory._userConnection) return prepare({ action: 'connect_user' });

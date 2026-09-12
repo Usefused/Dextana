@@ -15,7 +15,7 @@ class BrowserProgress:
     def observe(self, name, args, result):
         if name != 'browser' or not isinstance(result, dict):
             return result
-        if args.get('action') in ('list_tabs', 'connect_user', 'new_tab', 'close_tab'):
+        if args.get('action') in ('list_tabs', 'connect_user', 'disconnect_user', 'new_tab', 'close_tab'):
             return result
         key = str(result.get('tab_id') or args.get('tab_id') or 'default')
         state = self.tabs.setdefault(key, dict(texts=[], shapes=[], images=[], errors=[], repeats=0))

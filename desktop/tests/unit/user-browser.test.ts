@@ -169,6 +169,29 @@ it('keeps browser pairing available after a task finishes', async () => {
   f.browser.release('chat');
   expect(f.browser.snapshot()[0].state).toBe('connected');
 });
+it('lets the agent revoke a shared browser connection without closing tabs', async () => {
+  const f = await fixture();
+  await f.request('/attach', {
+    protocol: 4,
+    approved: true,
+    allowNewTabs: true,
+    scope: 'browser',
+    tabs: f.tabs,
+  });
+  await f.browser.request('second', 'Second chat', new AbortController().signal);
+  const pending = f.run({ action: 'read', tab_id: f.tabId });
+  const rejected = expect(pending).rejects.toThrow('Disconnected by Dext');
+  await f.request('/next');
+  const args = f.browser.prepare('second', { action: 'disconnect_user' });
+  expect(args).toEqual({ action: 'disconnect_user', _userConnection: f.pairing.id });
+  await expect(f.browser.execute('second', args, new AbortController().signal)).resolves.toEqual({
+    message: 'External browser connection closed. Your browser tabs were left open.',
+  });
+  await rejected;
+  expect(f.browser.snapshot().map((state) => state.state)).toEqual(['stopped', 'stopped']);
+  expect(f.browser.snapshot()[0].tabs.map((tab) => tab.id)).toEqual(f.tabs.map((tab) => tab.id));
+  expect(() => f.browser.prepare('chat', { action: 'read' })).toThrow('Attach');
+});
 it('returns only validated downloads observed by the attached browser connection', async () => {
   const f = await fixture();
   await f.attach();
@@ -279,6 +302,12 @@ it.each([
 ])('rejects unsupported or unbounded inputs: %j', (args) =>
   expect(() => browserArguments(args)).toThrow(),
 );
+
+it('accepts the explicit external-browser disconnect action without tab arguments', () => {
+  expect(browserArguments({ action: 'disconnect_user', tab_id: 'ignored' })).toEqual({
+    action: 'disconnect_user',
+  });
+});
 
 it('runs different tabs concurrently, scopes references, and rejects same-tab overlap', async () => {
   const f = await fixture();

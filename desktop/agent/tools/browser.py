@@ -4,7 +4,7 @@ from harnest.models.browser_result import BrowserResult
 
 
 @client_tool
-def browser(action: Literal["connect_user", "open", "read", "click", "fill", "clear_cookies", "new_tab", "list_tabs", "downloads", "close_tab", "press", "click_outside", "hover", "scroll", "screenshot"], url: str = "", ref: str = "", text: str = "", tab_id: str = "", key: str = "", offset: int = 0, limit: int = 100, text_offset: int = 0, x: float = -1, y: float = -1, delta_x: float = 0, delta_y: float = 0, click_count: int = 1, screenshot_id: str = "", coordinate_space: Literal["viewport", "screenshot", "normalized"] = "viewport") -> BrowserResult:
+def browser(action: Literal["connect_user", "disconnect_user", "open", "read", "click", "fill", "clear_cookies", "new_tab", "list_tabs", "downloads", "close_tab", "press", "click_outside", "hover", "scroll", "screenshot"], url: str = "", ref: str = "", text: str = "", tab_id: str = "", key: str = "", offset: int = 0, limit: int = 100, text_offset: int = 0, x: float = -1, y: float = -1, delta_x: float = 0, delta_y: float = 0, click_count: int = 1, screenshot_id: str = "", coordinate_space: Literal["viewport", "screenshot", "normalized"] = "viewport") -> BrowserResult:
     """Operate this chat's browser. Load browser-work before first use; reuse it afterward.
 
     For the owner's Chrome/Edge, use connect_user if disconnected. Never substitute
@@ -16,6 +16,7 @@ def browser(action: Literal["connect_user", "open", "read", "click", "fill", "cl
 
     action: Browser operation; browser-work describes supported actions by mode,
         permissions, forms, keys, overlays, sign-in and downloads.
+        disconnect_user ends the external Chrome/Edge connection and leaves tabs open.
     url: Address for open/new_tab. new_tab preserves existing pages.
     tab_id: Observed tab ID; empty uses this agent's last operated tab. Refs are tab-local.
     ref: Latest element reference for click/fill/hover or focused read; optional for
