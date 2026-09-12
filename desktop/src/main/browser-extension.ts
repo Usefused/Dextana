@@ -22,6 +22,7 @@ export const extensionFiles = [
   'control-downloads.js',
   'control-tabs.js',
   'control-actions.js',
+  'control-cursor.js',
   'control-screenshot.js',
   'screenshot-targeting.js',
   'control-page.js',

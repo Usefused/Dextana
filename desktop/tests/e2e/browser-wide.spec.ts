@@ -57,6 +57,11 @@ test('browser-wide activation discovers future tabs, survives task release and r
       text: 'Reused browser access',
     });
     await expect(future.locator('#title')).toHaveValue('Reused browser access');
+    const cursor = future.locator('[data-dextana-cursor]');
+    await expect(cursor).toBeAttached();
+    expect(await cursor.getAttribute('aria-hidden')).toBe('true');
+    expect(await cursor.evaluate((element) => element.shadowRoot)).toBeNull();
+    expect(await cursor.boundingBox()).toMatchObject({ width: 36, height: 36 });
     // Reconnecting either chat reuses the grant and preserves its own target.
     expect(browser.reuse('first')).toBe(true);
     expect(browser.reuse('second')).toBe(true);

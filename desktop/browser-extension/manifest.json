@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Dextana Browser",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Connect an approved browser tab to Dextana, or transfer a website login.",
   "permissions": ["activeTab", "scripting", "storage", "debugger", "tabs", "downloads"],
   "optional_permissions": ["cookies"],

@@ -1,5 +1,5 @@
 /* Runs only in this extension's isolated world; page scripts cannot mint element references. */
-function dextanaControlPage(command, describeBrowserElements) {
+function dextanaControlPage(command, describeBrowserElements, dextanaControlCursor) {
   const key = '__dextanaUserBrowser';
   function visible(element) {
     return (
@@ -14,6 +14,8 @@ function dextanaControlPage(command, describeBrowserElements) {
     const values = [...root.querySelectorAll('*')];
     const result = [];
     for (const element of values) {
+      if (element.matches('[data-dextana-cursor]') || element.closest('[data-dextana-cursor]'))
+        continue;
       result.push(element);
       if (element.shadowRoot) result.push(...nodes(element.shadowRoot));
     }
@@ -136,9 +138,17 @@ function dextanaControlPage(command, describeBrowserElements) {
   try {
     if (command.action === 'read') return read();
     if (command.action === 'inspect') return inspect();
+    if (command.action === 'cursor') {
+      dextanaControlCursor(command.x, command.y, command.animate !== false);
+      return { url: location.href, viewport: { width: innerWidth, height: innerHeight } };
+    }
     if (command.action === 'invalidate') {
       globalThis[key] = undefined;
       return { url: location.href, viewport: { width: innerWidth, height: innerHeight } };
+    }
+    if (command.preview) {
+      const position = point(element());
+      return { ...position, url: location.href, title: document.title };
     }
     return prepare();
   } catch (error) {

@@ -1,4 +1,5 @@
 importScripts(
+  'control-cursor.js',
   'control-page.js',
   'page-semantics.js',
   'control-screenshot.js',
@@ -52,7 +53,7 @@ async function controlEvaluate(session, expression) {
 async function controlPage(session, args) {
   return controlEvaluate(
     session,
-    `(${dextanaControlPage.toString()})(${JSON.stringify(args)}, ${DextanaPage.describeBrowserElements.toString()})`,
+    `(${dextanaControlPage.toString()})(${JSON.stringify(args)}, ${DextanaPage.describeBrowserElements.toString()}, ${dextanaControlCursor.toString()})`,
   );
 }
 async function controlCurrent(session, expectedURL) {
@@ -89,6 +90,10 @@ async function controlPointer(session, action, point) {
     clickCount: 1,
   });
 }
+async function controlShowCursor(session, point, pause = true) {
+  await controlPage(session, { action: 'cursor', x: point.x, y: point.y, animate: pause });
+  if (pause) await new Promise((resolve) => setTimeout(resolve, 280));
+}
 async function controlKey(session, args) {
   const key = controlKeys[args.key];
   if (!key)
@@ -107,6 +112,7 @@ async function controlInput(session, args) {
   if (args.screenshot_id) return controlScreenshotInput(session, args);
   if (['click', 'hover'].includes(args.action) && !args.ref) {
     await controlPage(session, { action: 'invalidate' });
+    await controlShowCursor(session, args);
     return controlPointer(session, args.action, args);
   }
   return controlRefInput(session, args);
@@ -116,6 +122,7 @@ async function controlRefInput(session, args) {
     const page = await controlPage(session, { action: 'invalidate' });
     if (args.x >= page.viewport.width || args.y >= page.viewport.height)
       throw new Error('Read the viewport before scrolling.');
+    await controlShowCursor(session, args);
     await controlCDP(session, 'Input.dispatchMouseEvent', {
       type: 'mouseWheel',
       x: args.x,
@@ -130,7 +137,10 @@ async function controlRefInput(session, args) {
     await controlKey(session, args);
     return;
   }
+  const preview = await controlPage(session, { ...args, preview: true });
+  await controlShowCursor(session, preview);
   const point = await controlPage(session, args);
+  await controlShowCursor(session, point, false);
   await controlCurrent(session, point.url);
   if (args.action === 'fill') await controlCDP(session, 'Input.insertText', { text: args.text });
   else if (args.action === 'press') {
