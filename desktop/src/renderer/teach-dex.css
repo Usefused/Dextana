@@ -1,0 +1,214 @@
+.teach-page {
+  width: min(920px, calc(100% - 56px));
+  margin: 0 auto;
+  padding: 42px 0 140px;
+}
+.teach-intro {
+  max-width: 680px;
+  margin: 6vh auto 0;
+  text-align: center;
+}
+.teach-intro h1,
+.teach-heading h1 {
+  margin: 14px 0 10px;
+  font-size: 34px;
+}
+.teach-intro > p,
+.teach-heading p {
+  color: var(--dx-muted);
+  line-height: 1.55;
+}
+.teach-intro label,
+.teach-review-card label,
+.teach-explanation label,
+.teach-run-inputs label {
+  display: grid;
+  gap: 7px;
+  text-align: left;
+  margin: 24px 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.teach-privacy {
+  font-size: 11px;
+  margin-top: 22px;
+}
+.teach-heading,
+.teach-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.teach-section-heading {
+  align-items: center;
+  margin: 28px 0 12px;
+}
+.teach-section-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.teach-message {
+  padding: 11px 14px;
+  border-radius: var(--dx-radius-md);
+  background: light-dark(#f0f3e8, var(--dark-raised));
+}
+.teach-explanation {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 12px;
+  margin: 20px 0;
+}
+.teach-explanation label {
+  margin: 0;
+}
+.teach-evidence,
+.teach-review {
+  display: grid;
+  gap: 12px;
+}
+.teach-evidence-step,
+.teach-review-step {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  gap: 16px;
+  align-items: start;
+}
+.teach-evidence-step img,
+.teach-review-step img {
+  width: 160px;
+  max-height: 110px;
+  object-fit: cover;
+  border-radius: var(--dx-radius-md);
+  border: 1px solid var(--dx-border);
+}
+.teach-evidence-step p {
+  color: var(--dx-muted);
+  margin: 6px 0;
+}
+.teach-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 9px;
+  background: light-dark(#e7ede3, var(--dark-raised));
+  font-size: 11px;
+}
+.teach-review-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 18px;
+}
+.teach-review-card label {
+  margin: 8px 0;
+}
+.teach-review-card label:nth-child(n + 3) {
+  grid-column: 1 / -1;
+}
+.teach-input-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr auto auto;
+  gap: 10px;
+  align-items: center;
+}
+.teach-input-row label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.teach-review-step-copy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.teach-review-step-copy .dx-badge {
+  grid-column: 2;
+  justify-self: start;
+}
+.teach-review-actions {
+  position: sticky;
+  bottom: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius-lg);
+  background: color-mix(in srgb, var(--dx-surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+.teach-control-bar {
+  position: fixed;
+  z-index: 90;
+  left: calc(var(--sidebar-width, 248px) + 22px);
+  right: 22px;
+  bottom: 20px;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 16px;
+  border: 1px solid light-dark(#cad4c5, var(--dark-border));
+  border-radius: 16px;
+  background: light-dark(#fbfcf8ed, #202721ed);
+  box-shadow: 0 14px 45px #17251a2b;
+  backdrop-filter: blur(18px);
+}
+.teach-control-bar > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 190px;
+}
+.teach-control-bar > div:first-child span:last-child {
+  color: var(--dx-muted);
+  font-size: 11px;
+}
+.teach-control-bar form {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  max-width: 520px;
+}
+.teach-control-actions {
+  display: flex;
+  gap: 8px;
+}
+.teach-recording-dot,
+.teach-paused-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d5453d;
+  box-shadow: 0 0 0 5px #d5453d1c;
+}
+.teach-paused-dot {
+  background: #c79030;
+  box-shadow: none;
+}
+.skill-status {
+  text-transform: none;
+}
+@media (max-width: 900px) {
+  .teach-control-bar {
+    left: calc(var(--sidebar-width, 248px) + 10px);
+    right: 10px;
+    flex-wrap: wrap;
+  }
+  .teach-evidence-step,
+  .teach-review-step {
+    grid-template-columns: 1fr;
+  }
+  .teach-review-step img,
+  .teach-evidence-step img {
+    width: 100%;
+    max-height: 220px;
+  }
+  .teach-input-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,40 @@
+apiVersion: fused/v1
+kind: mcp
+name: dextalabs-integrations
+version: 1.0.0
+description: Manage Stripe customers, products, prices, checkout sessions, subscriptions and invoice drafts from one integration hub.
+bucket: default
+services:
+    '@martins-joseph/stripe':
+        version: 2026-07-29.dahlia
+        auth:
+            type: bearer
+            name: bearerAuth
+        operations:
+            - GetCustomers
+            - GetCustomersCustomer
+            - GetCustomersSearch
+            - PostCustomers
+            - PostCustomersCustomer
+            - GetProducts
+            - GetProductsId
+            - PostProducts
+            - PostProductsId
+            - GetPrices
+            - GetPricesPrice
+            - PostPrices
+            - PostPricesPrice
+            - GetCheckoutSessions
+            - GetCheckoutSessionsSession
+            - PostCheckoutSessions
+            - GetSubscriptions
+            - GetSubscriptionsSubscriptionExposedId
+            - PostSubscriptions
+            - PostSubscriptionsSubscriptionExposedId
+            - DeleteSubscriptionsSubscriptionExposedId
+            - GetInvoices
+            - GetInvoicesInvoice
+            - GetInvoicesInvoiceLines
+            - PostInvoices
+            - PostInvoicesInvoice
+            - PostInvoicesCreatePreview

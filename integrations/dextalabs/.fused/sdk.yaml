@@ -1,0 +1,41 @@
+apiVersion: fused/v1
+kind: sdk
+name: dextalabs-stripe
+version: 1.0.0
+language: typescript
+bucket: default
+generate: true
+services:
+    '@martins-joseph/stripe':
+        version: 2026-07-29.dahlia
+        auth:
+            type: bearer
+            name: bearerAuth
+        operations:
+            - GetCustomers
+            - GetCustomersCustomer
+            - GetCustomersSearch
+            - PostCustomers
+            - PostCustomersCustomer
+            - GetProducts
+            - GetProductsId
+            - PostProducts
+            - PostProductsId
+            - GetPrices
+            - GetPricesPrice
+            - PostPrices
+            - PostPricesPrice
+            - GetCheckoutSessions
+            - GetCheckoutSessionsSession
+            - PostCheckoutSessions
+            - GetSubscriptions
+            - GetSubscriptionsSubscriptionExposedId
+            - PostSubscriptions
+            - PostSubscriptionsSubscriptionExposedId
+            - DeleteSubscriptionsSubscriptionExposedId
+            - GetInvoices
+            - GetInvoicesInvoice
+            - GetInvoicesInvoiceLines
+            - PostInvoices
+            - PostInvoicesInvoice
+            - PostInvoicesCreatePreview

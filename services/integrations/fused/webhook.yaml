@@ -1,0 +1,6 @@
+apiVersion: fused/v1
+kind: webhook
+name: dext-integrations-stripe
+services:
+  stripe:
+    secret: '${bucket.default.secret.dext_stripe_signing}'

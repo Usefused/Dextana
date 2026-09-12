@@ -1,0 +1,1623 @@
+{
+  "schema_version": 1,
+  "language": "typescript",
+  "import_path": "dextalabs-stripe",
+  "methods": [
+    {
+      "path": "sdk.close",
+      "signature": "sdk.close(): void",
+      "file": "src/index.ts",
+      "summary": "Close the shared Engine gRPC channel. Call on application shutdown.",
+      "async": false,
+      "parameters": [],
+      "returns": "void"
+    },
+    {
+      "path": "sdk.Stripe.checkout.getCheckoutSessions",
+      "signature": "sdk.Stripe.checkout.getCheckoutSessions(options: GetCheckoutSessionsOptions): Promise<GetCheckoutSessionsResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Returns a list of Checkout Sessions.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetCheckoutSessionsOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetCheckoutSessionsResponse>"
+    },
+    {
+      "path": "sdk.Stripe.checkout.getCheckoutSessionsSession",
+      "signature": "sdk.Stripe.checkout.getCheckoutSessionsSession(options: GetCheckoutSessionsSessionOptions): Promise<GetCheckoutSessionsSessionResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Retrieves a Checkout Session object.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetCheckoutSessionsSessionOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetCheckoutSessionsSessionResponse>"
+    },
+    {
+      "path": "sdk.Stripe.checkout.postCheckoutSessions",
+      "signature": "sdk.Stripe.checkout.postCheckoutSessions(options?: PostCheckoutSessionsOptions): Promise<PostCheckoutSessionsResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Creates a Checkout Session object.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostCheckoutSessionsOptions",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<PostCheckoutSessionsResponse>"
+    },
+    {
+      "path": "sdk.Stripe.customers.getCustomers",
+      "signature": "sdk.Stripe.customers.getCustomers(options: GetCustomersOptions): Promise<GetCustomersResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Returns a list of your customers. The customers are returned sorted by creation date, with the most recent customers appearing first.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetCustomersOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetCustomersResponse>"
+    },
+    {
+      "path": "sdk.Stripe.customers.getCustomersCustomer",
+      "signature": "sdk.Stripe.customers.getCustomersCustomer(options: GetCustomersCustomerOptions): Promise<GetCustomersCustomerResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Retrieves a Customer object.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetCustomersCustomerOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetCustomersCustomerResponse>"
+    },
+    {
+      "path": "sdk.Stripe.customers.getCustomersSearch",
+      "signature": "sdk.Stripe.customers.getCustomersSearch(options: GetCustomersSearchOptions): Promise<GetCustomersSearchResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Search for customers you’ve previously created using Stripe’s <a href=\"/docs/search#search-query-language\">Search Query Language</a>.\nDon’t use search in read-after-write flows where strict consistency is necessary. Under normal operating\nconditions, data is searchable in less than a minute. Occasionally, propagation of new or updated data can be up\nto an hour behind during outages. Search functionality is not available to merchants in India.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetCustomersSearchOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetCustomersSearchResponse>"
+    },
+    {
+      "path": "sdk.Stripe.customers.postCustomers",
+      "signature": "sdk.Stripe.customers.postCustomers(options?: PostCustomersOptions): Promise<PostCustomersResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Creates a new customer object.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostCustomersOptions",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<PostCustomersResponse>"
+    },
+    {
+      "path": "sdk.Stripe.customers.postCustomersCustomer",
+      "signature": "sdk.Stripe.customers.postCustomersCustomer(options: PostCustomersCustomerOptions): Promise<PostCustomersCustomerResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Updates the specified customer by setting the values of the parameters passed. Any parameters not provided are left unchanged. For example, if you pass the <strong>source</strong> parameter, that becomes the customer’s active source (such as a card) to be used for all charges in the future. When you update a customer to a new valid card source by passing the <strong>source</strong> parameter: for each of the customer’s current subscriptions, if the subscription bills automatically and is in the <code>past_due</code> state, then the latest open invoice for the subscription with automatic collection enabled is retried. This retry doesn’t count as an automatic retry, and doesn’t affect the next regularly scheduled payment for the invoice. Changing the <strong>default_source</strong> for a customer doesn’t trigger this behavior.</p>\n\n<p>This request accepts mostly the same arguments as the customer creation call.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostCustomersCustomerOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<PostCustomersCustomerResponse>"
+    },
+    {
+      "path": "sdk.Stripe.invoices.getInvoices",
+      "signature": "sdk.Stripe.invoices.getInvoices(options: GetInvoicesOptions): Promise<GetInvoicesResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>You can list all invoices, or list the invoices for a specific customer. The invoices are returned sorted by creation date, with the most recently created invoices appearing first.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetInvoicesOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetInvoicesResponse>"
+    },
+    {
+      "path": "sdk.Stripe.invoices.getInvoicesInvoice",
+      "signature": "sdk.Stripe.invoices.getInvoicesInvoice(options: GetInvoicesInvoiceOptions): Promise<GetInvoicesInvoiceResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Retrieves the invoice with the given ID.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetInvoicesInvoiceOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetInvoicesInvoiceResponse>"
+    },
+    {
+      "path": "sdk.Stripe.invoices.getInvoicesInvoiceLines",
+      "signature": "sdk.Stripe.invoices.getInvoicesInvoiceLines(options: GetInvoicesInvoiceLinesOptions): Promise<GetInvoicesInvoiceLinesResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>When retrieving an invoice, you’ll get a <strong>lines</strong> property containing the total count of line items and the first handful of those items. There is also a URL where you can retrieve the full (paginated) list of line items.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetInvoicesInvoiceLinesOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetInvoicesInvoiceLinesResponse>"
+    },
+    {
+      "path": "sdk.Stripe.invoices.postInvoices",
+      "signature": "sdk.Stripe.invoices.postInvoices(options?: PostInvoicesOptions): Promise<PostInvoicesResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>This endpoint creates a draft invoice for a given customer. The invoice remains a draft until you <a href=\"/api/invoices/finalize\">finalize</a> the invoice, which allows you to <a href=\"/api/invoices/pay\">pay</a> or <a href=\"/api/invoices/send\">send</a> the invoice to your customers.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostInvoicesOptions",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<PostInvoicesResponse>"
+    },
+    {
+      "path": "sdk.Stripe.invoices.postInvoicesCreatePreview",
+      "signature": "sdk.Stripe.invoices.postInvoicesCreatePreview(options?: PostInvoicesCreatePreviewOptions): Promise<PostInvoicesCreatePreviewResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>At any time, you can preview the upcoming invoice for a subscription or subscription schedule. This will show you all the charges that are pending, including subscription renewal charges, invoice item charges, etc. It will also show you any discounts that are applicable to the invoice.</p>\n\n<p>You can also preview the effects of creating or updating a subscription or subscription schedule, including a preview of any prorations that will take place. To ensure that the actual proration is calculated exactly the same as the previewed proration, you should pass the <code>subscription_details.proration_date</code> parameter when doing the actual subscription update.</p>\n\n<p>The recommended way to get only the prorations being previewed on the invoice is to consider line items where <code>parent.subscription_item_details.proration</code> is <code>true</code>.</p>\n\n<p>Note that when you are viewing an upcoming invoice, you are simply viewing a preview – the invoice has not yet been created. As such, the upcoming invoice will not show up in invoice listing calls, and you cannot use the API to pay or edit the invoice. If you want to change the amount that your customer will be billed, you can add, remove, or update pending invoice items, or update the customer’s discount.</p>\n\n<p>Note: Currency conversion calculations use the latest exchange rates. Exchange rates may vary between the time of the preview and the time of the actual invoice creation. <a href=\"https://docs.stripe.com/currencies/conversions\">Learn more</a></p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostInvoicesCreatePreviewOptions",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<PostInvoicesCreatePreviewResponse>"
+    },
+    {
+      "path": "sdk.Stripe.invoices.postInvoicesInvoice",
+      "signature": "sdk.Stripe.invoices.postInvoicesInvoice(options: PostInvoicesInvoiceOptions): Promise<PostInvoicesInvoiceResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Draft invoices are fully editable. Once an invoice is <a href=\"/docs/billing/invoices/workflow#finalized\">finalized</a>,\nmonetary values, as well as <code>collection_method</code>, become uneditable.</p>\n\n<p>If you would like to stop the Stripe Billing engine from automatically finalizing, reattempting payments on,\nsending reminders for, or <a href=\"/docs/billing/invoices/reconciliation\">automatically reconciling</a> invoices, pass\n<code>auto_advance=false</code>.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostInvoicesInvoiceOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<PostInvoicesInvoiceResponse>"
+    },
+    {
+      "path": "sdk.Stripe.prices.getPrices",
+      "signature": "sdk.Stripe.prices.getPrices(options: GetPricesOptions): Promise<GetPricesResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Returns a list of your active prices, excluding <a href=\"/docs/products-prices/pricing-models#inline-pricing\">inline prices</a>. For the list of inactive prices, set <code>active</code> to false.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetPricesOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetPricesResponse>"
+    },
+    {
+      "path": "sdk.Stripe.prices.getPricesPrice",
+      "signature": "sdk.Stripe.prices.getPricesPrice(options: GetPricesPriceOptions): Promise<GetPricesPriceResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Retrieves the price with the given ID.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetPricesPriceOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetPricesPriceResponse>"
+    },
+    {
+      "path": "sdk.Stripe.prices.postPrices",
+      "signature": "sdk.Stripe.prices.postPrices(options: PostPricesOptions): Promise<PostPricesResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Creates a new <a href=\"https://docs.stripe.com/api/prices\">Price</a> for an existing <a href=\"https://docs.stripe.com/api/products\">Product</a>. The Price can be recurring or one-time.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostPricesOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<PostPricesResponse>"
+    },
+    {
+      "path": "sdk.Stripe.prices.postPricesPrice",
+      "signature": "sdk.Stripe.prices.postPricesPrice(options: PostPricesPriceOptions): Promise<PostPricesPriceResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Updates the specified price by setting the values of the parameters passed. Any parameters not provided are left unchanged.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostPricesPriceOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<PostPricesPriceResponse>"
+    },
+    {
+      "path": "sdk.Stripe.products.getProducts",
+      "signature": "sdk.Stripe.products.getProducts(options: GetProductsOptions): Promise<GetProductsResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Returns a list of your products. The products are returned sorted by creation date, with the most recently created products appearing first.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetProductsOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetProductsResponse>"
+    },
+    {
+      "path": "sdk.Stripe.products.getProductsId",
+      "signature": "sdk.Stripe.products.getProductsId(options: GetProductsIdOptions): Promise<GetProductsIdResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Retrieves the details of an existing product. Supply the unique product ID from either a product creation request or the product list, and Stripe will return the corresponding product information.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetProductsIdOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetProductsIdResponse>"
+    },
+    {
+      "path": "sdk.Stripe.products.postProducts",
+      "signature": "sdk.Stripe.products.postProducts(options: PostProductsOptions): Promise<PostProductsResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Creates a new product object.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostProductsOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<PostProductsResponse>"
+    },
+    {
+      "path": "sdk.Stripe.products.postProductsId",
+      "signature": "sdk.Stripe.products.postProductsId(options: PostProductsIdOptions): Promise<PostProductsIdResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Updates the specific product by setting the values of the parameters passed. Any parameters not provided will be left unchanged.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostProductsIdOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<PostProductsIdResponse>"
+    },
+    {
+      "path": "sdk.Stripe.subscriptions.deleteSubscriptionsSubscriptionExposedId",
+      "signature": "sdk.Stripe.subscriptions.deleteSubscriptionsSubscriptionExposedId(options: DeleteSubscriptionsSubscriptionExposedIdOptions): Promise<DeleteSubscriptionsSubscriptionExposedIdResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Cancels a customer’s subscription immediately. The customer won’t be charged again for the subscription. After it’s canceled, the subscription is largely immutable. You can still update its <a href=\"/metadata\">metadata</a> and <code>cancellation_details</code>.</p>\n\n<p>Any pending invoice items that you’ve created are still charged at the end of the period, unless manually <a href=\"/api/invoiceitems/delete\">deleted</a>. If you’ve set the subscription to cancel at the end of the period, any pending prorations are also left in place and collected at the end of the period. But if the subscription is set to cancel immediately, pending prorations are removed if <code>invoice_now</code> and <code>prorate</code> are both set to false.</p>\n\n<p>By default, upon subscription cancellation, Stripe stops automatic collection of all finalized invoices for the customer. This is intended to prevent unexpected payment attempts after the customer has canceled a subscription. However, you can resume automatic collection of the invoices manually after subscription cancellation to have us proceed. Or, you could check for unpaid invoices before allowing the customer to cancel the subscription at all.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "DeleteSubscriptionsSubscriptionExposedIdOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<DeleteSubscriptionsSubscriptionExposedIdResponse>"
+    },
+    {
+      "path": "sdk.Stripe.subscriptions.getSubscriptions",
+      "signature": "sdk.Stripe.subscriptions.getSubscriptions(options: GetSubscriptionsOptions): Promise<GetSubscriptionsResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>By default, returns a list of subscriptions that have not been canceled. In order to list canceled subscriptions, specify <code>status=canceled</code>.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetSubscriptionsOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetSubscriptionsResponse>"
+    },
+    {
+      "path": "sdk.Stripe.subscriptions.getSubscriptionsSubscriptionExposedId",
+      "signature": "sdk.Stripe.subscriptions.getSubscriptionsSubscriptionExposedId(options: GetSubscriptionsSubscriptionExposedIdOptions): Promise<GetSubscriptionsSubscriptionExposedIdResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Retrieves the subscription with the given ID.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "GetSubscriptionsSubscriptionExposedIdOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<GetSubscriptionsSubscriptionExposedIdResponse>"
+    },
+    {
+      "path": "sdk.Stripe.subscriptions.postSubscriptions",
+      "signature": "sdk.Stripe.subscriptions.postSubscriptions(options?: PostSubscriptionsOptions): Promise<PostSubscriptionsResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Creates a new subscription on an existing customer. Each customer can have up to 500 active or scheduled subscriptions.</p>\n\n<p>When you create a subscription with <code>collection_method=charge_automatically</code>, the first invoice is finalized as part of the request.\nThe <code>payment_behavior</code> parameter determines the exact behavior of the initial payment.</p>\n\n<p>To start subscriptions where the first invoice always begins in a <code>draft</code> status, use <a href=\"/docs/billing/subscriptions/subscription-schedules#managing\">subscription schedules</a> instead.\nSchedules provide the flexibility to model more complex billing configurations that change over time.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostSubscriptionsOptions",
+          "optional": true
+        }
+      ],
+      "returns": "Promise<PostSubscriptionsResponse>"
+    },
+    {
+      "path": "sdk.Stripe.subscriptions.postSubscriptionsSubscriptionExposedId",
+      "signature": "sdk.Stripe.subscriptions.postSubscriptionsSubscriptionExposedId(options: PostSubscriptionsSubscriptionExposedIdOptions): Promise<PostSubscriptionsSubscriptionExposedIdResponse>",
+      "file": "src/Stripe.ts",
+      "summary": "<p>Updates an existing subscription to match the specified parameters.\nWhen changing prices or quantities, we optionally prorate the price we charge next month to make up for any price changes.\nTo preview how the proration is calculated, use the <a href=\"/docs/api/invoices/create_preview\">create preview</a> endpoint.</p>\n\n<p>By default, we prorate subscription changes. For example, if a customer signs up on May 1 for a <currency>100</currency> price, they’ll be billed <currency>100</currency> immediately. If on May 15 they switch to a <currency>200</currency> price, then on June 1 they’ll be billed <currency>250</currency> (<currency>200</currency> for a renewal of her subscription, plus a <currency>50</currency> prorating adjustment for half of the previous month’s <currency>100</currency> difference). Similarly, a downgrade generates a credit that is applied to the next invoice. We also prorate when you make quantity changes.</p>\n\n<p>Switching prices does not normally change the billing date or generate an immediate charge unless:</p>\n\n<ul>\n<li>The billing interval is changed (for example, from monthly to yearly).</li>\n<li>The subscription moves from free to paid.</li>\n<li>A trial starts or ends.</li>\n</ul>\n\n<p>In these cases, we apply a credit for the unused time on the previous price, immediately charge the customer using the new price, and reset the billing date. Learn about how <a href=\"/docs/billing/subscriptions/upgrade-downgrade#immediate-payment\">Stripe immediately attempts payment for subscription changes</a>.</p>\n\n<p>If you want to charge for an upgrade immediately, pass <code>proration_behavior</code> as <code>always_invoice</code> to create prorations, automatically invoice the customer for those proration adjustments, and attempt to collect payment. If you pass <code>create_prorations</code>, the prorations are created but not automatically invoiced. If you want to bill the customer for the prorations before the subscription’s renewal date, you need to manually <a href=\"/docs/api/invoices/create\">invoice the customer</a>.</p>\n\n<p>If you don’t want to prorate, set the <code>proration_behavior</code> option to <code>none</code>. With this option, the customer is billed <currency>100</currency> on May 1 and <currency>200</currency> on June 1. Similarly, if you set <code>proration_behavior</code> to <code>none</code> when switching between different billing intervals (for example, from monthly to yearly), we don’t generate any credits for the old subscription’s unused time. We still reset the billing date and bill immediately for the new subscription.</p>\n\n<p>Updating the quantity on a subscription many times in an hour may result in <a href=\"/docs/rate-limits\">rate limiting</a>. If you need to bill for a frequently changing quantity, consider integrating <a href=\"/docs/billing/subscriptions/usage-based\">usage-based billing</a> instead.</p>",
+      "async": true,
+      "parameters": [
+        {
+          "name": "options",
+          "type": "PostSubscriptionsSubscriptionExposedIdOptions",
+          "optional": false
+        }
+      ],
+      "returns": "Promise<PostSubscriptionsSubscriptionExposedIdResponse>"
+    }
+  ],
+  "types": [
+    {
+      "name": "FusedExecutionOptions",
+      "file": "src/core.ts",
+      "declaration": "export interface FusedExecutionOptions {\n  endUserRef?: string;\n  authType?: 'basic' | 'bearer' | 'api_key' | 'oauth' | 'oidc' | 'mtls';\n  authName?: string;\n  resourceId?: string;\n  pagination?: FusedPaginationOptions;\n}"
+    },
+    {
+      "name": "FusedPaginationOptions",
+      "file": "src/core.ts",
+      "declaration": "export interface FusedPaginationOptions {\n  maxPages: number;\n}"
+    },
+    {
+      "name": "SDKConfig",
+      "file": "src/core.ts",
+      "declaration": "export interface SDKConfig {\n  grpcUrl?: string;               // Engine gRPC target, e.g. http://localhost:50051\n  headers?: Record<string, string>; // SDK-wide global headers\n  timeoutMs?: number;               // default 30000\n  streamIdleTimeoutMs?: number;     // disabled when omitted\n  maxStreamDurationMs?: number;     // disabled when omitted\n  debug?: boolean;                  // log requests/responses\n  // Family-scoped SDK execution token sent on Connect/Execute.\n  token?: string;\n  // Provider credentials forwarded to the Engine on every call and used\n  // in-flight only (never persisted) — see ExecuteRequest.credentials. Keys\n  // match what the Engine's applyAuth expects: \"Authorization\", \"username\"/\n  // \"password\", or the apiKey key name for the provider.\n  credentials?: Record<string, string>;\n}"
+    },
+    {
+      "name": "DeleteSubscriptionsSubscriptionExposedIdErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type DeleteSubscriptionsSubscriptionExposedIdErrorResult = Error;"
+    },
+    {
+      "name": "DeleteSubscriptionsSubscriptionExposedIdOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface DeleteSubscriptionsSubscriptionExposedIdOptions {\n  'subscription_exposed_id': string;\n  'cancellation_details'?: {\n    'comment'?: Record<string, any>;\n    'feedback'?: string;\n  };\n  'expand'?: string[];\n  'invoice_now'?: boolean;\n  'prorate'?: boolean;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "DeleteSubscriptionsSubscriptionExposedIdResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type DeleteSubscriptionsSubscriptionExposedIdResponse =\n  | { ok: true; status: number; data: DeleteSubscriptionsSubscriptionExposedIdSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: DeleteSubscriptionsSubscriptionExposedIdErrorResult };"
+    },
+    {
+      "name": "DeleteSubscriptionsSubscriptionExposedIdSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type DeleteSubscriptionsSubscriptionExposedIdSuccessResult = Subscription;"
+    },
+    {
+      "name": "GetCheckoutSessionsErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCheckoutSessionsErrorResult = Error;"
+    },
+    {
+      "name": "GetCheckoutSessionsOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCheckoutSessionsOptions = any;"
+    },
+    {
+      "name": "GetCheckoutSessionsResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCheckoutSessionsResponse =\n  | { ok: true; status: number; data: GetCheckoutSessionsSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetCheckoutSessionsErrorResult };"
+    },
+    {
+      "name": "GetCheckoutSessionsSessionErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCheckoutSessionsSessionErrorResult = Error;"
+    },
+    {
+      "name": "GetCheckoutSessionsSessionOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCheckoutSessionsSessionOptions = any;"
+    },
+    {
+      "name": "GetCheckoutSessionsSessionResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCheckoutSessionsSessionResponse =\n  | { ok: true; status: number; data: GetCheckoutSessionsSessionSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetCheckoutSessionsSessionErrorResult };"
+    },
+    {
+      "name": "GetCheckoutSessionsSessionSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCheckoutSessionsSessionSuccessResult = CheckoutSession;"
+    },
+    {
+      "name": "GetCheckoutSessionsSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetCheckoutSessionsSuccessResult {\n  'data': CheckoutSession[];\n  'has_more': boolean;\n  'object': string;\n  'url': string;\n}"
+    },
+    {
+      "name": "GetCustomersCustomerErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersCustomerErrorResult = Error;"
+    },
+    {
+      "name": "GetCustomersCustomerOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersCustomerOptions = any;"
+    },
+    {
+      "name": "GetCustomersCustomerResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersCustomerResponse =\n  | { ok: true; status: number; data: GetCustomersCustomerSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetCustomersCustomerErrorResult };"
+    },
+    {
+      "name": "GetCustomersCustomerSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersCustomerSuccessResult = Record<string, any>;"
+    },
+    {
+      "name": "GetCustomersErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersErrorResult = Error;"
+    },
+    {
+      "name": "GetCustomersOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersOptions = any;"
+    },
+    {
+      "name": "GetCustomersResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersResponse =\n  | { ok: true; status: number; data: GetCustomersSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetCustomersErrorResult };"
+    },
+    {
+      "name": "GetCustomersSearchErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersSearchErrorResult = Error;"
+    },
+    {
+      "name": "GetCustomersSearchOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersSearchOptions = any;"
+    },
+    {
+      "name": "GetCustomersSearchResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetCustomersSearchResponse =\n  | { ok: true; status: number; data: GetCustomersSearchSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetCustomersSearchErrorResult };"
+    },
+    {
+      "name": "GetCustomersSearchSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetCustomersSearchSuccessResult {\n  'data': Customer[];\n  'has_more': boolean;\n  'next_page'?: string;\n  'object': string;\n  'total_count'?: number;\n  'url': string;\n}"
+    },
+    {
+      "name": "GetCustomersSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetCustomersSuccessResult {\n  'data': Customer[];\n  'has_more': boolean;\n  'object': string;\n  'url': string;\n}"
+    },
+    {
+      "name": "GetInvoicesErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesErrorResult = Error;"
+    },
+    {
+      "name": "GetInvoicesInvoiceErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesInvoiceErrorResult = Error;"
+    },
+    {
+      "name": "GetInvoicesInvoiceLinesErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesInvoiceLinesErrorResult = Error;"
+    },
+    {
+      "name": "GetInvoicesInvoiceLinesOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesInvoiceLinesOptions = any;"
+    },
+    {
+      "name": "GetInvoicesInvoiceLinesResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesInvoiceLinesResponse =\n  | { ok: true; status: number; data: GetInvoicesInvoiceLinesSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetInvoicesInvoiceLinesErrorResult };"
+    },
+    {
+      "name": "GetInvoicesInvoiceLinesSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetInvoicesInvoiceLinesSuccessResult {\n  'data': LineItem[];\n  'has_more': boolean;\n  'object': string;\n  'url': string;\n}"
+    },
+    {
+      "name": "GetInvoicesInvoiceOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesInvoiceOptions = any;"
+    },
+    {
+      "name": "GetInvoicesInvoiceResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesInvoiceResponse =\n  | { ok: true; status: number; data: GetInvoicesInvoiceSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetInvoicesInvoiceErrorResult };"
+    },
+    {
+      "name": "GetInvoicesInvoiceSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesInvoiceSuccessResult = Invoice;"
+    },
+    {
+      "name": "GetInvoicesOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesOptions = any;"
+    },
+    {
+      "name": "GetInvoicesResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetInvoicesResponse =\n  | { ok: true; status: number; data: GetInvoicesSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetInvoicesErrorResult };"
+    },
+    {
+      "name": "GetInvoicesSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetInvoicesSuccessResult {\n  'data': Invoice[];\n  'has_more': boolean;\n  'object': string;\n  'url': string;\n}"
+    },
+    {
+      "name": "GetPricesErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetPricesErrorResult = Error;"
+    },
+    {
+      "name": "GetPricesOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetPricesOptions = any;"
+    },
+    {
+      "name": "GetPricesPriceErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetPricesPriceErrorResult = Error;"
+    },
+    {
+      "name": "GetPricesPriceOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetPricesPriceOptions = any;"
+    },
+    {
+      "name": "GetPricesPriceResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetPricesPriceResponse =\n  | { ok: true; status: number; data: GetPricesPriceSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetPricesPriceErrorResult };"
+    },
+    {
+      "name": "GetPricesPriceSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetPricesPriceSuccessResult = Price;"
+    },
+    {
+      "name": "GetPricesResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetPricesResponse =\n  | { ok: true; status: number; data: GetPricesSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetPricesErrorResult };"
+    },
+    {
+      "name": "GetPricesSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetPricesSuccessResult {\n  'data': Price[];\n  'has_more': boolean;\n  'object': string;\n  'url': string;\n}"
+    },
+    {
+      "name": "GetProductsErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetProductsErrorResult = Error;"
+    },
+    {
+      "name": "GetProductsIdErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetProductsIdErrorResult = Error;"
+    },
+    {
+      "name": "GetProductsIdOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetProductsIdOptions = any;"
+    },
+    {
+      "name": "GetProductsIdResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetProductsIdResponse =\n  | { ok: true; status: number; data: GetProductsIdSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetProductsIdErrorResult };"
+    },
+    {
+      "name": "GetProductsIdSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetProductsIdSuccessResult = Product;"
+    },
+    {
+      "name": "GetProductsOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetProductsOptions = any;"
+    },
+    {
+      "name": "GetProductsResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetProductsResponse =\n  | { ok: true; status: number; data: GetProductsSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetProductsErrorResult };"
+    },
+    {
+      "name": "GetProductsSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetProductsSuccessResult {\n  'data': Product[];\n  'has_more': boolean;\n  'object': string;\n  'url': string;\n}"
+    },
+    {
+      "name": "GetSubscriptionsErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetSubscriptionsErrorResult = Error;"
+    },
+    {
+      "name": "GetSubscriptionsOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetSubscriptionsOptions = any;"
+    },
+    {
+      "name": "GetSubscriptionsResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetSubscriptionsResponse =\n  | { ok: true; status: number; data: GetSubscriptionsSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetSubscriptionsErrorResult };"
+    },
+    {
+      "name": "GetSubscriptionsSubscriptionExposedIdErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetSubscriptionsSubscriptionExposedIdErrorResult = Error;"
+    },
+    {
+      "name": "GetSubscriptionsSubscriptionExposedIdOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetSubscriptionsSubscriptionExposedIdOptions = any;"
+    },
+    {
+      "name": "GetSubscriptionsSubscriptionExposedIdResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetSubscriptionsSubscriptionExposedIdResponse =\n  | { ok: true; status: number; data: GetSubscriptionsSubscriptionExposedIdSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: GetSubscriptionsSubscriptionExposedIdErrorResult };"
+    },
+    {
+      "name": "GetSubscriptionsSubscriptionExposedIdSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type GetSubscriptionsSubscriptionExposedIdSuccessResult = Subscription;"
+    },
+    {
+      "name": "GetSubscriptionsSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface GetSubscriptionsSuccessResult {\n  'data': Subscription[];\n  'has_more': boolean;\n  'object': string;\n  'url': string;\n}"
+    },
+    {
+      "name": "PostCheckoutSessionsErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCheckoutSessionsErrorResult = Error;"
+    },
+    {
+      "name": "PostCheckoutSessionsOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostCheckoutSessionsOptions {\n  'adaptive_pricing'?: {\n    'enabled'?: boolean;\n  };\n  'after_expiration'?: {\n    'recovery'?: {\n      'allow_promotion_codes'?: boolean;\n      'enabled': boolean;\n    };\n  };\n  'allow_promotion_codes'?: boolean;\n  'automatic_tax'?: {\n    'enabled': boolean;\n    'liability'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'billing_address_collection'?: string;\n  'branding_settings'?: {\n    'background_color'?: Record<string, any>;\n    'border_style'?: string;\n    'button_color'?: Record<string, any>;\n    'display_name'?: string;\n    'font_family'?: string;\n    'icon'?: {\n      'file'?: string;\n      'type': string;\n      'url'?: string;\n    };\n    'logo'?: {\n      'file'?: string;\n      'type': string;\n      'url'?: string;\n    };\n  };\n  'cancel_url'?: string;\n  'client_reference_id'?: string;\n  'consent_collection'?: {\n    'payment_method_reuse_agreement'?: {\n      'position': string;\n    };\n    'promotions'?: string;\n    'terms_of_service'?: string;\n  };\n  'currency'?: string;\n  'custom_fields'?: {\n    'dropdown'?: {\n      'default_value'?: string;\n      'options': {\n        'label': string;\n        'value': string;\n      }[];\n    };\n    'key': string;\n    'label': {\n      'custom': string;\n      'type': string;\n    };\n    'numeric'?: {\n      'default_value'?: string;\n      'maximum_length'?: number;\n      'minimum_length'?: number;\n    };\n    'optional'?: boolean;\n    'text'?: {\n      'default_value'?: string;\n      'maximum_length'?: number;\n      'minimum_length'?: number;\n    };\n    'type': string;\n  }[];\n  'custom_text'?: {\n    'after_submit'?: Record<string, any>;\n    'shipping_address'?: Record<string, any>;\n    'submit'?: Record<string, any>;\n    'terms_of_service_acceptance'?: Record<string, any>;\n  };\n  'customer'?: string;\n  'customer_account'?: string;\n  'customer_creation'?: string;\n  'customer_email'?: string;\n  'customer_update'?: {\n    'address'?: string;\n    'name'?: string;\n    'shipping'?: string;\n  };\n  'discounts'?: {\n    'coupon'?: string;\n    'promotion_code'?: string;\n  }[];\n  'excluded_payment_method_types'?: string[];\n  'expand'?: string[];\n  'expires_at'?: number;\n  'integration_identifier'?: string;\n  'invoice_creation'?: {\n    'enabled': boolean;\n    'invoice_data'?: {\n      'account_tax_ids'?: Record<string, any>;\n      'custom_fields'?: Record<string, any>;\n      'description'?: string;\n      'footer'?: string;\n      'issuer'?: {\n        'account'?: string;\n        'type': string;\n      };\n      'metadata'?: Record<string, any>;\n      'rendering_options'?: Record<string, any>;\n    };\n  };\n  'line_items'?: {\n    'adjustable_quantity'?: {\n      'enabled': boolean;\n      'maximum'?: number;\n      'minimum'?: number;\n    };\n    'metadata'?: Record<string, any>;\n    'price'?: string;\n    'price_data'?: {\n      'currency': string;\n      'product'?: string;\n      'product_data'?: {\n        'description'?: string;\n        'images'?: string[];\n        'metadata'?: Record<string, any>;\n        'name': string;\n        'tax_code'?: string;\n        'unit_label'?: string;\n      };\n      'recurring'?: {\n        'interval': string;\n        'interval_count'?: number;\n      };\n      'tax_behavior'?: string;\n      'unit_amount'?: number;\n      'unit_amount_decimal'?: string;\n    };\n    'quantity'?: number;\n    'tax_rates'?: string[];\n  }[];\n  'locale'?: string;\n  'managed_payments'?: {\n    'enabled'?: boolean;\n  };\n  'metadata'?: Record<string, any>;\n  'mode'?: string;\n  'name_collection'?: {\n    'business'?: {\n      'enabled': boolean;\n      'optional'?: boolean;\n    };\n    'individual'?: {\n      'enabled': boolean;\n      'optional'?: boolean;\n    };\n  };\n  'optional_items'?: {\n    'adjustable_quantity'?: {\n      'enabled': boolean;\n      'maximum'?: number;\n      'minimum'?: number;\n    };\n    'price': string;\n    'quantity': number;\n  }[];\n  'origin_context'?: string;\n  'payment_intent_data'?: {\n    'application_fee_amount'?: number;\n    'capture_method'?: string;\n    'description'?: string;\n    'metadata'?: Record<string, any>;\n    'on_behalf_of'?: string;\n    'receipt_email'?: string;\n    'setup_future_usage'?: string;\n    'shipping'?: {\n      'address': {\n        'city'?: string;\n        'country'?: string;\n        'line1': string;\n        'line2'?: string;\n        'postal_code'?: string;\n        'state'?: string;\n      };\n      'carrier'?: string;\n      'name': string;\n      'phone'?: string;\n      'tracking_number'?: string;\n    };\n    'statement_descriptor'?: string;\n    'statement_descriptor_suffix'?: string;\n    'transfer_data'?: {\n      'amount'?: number;\n      'destination': string;\n    };\n    'transfer_group'?: string;\n  };\n  'payment_method_collection'?: string;\n  'payment_method_configuration'?: string;\n  'payment_method_data'?: {\n    'allow_redisplay'?: string;\n  };\n  'payment_method_options'?: {\n    'acss_debit'?: {\n      'currency'?: string;\n      'mandate_options'?: {\n        'custom_mandate_url'?: Record<string, any>;\n        'default_for'?: string[];\n        'interval_description'?: string;\n        'payment_schedule'?: string;\n        'transaction_type'?: string;\n      };\n      'setup_future_usage'?: string;\n      'target_date'?: string;\n      'verification_method'?: string;\n    };\n    'affirm'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'afterpay_clearpay'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'alipay'?: {\n      'setup_future_usage'?: string;\n    };\n    'alma'?: {\n      'capture_method'?: string;\n    };\n    'amazon_pay'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'au_becs_debit'?: {\n      'setup_future_usage'?: string;\n      'target_date'?: string;\n    };\n    'bacs_debit'?: {\n      'mandate_options'?: {\n        'reference_prefix'?: Record<string, any>;\n      };\n      'setup_future_usage'?: string;\n      'target_date'?: string;\n    };\n    'bancontact'?: {\n      'setup_future_usage'?: string;\n    };\n    'billie'?: {\n      'capture_method'?: string;\n    };\n    'boleto'?: {\n      'expires_after_days'?: number;\n      'setup_future_usage'?: string;\n    };\n    'card'?: {\n      'capture_method'?: string;\n      'installments'?: {\n        'enabled'?: boolean;\n      };\n      'request_extended_authorization'?: string;\n      'request_incremental_authorization'?: string;\n      'request_multicapture'?: string;\n      'request_overcapture'?: string;\n      'request_three_d_secure'?: string;\n      'restrictions'?: {\n        'brands_blocked'?: string[];\n      };\n      'setup_future_usage'?: string;\n      'statement_descriptor_suffix_kana'?: string;\n      'statement_descriptor_suffix_kanji'?: string;\n    };\n    'cashapp'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'crypto'?: {\n      'setup_future_usage'?: string;\n    };\n    'customer_balance'?: {\n      'bank_transfer'?: {\n        'eu_bank_transfer'?: {\n          'country': string;\n        };\n        'requested_address_types'?: string[];\n        'type': string;\n      };\n      'funding_type'?: string;\n      'setup_future_usage'?: string;\n    };\n    'demo_pay'?: {\n      'setup_future_usage'?: string;\n    };\n    'eps'?: {\n      'setup_future_usage'?: string;\n    };\n    'fpx'?: {\n      'setup_future_usage'?: string;\n    };\n    'giropay'?: {\n      'setup_future_usage'?: string;\n    };\n    'grabpay'?: {\n      'setup_future_usage'?: string;\n    };\n    'ideal'?: {\n      'setup_future_usage'?: string;\n    };\n    'kakao_pay'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'klarna'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n      'subscriptions'?: Record<string, any>;\n    };\n    'konbini'?: {\n      'expires_after_days'?: number;\n      'setup_future_usage'?: string;\n    };\n    'kr_card'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'link'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'mobilepay'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'multibanco'?: {\n      'setup_future_usage'?: string;\n    };\n    'naver_pay'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'oxxo'?: {\n      'expires_after_days'?: number;\n      'setup_future_usage'?: string;\n    };\n    'p24'?: {\n      'setup_future_usage'?: string;\n      'tos_shown_and_accepted'?: boolean;\n    };\n    'pay_by_bank'?: Record<string, any>;\n    'payco'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'paynow'?: {\n      'setup_future_usage'?: string;\n    };\n    'paypal'?: {\n      'capture_method'?: string;\n      'preferred_locale'?: string;\n      'reference'?: string;\n      'risk_correlation_id'?: string;\n      'setup_future_usage'?: string;\n    };\n    'payto'?: {\n      'mandate_options'?: {\n        'amount'?: Record<string, any>;\n        'amount_type'?: string;\n        'end_date'?: Record<string, any>;\n        'payment_schedule'?: string;\n        'payments_per_period'?: Record<string, any>;\n        'purpose'?: string;\n        'start_date'?: Record<string, any>;\n      };\n      'setup_future_usage'?: string;\n    };\n    'pix'?: {\n      'amount_includes_iof'?: string;\n      'expires_after_seconds'?: number;\n      'mandate_options'?: {\n        'amount'?: number;\n        'amount_includes_iof'?: string;\n        'amount_type'?: string;\n        'currency'?: string;\n        'end_date'?: string;\n        'payment_schedule'?: string;\n        'reference'?: string;\n        'start_date'?: string;\n      };\n      'setup_future_usage'?: string;\n    };\n    'revolut_pay'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'samsung_pay'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'satispay'?: {\n      'capture_method'?: string;\n    };\n    'scalapay'?: {\n      'capture_method'?: string;\n    };\n    'sepa_debit'?: {\n      'mandate_options'?: {\n        'reference_prefix'?: Record<string, any>;\n      };\n      'setup_future_usage'?: string;\n      'target_date'?: string;\n    };\n    'sofort'?: {\n      'setup_future_usage'?: string;\n    };\n    'sunbit'?: {\n      'capture_method'?: string;\n      'setup_future_usage'?: string;\n    };\n    'swish'?: {\n      'reference'?: string;\n    };\n    'twint'?: {\n      'setup_future_usage'?: string;\n    };\n    'upi'?: {\n      'mandate_options'?: {\n        'amount'?: number;\n        'amount_type'?: string;\n        'description'?: string;\n        'end_date'?: number;\n      };\n      'setup_future_usage'?: string;\n    };\n    'us_bank_account'?: {\n      'financial_connections'?: {\n        'permissions'?: string[];\n        'prefetch'?: string[];\n      };\n      'setup_future_usage'?: string;\n      'target_date'?: string;\n      'verification_method'?: string;\n    };\n    'wechat_pay'?: {\n      'app_id'?: string;\n      'client': string;\n      'setup_future_usage'?: string;\n    };\n  };\n  'payment_method_types'?: string[];\n  'permissions'?: {\n    'update_shipping_details'?: string;\n  };\n  'phone_number_collection'?: {\n    'enabled': boolean;\n  };\n  'redirect_on_completion'?: string;\n  'return_url'?: string;\n  'saved_payment_method_options'?: {\n    'allow_redisplay_filters'?: string[];\n    'payment_method_remove'?: string;\n    'payment_method_save'?: string;\n  };\n  'setup_intent_data'?: {\n    'description'?: string;\n    'metadata'?: Record<string, any>;\n    'on_behalf_of'?: string;\n  };\n  'shipping_address_collection'?: {\n    'allowed_countries': string[];\n  };\n  'shipping_options'?: {\n    'shipping_rate'?: string;\n    'shipping_rate_data'?: {\n      'delivery_estimate'?: {\n        'maximum'?: {\n          'unit': string;\n          'value': number;\n        };\n        'minimum'?: {\n          'unit': string;\n          'value': number;\n        };\n      };\n      'display_name': string;\n      'fixed_amount'?: {\n        'amount': number;\n        'currency': string;\n        'currency_options'?: Record<string, any>;\n      };\n      'metadata'?: Record<string, any>;\n      'tax_behavior'?: string;\n      'tax_code'?: string;\n      'type'?: string;\n    };\n  }[];\n  'submit_type'?: string;\n  'subscription_data'?: {\n    'application_fee_percent'?: number;\n    'billing_cycle_anchor'?: number;\n    'billing_cycle_anchor_config'?: {\n      'day_of_month': number;\n      'hour'?: number;\n      'minute'?: number;\n      'month'?: number;\n      'second'?: number;\n    };\n    'billing_mode'?: {\n      'flexible'?: {\n        'proration_discounts'?: string;\n      };\n      'type': string;\n    };\n    'default_tax_rates'?: string[];\n    'description'?: string;\n    'invoice_settings'?: {\n      'issuer'?: {\n        'account'?: string;\n        'type': string;\n      };\n    };\n    'metadata'?: Record<string, any>;\n    'on_behalf_of'?: string;\n    'pending_invoice_item_interval'?: {\n      'interval': string;\n      'interval_count'?: number;\n    };\n    'proration_behavior'?: string;\n    'transfer_data'?: {\n      'amount_percent'?: number;\n      'destination': string;\n    };\n    'trial_end'?: number;\n    'trial_period_days'?: number;\n    'trial_settings'?: {\n      'end_behavior': {\n        'missing_payment_method': string;\n      };\n    };\n  };\n  'success_url'?: string;\n  'tax_id_collection'?: {\n    'enabled': boolean;\n    'required'?: string;\n  };\n  'ui_mode'?: string;\n  'wallet_options'?: {\n    'link'?: {\n      'display'?: string;\n    };\n  };\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostCheckoutSessionsResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCheckoutSessionsResponse =\n  | { ok: true; status: number; data: PostCheckoutSessionsSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostCheckoutSessionsErrorResult };"
+    },
+    {
+      "name": "PostCheckoutSessionsSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCheckoutSessionsSuccessResult = CheckoutSession;"
+    },
+    {
+      "name": "PostCustomersCustomerErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCustomersCustomerErrorResult = Error;"
+    },
+    {
+      "name": "PostCustomersCustomerOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostCustomersCustomerOptions {\n  'customer': string;\n  'address'?: Record<string, any>;\n  'balance'?: number;\n  'bank_account'?: Record<string, any>;\n  'business_name'?: Record<string, any>;\n  'card'?: Record<string, any>;\n  'cash_balance'?: {\n    'settings'?: {\n      'reconciliation_mode'?: string;\n    };\n  };\n  'default_alipay_account'?: string;\n  'default_bank_account'?: string;\n  'default_card'?: string;\n  'default_source'?: string;\n  'description'?: string;\n  'email'?: string;\n  'expand'?: string[];\n  'individual_name'?: Record<string, any>;\n  'invoice_prefix'?: string;\n  'invoice_settings'?: {\n    'custom_fields'?: Record<string, any>;\n    'default_payment_method'?: string;\n    'footer'?: string;\n    'rendering_options'?: Record<string, any>;\n  };\n  'metadata'?: Record<string, any>;\n  'name'?: string;\n  'next_invoice_sequence'?: number;\n  'phone'?: string;\n  'preferred_locales'?: string[];\n  'shipping'?: Record<string, any>;\n  'source'?: string;\n  'tax'?: {\n    'ip_address'?: Record<string, any>;\n    'validate_location'?: string;\n  };\n  'tax_exempt'?: string;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostCustomersCustomerResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCustomersCustomerResponse =\n  | { ok: true; status: number; data: PostCustomersCustomerSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostCustomersCustomerErrorResult };"
+    },
+    {
+      "name": "PostCustomersCustomerSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCustomersCustomerSuccessResult = Customer;"
+    },
+    {
+      "name": "PostCustomersErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCustomersErrorResult = Error;"
+    },
+    {
+      "name": "PostCustomersOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostCustomersOptions {\n  'address'?: Record<string, any>;\n  'balance'?: number;\n  'business_name'?: Record<string, any>;\n  'cash_balance'?: {\n    'settings'?: {\n      'reconciliation_mode'?: string;\n    };\n  };\n  'description'?: string;\n  'email'?: string;\n  'expand'?: string[];\n  'individual_name'?: Record<string, any>;\n  'invoice_prefix'?: string;\n  'invoice_settings'?: {\n    'custom_fields'?: Record<string, any>;\n    'default_payment_method'?: string;\n    'footer'?: string;\n    'rendering_options'?: Record<string, any>;\n  };\n  'metadata'?: Record<string, any>;\n  'name'?: string;\n  'next_invoice_sequence'?: number;\n  'payment_method'?: string;\n  'phone'?: string;\n  'preferred_locales'?: string[];\n  'shipping'?: Record<string, any>;\n  'source'?: string;\n  'tax'?: {\n    'ip_address'?: Record<string, any>;\n    'validate_location'?: string;\n  };\n  'tax_exempt'?: string;\n  'tax_id_data'?: {\n    'type': string;\n    'value': string;\n  }[];\n  'test_clock'?: string;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostCustomersResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCustomersResponse =\n  | { ok: true; status: number; data: PostCustomersSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostCustomersErrorResult };"
+    },
+    {
+      "name": "PostCustomersSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostCustomersSuccessResult = Customer;"
+    },
+    {
+      "name": "PostInvoicesCreatePreviewErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesCreatePreviewErrorResult = Error;"
+    },
+    {
+      "name": "PostInvoicesCreatePreviewOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostInvoicesCreatePreviewOptions {\n  'automatic_tax'?: {\n    'enabled': boolean;\n    'liability'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'currency'?: string;\n  'customer'?: string;\n  'customer_account'?: string;\n  'customer_details'?: {\n    'address'?: Record<string, any>;\n    'shipping'?: Record<string, any>;\n    'tax'?: {\n      'ip_address'?: Record<string, any>;\n    };\n    'tax_exempt'?: string;\n    'tax_ids'?: {\n      'type': string;\n      'value': string;\n    }[];\n  };\n  'discounts'?: Record<string, any>;\n  'expand'?: string[];\n  'invoice_items'?: {\n    'amount'?: number;\n    'currency'?: string;\n    'description'?: string;\n    'discountable'?: boolean;\n    'discounts'?: Record<string, any>;\n    'invoiceitem'?: string;\n    'metadata'?: Record<string, any>;\n    'period'?: {\n      'end': number;\n      'start': number;\n    };\n    'price'?: string;\n    'price_data'?: {\n      'currency': string;\n      'product': string;\n      'tax_behavior'?: string;\n      'unit_amount'?: number;\n      'unit_amount_decimal'?: string;\n    };\n    'quantity'?: number;\n    'quantity_decimal'?: string;\n    'tax_behavior'?: string;\n    'tax_code'?: Record<string, any>;\n    'tax_rates'?: Record<string, any>;\n    'unit_amount'?: number;\n    'unit_amount_decimal'?: string;\n  }[];\n  'issuer'?: {\n    'account'?: string;\n    'type': string;\n  };\n  'on_behalf_of'?: Record<string, any>;\n  'preview_mode'?: string;\n  'schedule'?: string;\n  'schedule_details'?: {\n    'billing_mode'?: {\n      'flexible'?: {\n        'proration_discounts'?: string;\n      };\n      'type': string;\n    };\n    'end_behavior'?: string;\n    'phases'?: {\n      'add_invoice_items'?: {\n        'discountable'?: boolean;\n        'discounts'?: {\n          'coupon'?: string;\n          'discount'?: string;\n          'promotion_code'?: string;\n        }[];\n        'metadata'?: Record<string, any>;\n        'period'?: {\n          'end': {\n            'timestamp'?: number;\n            'type': string;\n          };\n          'start': {\n            'timestamp'?: number;\n            'type': string;\n          };\n        };\n        'price'?: string;\n        'price_data'?: {\n          'currency': string;\n          'product': string;\n          'tax_behavior'?: string;\n          'unit_amount'?: number;\n          'unit_amount_decimal'?: string;\n        };\n        'quantity'?: number;\n        'tax_rates'?: Record<string, any>;\n      }[];\n      'application_fee_percent'?: number;\n      'automatic_tax'?: {\n        'enabled': boolean;\n        'liability'?: {\n          'account'?: string;\n          'type': string;\n        };\n      };\n      'billing_cycle_anchor'?: string;\n      'billing_thresholds'?: Record<string, any>;\n      'collection_method'?: string;\n      'default_payment_method'?: string;\n      'default_tax_rates'?: Record<string, any>;\n      'description'?: Record<string, any>;\n      'discounts'?: Record<string, any>;\n      'duration'?: {\n        'interval': string;\n        'interval_count'?: number;\n      };\n      'end_date'?: Record<string, any>;\n      'invoice_settings'?: {\n        'account_tax_ids'?: Record<string, any>;\n        'days_until_due'?: number;\n        'issuer'?: {\n          'account'?: string;\n          'type': string;\n        };\n      };\n      'items': {\n        'billing_thresholds'?: Record<string, any>;\n        'discounts'?: Record<string, any>;\n        'metadata'?: Record<string, any>;\n        'price'?: string;\n        'price_data'?: {\n          'currency': string;\n          'product': string;\n          'recurring': {\n            'interval': string;\n            'interval_count'?: number;\n          };\n          'tax_behavior'?: string;\n          'unit_amount'?: number;\n          'unit_amount_decimal'?: string;\n        };\n        'quantity'?: number;\n        'tax_rates'?: Record<string, any>;\n      }[];\n      'metadata'?: Record<string, any>;\n      'on_behalf_of'?: string;\n      'proration_behavior'?: string;\n      'start_date'?: Record<string, any>;\n      'transfer_data'?: {\n        'amount_percent'?: number;\n        'destination': string;\n      };\n      'trial'?: boolean;\n      'trial_end'?: Record<string, any>;\n    }[];\n    'proration_behavior'?: string;\n  };\n  'subscription'?: string;\n  'subscription_details'?: {\n    'billing_cycle_anchor'?: Record<string, any>;\n    'billing_mode'?: {\n      'flexible'?: {\n        'proration_discounts'?: string;\n      };\n      'type': string;\n    };\n    'billing_schedules'?: Record<string, any>;\n    'cancel_at'?: Record<string, any>;\n    'cancel_at_period_end'?: boolean;\n    'cancel_now'?: boolean;\n    'default_tax_rates'?: Record<string, any>;\n    'items'?: {\n      'billing_thresholds'?: Record<string, any>;\n      'clear_usage'?: boolean;\n      'deleted'?: boolean;\n      'discounts'?: Record<string, any>;\n      'id'?: string;\n      'metadata'?: Record<string, any>;\n      'price'?: string;\n      'price_data'?: {\n        'currency': string;\n        'product': string;\n        'recurring': {\n          'interval': string;\n          'interval_count'?: number;\n        };\n        'tax_behavior'?: string;\n        'unit_amount'?: number;\n        'unit_amount_decimal'?: string;\n      };\n      'quantity'?: number;\n      'tax_rates'?: Record<string, any>;\n    }[];\n    'metadata'?: Record<string, any>;\n    'proration_behavior'?: string;\n    'proration_date'?: number;\n    'resume_at'?: string;\n    'start_date'?: number;\n    'trial_end'?: Record<string, any>;\n  };\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostInvoicesCreatePreviewResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesCreatePreviewResponse =\n  | { ok: true; status: number; data: PostInvoicesCreatePreviewSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostInvoicesCreatePreviewErrorResult };"
+    },
+    {
+      "name": "PostInvoicesCreatePreviewSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesCreatePreviewSuccessResult = Invoice;"
+    },
+    {
+      "name": "PostInvoicesErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesErrorResult = Error;"
+    },
+    {
+      "name": "PostInvoicesInvoiceErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesInvoiceErrorResult = Error;"
+    },
+    {
+      "name": "PostInvoicesInvoiceOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostInvoicesInvoiceOptions {\n  'invoice': string;\n  'account_tax_ids'?: Record<string, any>;\n  'application_fee_amount'?: number;\n  'auto_advance'?: boolean;\n  'automatic_tax'?: {\n    'enabled': boolean;\n    'liability'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'automatically_finalizes_at'?: number;\n  'collection_method'?: string;\n  'custom_fields'?: Record<string, any>;\n  'days_until_due'?: number;\n  'default_payment_method'?: string;\n  'default_source'?: Record<string, any>;\n  'default_tax_rates'?: Record<string, any>;\n  'description'?: string;\n  'discounts'?: Record<string, any>;\n  'due_date'?: number;\n  'effective_at'?: Record<string, any>;\n  'expand'?: string[];\n  'footer'?: string;\n  'issuer'?: {\n    'account'?: string;\n    'type': string;\n  };\n  'metadata'?: Record<string, any>;\n  'number'?: Record<string, any>;\n  'on_behalf_of'?: Record<string, any>;\n  'payment_settings'?: {\n    'default_mandate'?: Record<string, any>;\n    'payment_method_options'?: {\n      'acss_debit'?: Record<string, any>;\n      'bancontact'?: Record<string, any>;\n      'card'?: Record<string, any>;\n      'customer_balance'?: Record<string, any>;\n      'konbini'?: Record<string, any>;\n      'payto'?: Record<string, any>;\n      'pix'?: Record<string, any>;\n      'sepa_debit'?: Record<string, any>;\n      'upi'?: Record<string, any>;\n      'us_bank_account'?: Record<string, any>;\n    };\n    'payment_method_types'?: Record<string, any>;\n  };\n  'rendering'?: {\n    'amount_tax_display'?: string;\n    'pdf'?: {\n      'page_size'?: string;\n    };\n    'template'?: string;\n    'template_version'?: Record<string, any>;\n  };\n  'shipping_cost'?: Record<string, any>;\n  'shipping_details'?: Record<string, any>;\n  'statement_descriptor'?: string;\n  'transfer_data'?: Record<string, any>;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostInvoicesInvoiceResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesInvoiceResponse =\n  | { ok: true; status: number; data: PostInvoicesInvoiceSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostInvoicesInvoiceErrorResult };"
+    },
+    {
+      "name": "PostInvoicesInvoiceSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesInvoiceSuccessResult = Invoice;"
+    },
+    {
+      "name": "PostInvoicesOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostInvoicesOptions {\n  'account_tax_ids'?: Record<string, any>;\n  'application_fee_amount'?: number;\n  'auto_advance'?: boolean;\n  'automatic_tax'?: {\n    'enabled': boolean;\n    'liability'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'automatically_finalizes_at'?: number;\n  'collection_method'?: string;\n  'currency'?: string;\n  'custom_fields'?: Record<string, any>;\n  'customer'?: string;\n  'customer_account'?: string;\n  'days_until_due'?: number;\n  'default_payment_method'?: string;\n  'default_source'?: string;\n  'default_tax_rates'?: string[];\n  'description'?: string;\n  'discounts'?: Record<string, any>;\n  'due_date'?: number;\n  'effective_at'?: number;\n  'expand'?: string[];\n  'footer'?: string;\n  'from_invoice'?: {\n    'action': string;\n    'invoice': string;\n  };\n  'issuer'?: {\n    'account'?: string;\n    'type': string;\n  };\n  'metadata'?: Record<string, any>;\n  'number'?: string;\n  'on_behalf_of'?: string;\n  'payment_settings'?: {\n    'default_mandate'?: Record<string, any>;\n    'payment_method_options'?: {\n      'acss_debit'?: Record<string, any>;\n      'bancontact'?: Record<string, any>;\n      'card'?: Record<string, any>;\n      'customer_balance'?: Record<string, any>;\n      'konbini'?: Record<string, any>;\n      'payto'?: Record<string, any>;\n      'pix'?: Record<string, any>;\n      'sepa_debit'?: Record<string, any>;\n      'upi'?: Record<string, any>;\n      'us_bank_account'?: Record<string, any>;\n    };\n    'payment_method_types'?: Record<string, any>;\n  };\n  'pending_invoice_items_behavior'?: string;\n  'rendering'?: {\n    'amount_tax_display'?: string;\n    'pdf'?: {\n      'page_size'?: string;\n    };\n    'template'?: string;\n    'template_version'?: Record<string, any>;\n  };\n  'shipping_cost'?: {\n    'shipping_rate'?: string;\n    'shipping_rate_data'?: {\n      'delivery_estimate'?: {\n        'maximum'?: {\n          'unit': string;\n          'value': number;\n        };\n        'minimum'?: {\n          'unit': string;\n          'value': number;\n        };\n      };\n      'display_name': string;\n      'fixed_amount'?: {\n        'amount': number;\n        'currency': string;\n        'currency_options'?: Record<string, any>;\n      };\n      'metadata'?: Record<string, any>;\n      'tax_behavior'?: string;\n      'tax_code'?: string;\n      'type'?: string;\n    };\n  };\n  'shipping_details'?: {\n    'address': {\n      'city'?: string;\n      'country'?: string;\n      'line1'?: string;\n      'line2'?: string;\n      'postal_code'?: string;\n      'state'?: string;\n    };\n    'name': string;\n    'phone'?: Record<string, any>;\n  };\n  'statement_descriptor'?: string;\n  'subscription'?: string;\n  'transfer_data'?: {\n    'amount'?: number;\n    'destination': string;\n  };\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostInvoicesResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesResponse =\n  | { ok: true; status: number; data: PostInvoicesSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostInvoicesErrorResult };"
+    },
+    {
+      "name": "PostInvoicesSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostInvoicesSuccessResult = Invoice;"
+    },
+    {
+      "name": "PostPricesErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostPricesErrorResult = Error;"
+    },
+    {
+      "name": "PostPricesOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostPricesOptions {\n  'active'?: boolean;\n  'billing_scheme'?: string;\n  'currency': string;\n  'currency_options'?: Record<string, any>;\n  'custom_unit_amount'?: {\n    'enabled': boolean;\n    'maximum'?: number;\n    'minimum'?: number;\n    'preset'?: number;\n  };\n  'expand'?: string[];\n  'lookup_key'?: string;\n  'metadata'?: Record<string, any>;\n  'nickname'?: string;\n  'product'?: string;\n  'product_data'?: {\n    'active'?: boolean;\n    'id'?: string;\n    'metadata'?: Record<string, any>;\n    'name': string;\n    'statement_descriptor'?: string;\n    'tax_code'?: string;\n    'unit_label'?: string;\n  };\n  'recurring'?: {\n    'interval': string;\n    'interval_count'?: number;\n    'meter'?: string;\n    'usage_type'?: string;\n  };\n  'tax_behavior'?: string;\n  'tiers'?: {\n    'flat_amount'?: number;\n    'flat_amount_decimal'?: string;\n    'unit_amount'?: number;\n    'unit_amount_decimal'?: string;\n    'up_to': Record<string, any>;\n  }[];\n  'tiers_mode'?: string;\n  'transfer_lookup_key'?: boolean;\n  'transform_quantity'?: {\n    'divide_by': number;\n    'round': string;\n  };\n  'unit_amount'?: number;\n  'unit_amount_decimal'?: string;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostPricesPriceErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostPricesPriceErrorResult = Error;"
+    },
+    {
+      "name": "PostPricesPriceOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostPricesPriceOptions {\n  'price': string;\n  'active'?: boolean;\n  'currency_options'?: Record<string, any>;\n  'expand'?: string[];\n  'lookup_key'?: string;\n  'metadata'?: Record<string, any>;\n  'nickname'?: string;\n  'tax_behavior'?: string;\n  'transfer_lookup_key'?: boolean;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostPricesPriceResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostPricesPriceResponse =\n  | { ok: true; status: number; data: PostPricesPriceSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostPricesPriceErrorResult };"
+    },
+    {
+      "name": "PostPricesPriceSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostPricesPriceSuccessResult = Price;"
+    },
+    {
+      "name": "PostPricesResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostPricesResponse =\n  | { ok: true; status: number; data: PostPricesSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostPricesErrorResult };"
+    },
+    {
+      "name": "PostPricesSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostPricesSuccessResult = Price;"
+    },
+    {
+      "name": "PostProductsErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostProductsErrorResult = Error;"
+    },
+    {
+      "name": "PostProductsIdErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostProductsIdErrorResult = Error;"
+    },
+    {
+      "name": "PostProductsIdOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostProductsIdOptions {\n  'id': string;\n  'active'?: boolean;\n  'default_price'?: string;\n  'description'?: Record<string, any>;\n  'expand'?: string[];\n  'images'?: Record<string, any>;\n  'marketing_features'?: Record<string, any>;\n  'metadata'?: Record<string, any>;\n  'name'?: string;\n  'package_dimensions'?: Record<string, any>;\n  'shippable'?: boolean;\n  'statement_descriptor'?: string;\n  'tax_code'?: Record<string, any>;\n  'unit_label'?: Record<string, any>;\n  'url'?: Record<string, any>;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostProductsIdResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostProductsIdResponse =\n  | { ok: true; status: number; data: PostProductsIdSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostProductsIdErrorResult };"
+    },
+    {
+      "name": "PostProductsIdSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostProductsIdSuccessResult = Product;"
+    },
+    {
+      "name": "PostProductsOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostProductsOptions {\n  'active'?: boolean;\n  'default_price_data'?: {\n    'currency': string;\n    'currency_options'?: Record<string, any>;\n    'custom_unit_amount'?: {\n      'enabled': boolean;\n      'maximum'?: number;\n      'minimum'?: number;\n      'preset'?: number;\n    };\n    'metadata'?: Record<string, any>;\n    'recurring'?: {\n      'interval': string;\n      'interval_count'?: number;\n    };\n    'tax_behavior'?: string;\n    'unit_amount'?: number;\n    'unit_amount_decimal'?: string;\n  };\n  'description'?: string;\n  'expand'?: string[];\n  'id'?: string;\n  'images'?: string[];\n  'marketing_features'?: {\n    'name': string;\n  }[];\n  'metadata'?: Record<string, any>;\n  'name': string;\n  'package_dimensions'?: {\n    'height': number;\n    'length': number;\n    'weight': number;\n    'width': number;\n  };\n  'shippable'?: boolean;\n  'statement_descriptor'?: string;\n  'tax_code'?: string;\n  'unit_label'?: string;\n  'url'?: string;\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostProductsResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostProductsResponse =\n  | { ok: true; status: number; data: PostProductsSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostProductsErrorResult };"
+    },
+    {
+      "name": "PostProductsSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostProductsSuccessResult = Product;"
+    },
+    {
+      "name": "PostSubscriptionsErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostSubscriptionsErrorResult = Error;"
+    },
+    {
+      "name": "PostSubscriptionsOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostSubscriptionsOptions {\n  'add_invoice_items'?: {\n    'discountable'?: boolean;\n    'discounts'?: {\n      'coupon'?: string;\n      'discount'?: string;\n      'promotion_code'?: string;\n    }[];\n    'metadata'?: Record<string, any>;\n    'period'?: {\n      'end': {\n        'timestamp'?: number;\n        'type': string;\n      };\n      'start': {\n        'timestamp'?: number;\n        'type': string;\n      };\n    };\n    'price'?: string;\n    'price_data'?: {\n      'currency': string;\n      'product': string;\n      'tax_behavior'?: string;\n      'unit_amount'?: number;\n      'unit_amount_decimal'?: string;\n    };\n    'quantity'?: number;\n    'tax_rates'?: Record<string, any>;\n  }[];\n  'application_fee_percent'?: Record<string, any>;\n  'automatic_tax'?: {\n    'enabled': boolean;\n    'liability'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'backdate_start_date'?: number;\n  'billing_cycle_anchor'?: number;\n  'billing_cycle_anchor_config'?: {\n    'day_of_month': number;\n    'hour'?: number;\n    'minute'?: number;\n    'month'?: number;\n    'second'?: number;\n  };\n  'billing_mode'?: {\n    'flexible'?: {\n      'proration_discounts'?: string;\n    };\n    'type': string;\n  };\n  'billing_schedules'?: {\n    'applies_to'?: {\n      'price'?: string;\n      'type': string;\n    }[];\n    'bill_until': {\n      'duration'?: {\n        'interval': string;\n        'interval_count'?: number;\n      };\n      'timestamp'?: number;\n      'type': string;\n    };\n    'key'?: string;\n  }[];\n  'billing_thresholds'?: Record<string, any>;\n  'cancel_at'?: Record<string, any>;\n  'cancel_at_period_end'?: boolean;\n  'collection_method'?: string;\n  'currency'?: string;\n  'customer'?: string;\n  'customer_account'?: string;\n  'days_until_due'?: number;\n  'default_payment_method'?: string;\n  'default_source'?: string;\n  'default_tax_rates'?: Record<string, any>;\n  'description'?: string;\n  'discounts'?: Record<string, any>;\n  'expand'?: string[];\n  'invoice_settings'?: {\n    'account_tax_ids'?: Record<string, any>;\n    'custom_fields'?: Record<string, any>;\n    'description'?: string;\n    'footer'?: string;\n    'issuer'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'items'?: {\n    'billing_thresholds'?: Record<string, any>;\n    'discounts'?: Record<string, any>;\n    'metadata'?: Record<string, any>;\n    'price'?: string;\n    'price_data'?: {\n      'currency': string;\n      'product': string;\n      'recurring': {\n        'interval': string;\n        'interval_count'?: number;\n      };\n      'tax_behavior'?: string;\n      'unit_amount'?: number;\n      'unit_amount_decimal'?: string;\n    };\n    'quantity'?: number;\n    'tax_rates'?: Record<string, any>;\n  }[];\n  'metadata'?: Record<string, any>;\n  'off_session'?: boolean;\n  'on_behalf_of'?: Record<string, any>;\n  'payment_behavior'?: string;\n  'payment_settings'?: {\n    'payment_method_options'?: {\n      'acss_debit'?: Record<string, any>;\n      'bancontact'?: Record<string, any>;\n      'card'?: Record<string, any>;\n      'customer_balance'?: Record<string, any>;\n      'konbini'?: Record<string, any>;\n      'payto'?: Record<string, any>;\n      'pix'?: Record<string, any>;\n      'sepa_debit'?: Record<string, any>;\n      'upi'?: Record<string, any>;\n      'us_bank_account'?: Record<string, any>;\n    };\n    'payment_method_types'?: Record<string, any>;\n    'save_default_payment_method'?: string;\n  };\n  'pending_invoice_item_interval'?: Record<string, any>;\n  'proration_behavior'?: string;\n  'transfer_data'?: {\n    'amount_percent'?: number;\n    'destination': string;\n  };\n  'trial_end'?: Record<string, any>;\n  'trial_from_plan'?: boolean;\n  'trial_period_days'?: number;\n  'trial_settings'?: {\n    'end_behavior': {\n      'missing_payment_method': string;\n    };\n  };\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostSubscriptionsResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostSubscriptionsResponse =\n  | { ok: true; status: number; data: PostSubscriptionsSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostSubscriptionsErrorResult };"
+    },
+    {
+      "name": "PostSubscriptionsSubscriptionExposedIdErrorResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostSubscriptionsSubscriptionExposedIdErrorResult = Error;"
+    },
+    {
+      "name": "PostSubscriptionsSubscriptionExposedIdOptions",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface PostSubscriptionsSubscriptionExposedIdOptions {\n  'subscription_exposed_id': string;\n  'add_invoice_items'?: {\n    'discountable'?: boolean;\n    'discounts'?: {\n      'coupon'?: string;\n      'discount'?: string;\n      'promotion_code'?: string;\n    }[];\n    'metadata'?: Record<string, any>;\n    'period'?: {\n      'end': {\n        'timestamp'?: number;\n        'type': string;\n      };\n      'start': {\n        'timestamp'?: number;\n        'type': string;\n      };\n    };\n    'price'?: string;\n    'price_data'?: {\n      'currency': string;\n      'product': string;\n      'tax_behavior'?: string;\n      'unit_amount'?: number;\n      'unit_amount_decimal'?: string;\n    };\n    'quantity'?: number;\n    'tax_rates'?: Record<string, any>;\n  }[];\n  'application_fee_percent'?: Record<string, any>;\n  'automatic_tax'?: {\n    'enabled': boolean;\n    'liability'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'billing_cycle_anchor'?: string;\n  'billing_schedules'?: Record<string, any>;\n  'billing_thresholds'?: Record<string, any>;\n  'cancel_at'?: Record<string, any>;\n  'cancel_at_period_end'?: boolean;\n  'cancellation_details'?: {\n    'comment'?: Record<string, any>;\n    'feedback'?: string;\n  };\n  'collection_method'?: string;\n  'days_until_due'?: number;\n  'default_payment_method'?: string;\n  'default_source'?: Record<string, any>;\n  'default_tax_rates'?: Record<string, any>;\n  'description'?: Record<string, any>;\n  'discounts'?: Record<string, any>;\n  'expand'?: string[];\n  'invoice_settings'?: {\n    'account_tax_ids'?: Record<string, any>;\n    'custom_fields'?: Record<string, any>;\n    'description'?: Record<string, any>;\n    'footer'?: Record<string, any>;\n    'issuer'?: {\n      'account'?: string;\n      'type': string;\n    };\n  };\n  'items'?: {\n    'billing_thresholds'?: Record<string, any>;\n    'clear_usage'?: boolean;\n    'deleted'?: boolean;\n    'discounts'?: Record<string, any>;\n    'id'?: string;\n    'metadata'?: Record<string, any>;\n    'price'?: string;\n    'price_data'?: {\n      'currency': string;\n      'product': string;\n      'recurring': {\n        'interval': string;\n        'interval_count'?: number;\n      };\n      'tax_behavior'?: string;\n      'unit_amount'?: number;\n      'unit_amount_decimal'?: string;\n    };\n    'quantity'?: number;\n    'tax_rates'?: Record<string, any>;\n  }[];\n  'metadata'?: Record<string, any>;\n  'off_session'?: boolean;\n  'on_behalf_of'?: Record<string, any>;\n  'pause_collection'?: Record<string, any>;\n  'payment_behavior'?: string;\n  'payment_settings'?: {\n    'payment_method_options'?: {\n      'acss_debit'?: Record<string, any>;\n      'bancontact'?: Record<string, any>;\n      'card'?: Record<string, any>;\n      'customer_balance'?: Record<string, any>;\n      'konbini'?: Record<string, any>;\n      'payto'?: Record<string, any>;\n      'pix'?: Record<string, any>;\n      'sepa_debit'?: Record<string, any>;\n      'upi'?: Record<string, any>;\n      'us_bank_account'?: Record<string, any>;\n    };\n    'payment_method_types'?: Record<string, any>;\n    'save_default_payment_method'?: string;\n  };\n  'pending_invoice_item_interval'?: Record<string, any>;\n  'proration_behavior'?: string;\n  'proration_date'?: number;\n  'transfer_data'?: Record<string, any>;\n  'trial_end'?: Record<string, any>;\n  'trial_from_plan'?: boolean;\n  'trial_settings'?: {\n    'end_behavior': {\n      'missing_payment_method': string;\n    };\n  };\n  headers?: Record<string, string>;\n  _credentials?: Record<string, string>;\n  fused?: FusedExecutionOptions;\n}"
+    },
+    {
+      "name": "PostSubscriptionsSubscriptionExposedIdResponse",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostSubscriptionsSubscriptionExposedIdResponse =\n  | { ok: true; status: number; data: PostSubscriptionsSubscriptionExposedIdSuccessResult; error: null }\n  | { ok: false; status: number; data: null; error: PostSubscriptionsSubscriptionExposedIdErrorResult };"
+    },
+    {
+      "name": "PostSubscriptionsSubscriptionExposedIdSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostSubscriptionsSubscriptionExposedIdSuccessResult = Subscription;"
+    },
+    {
+      "name": "PostSubscriptionsSuccessResult",
+      "file": "src/Stripe.ts",
+      "declaration": "export type PostSubscriptionsSuccessResult = Subscription;"
+    },
+    {
+      "name": "StripeIntegrationConfig",
+      "file": "src/Stripe.ts",
+      "declaration": "export interface StripeIntegrationConfig extends SDKConfig {\n  environment?: string;\n}"
+    },
+    {
+      "name": "ApiErrors",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type ApiErrors = {\n  'advice_code'?: string;\n  'charge'?: string;\n  'code'?: string;\n  'decline_code'?: string;\n  'doc_url'?: string;\n  'message'?: string;\n  'network_advice_code'?: string;\n  'network_decline_code'?: string;\n  'param'?: string;\n  'payment_intent'?: PaymentIntent;\n  'payment_method'?: PaymentMethod;\n  'payment_method_type'?: string;\n  'request_log_url'?: string;\n  'setup_intent'?: SetupIntent;\n  'source'?: Record<string, any>;\n  'type': string;\n};"
+    },
+    {
+      "name": "AutomaticTax",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type AutomaticTax = {\n  'disabled_reason'?: string;\n  'enabled': boolean;\n  'liability'?: Record<string, any>;\n  'provider'?: string;\n  'status'?: string;\n};"
+    },
+    {
+      "name": "BillingBillResourceInvoicingTaxesTax",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type BillingBillResourceInvoicingTaxesTax = {\n  'amount': number;\n  'tax_behavior': string;\n  'tax_rate_details'?: Record<string, any>;\n  'taxability_reason': string;\n  'taxable_amount'?: number;\n  'type': string;\n};"
+    },
+    {
+      "name": "BillingDetails",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type BillingDetails = {\n  'address'?: Record<string, any>;\n  'email'?: string;\n  'name'?: string;\n  'phone'?: string;\n  'tax_id'?: string;\n};"
+    },
+    {
+      "name": "CheckoutSession",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type CheckoutSession = {\n  'adaptive_pricing'?: Record<string, any>;\n  'after_expiration'?: Record<string, any>;\n  'allow_promotion_codes'?: boolean;\n  'amount_subtotal'?: number;\n  'amount_total'?: number;\n  'automatic_tax': PaymentPagesCheckoutSessionAutomaticTax;\n  'billing_address_collection'?: string;\n  'branding_settings'?: PaymentPagesCheckoutSessionBrandingSettings;\n  'cancel_url'?: string;\n  'client_reference_id'?: string;\n  'client_secret'?: string;\n  'collected_information'?: Record<string, any>;\n  'consent'?: Record<string, any>;\n  'consent_collection'?: Record<string, any>;\n  'created': number;\n  'currency'?: string;\n  'currency_conversion'?: Record<string, any>;\n  'custom_fields': PaymentPagesCheckoutSessionCustomFields[];\n  'custom_text': PaymentPagesCheckoutSessionCustomText;\n  'customer'?: Record<string, any>;\n  'customer_account'?: string;\n  'customer_creation'?: string;\n  'customer_details'?: Record<string, any>;\n  'customer_email'?: string;\n  'discounts'?: PaymentPagesCheckoutSessionDiscount[];\n  'excluded_payment_method_types'?: string[];\n  'expires_at': number;\n  'id': string;\n  'integration_identifier'?: string;\n  'invoice'?: Record<string, any>;\n  'invoice_creation'?: Record<string, any>;\n  'line_items'?: {\n    'data': Item[];\n    'has_more': boolean;\n    'object': string;\n    'url': string;\n  };\n  'livemode': boolean;\n  'locale'?: string;\n  'managed_payments'?: Record<string, any>;\n  'metadata'?: Record<string, any>;\n  'mode': string;\n  'name_collection'?: PaymentPagesCheckoutSessionNameCollection;\n  'object': string;\n  'optional_items'?: PaymentPagesCheckoutSessionOptionalItem[];\n  'origin_context'?: string;\n  'payment_intent'?: Record<string, any>;\n  'payment_link'?: Record<string, any>;\n  'payment_method_collection'?: string;\n  'payment_method_configuration_details'?: Record<string, any>;\n  'payment_method_options'?: Record<string, any>;\n  'payment_method_types': string[];\n  'payment_status': string;\n  'permissions'?: Record<string, any>;\n  'phone_number_collection'?: PaymentPagesCheckoutSessionPhoneNumberCollection;\n  'presentment_details'?: PaymentFlowsPaymentIntentPresentmentDetails;\n  'recovered_from'?: string;\n  'redirect_on_completion'?: string;\n  'return_url'?: string;\n  'saved_payment_method_options'?: Record<string, any>;\n  'setup_intent'?: Record<string, any>;\n  'shipping_address_collection'?: Record<string, any>;\n  'shipping_cost'?: Record<string, any>;\n  'shipping_options': PaymentPagesCheckoutSessionShippingOption[];\n  'status'?: string;\n  'submit_type'?: string;\n  'subscription'?: Record<string, any>;\n  'success_url'?: string;\n  'tax_id_collection'?: PaymentPagesCheckoutSessionTaxIdCollection;\n  'total_details'?: Record<string, any>;\n  'ui_mode'?: string;\n  'url'?: string;\n  'wallet_options'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "ConnectAccountReference",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type ConnectAccountReference = {\n  'account'?: Record<string, any>;\n  'type': string;\n};"
+    },
+    {
+      "name": "Customer",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Customer = {\n  'address'?: Record<string, any>;\n  'balance'?: number;\n  'business_name'?: string;\n  'cash_balance'?: Record<string, any>;\n  'created': number;\n  'currency'?: string;\n  'customer_account'?: string;\n  'default_source'?: Record<string, any>;\n  'delinquent'?: boolean;\n  'description'?: string;\n  'discount'?: Record<string, any>;\n  'email'?: string;\n  'id': string;\n  'individual_name'?: string;\n  'invoice_credit_balance'?: Record<string, any>;\n  'invoice_prefix'?: string;\n  'invoice_settings'?: InvoiceSettingCustomerSetting;\n  'livemode': boolean;\n  'metadata'?: Record<string, any>;\n  'name'?: string;\n  'next_invoice_sequence'?: number;\n  'object': string;\n  'phone'?: string;\n  'preferred_locales'?: string[];\n  'shipping'?: Record<string, any>;\n  'sources'?: {\n    'data': Record<string, any>[];\n    'has_more': boolean;\n    'object': string;\n    'url': string;\n  };\n  'subscriptions'?: {\n    'data': Subscription[];\n    'has_more': boolean;\n    'object': string;\n    'url': string;\n  };\n  'tax'?: CustomerTax;\n  'tax_exempt'?: string;\n  'tax_ids'?: {\n    'data': TaxId[];\n    'has_more': boolean;\n    'object': string;\n    'url': string;\n  };\n  'test_clock'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "CustomerTax",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type CustomerTax = {\n  'automatic_tax': string;\n  'ip_address'?: string;\n  'location'?: Record<string, any>;\n  'provider': string;\n};"
+    },
+    {
+      "name": "Discount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Discount = {\n  'checkout_session'?: string;\n  'customer'?: Record<string, any>;\n  'customer_account'?: string;\n  'end'?: number;\n  'id': string;\n  'invoice'?: string;\n  'invoice_item'?: string;\n  'object': string;\n  'promotion_code'?: Record<string, any>;\n  'source': DiscountSource;\n  'start': number;\n  'subscription'?: string;\n  'subscription_item'?: string;\n};"
+    },
+    {
+      "name": "DiscountSource",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type DiscountSource = {\n  'coupon'?: Record<string, any>;\n  'type': string;\n};"
+    },
+    {
+      "name": "DiscountsResourceDiscountAmount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type DiscountsResourceDiscountAmount = {\n  'amount': number;\n  'discount': Record<string, any>;\n};"
+    },
+    {
+      "name": "Error",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Error = {\n  'error': ApiErrors;\n};"
+    },
+    {
+      "name": "Invoice",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Invoice = {\n  'account_country'?: string;\n  'account_name'?: string;\n  'account_tax_ids'?: Record<string, any>[];\n  'amount_due': number;\n  'amount_overpaid': number;\n  'amount_paid': number;\n  'amount_paid_off_stripe': number;\n  'amount_remaining': number;\n  'amount_shipping': number;\n  'application'?: Record<string, any>;\n  'attempt_count': number;\n  'attempted': boolean;\n  'auto_advance': boolean;\n  'automatic_tax': AutomaticTax;\n  'automatically_finalizes_at'?: number;\n  'billing_reason'?: string;\n  'collection_method': string;\n  'confirmation_secret'?: Record<string, any>;\n  'created': number;\n  'currency': string;\n  'custom_fields'?: InvoiceSettingCustomField[];\n  'customer': Record<string, any>;\n  'customer_account'?: string;\n  'customer_address'?: Record<string, any>;\n  'customer_email'?: string;\n  'customer_name'?: string;\n  'customer_phone'?: string;\n  'customer_shipping'?: Record<string, any>;\n  'customer_tax_exempt'?: string;\n  'customer_tax_ids'?: InvoicesResourceInvoiceTaxId[];\n  'default_payment_method'?: Record<string, any>;\n  'default_source'?: Record<string, any>;\n  'default_tax_rates': TaxRate[];\n  'description'?: string;\n  'discounts': Record<string, any>[];\n  'due_date'?: number;\n  'effective_at'?: number;\n  'ending_balance'?: number;\n  'footer'?: string;\n  'from_invoice'?: Record<string, any>;\n  'hosted_invoice_url'?: string;\n  'id': string;\n  'invoice_pdf'?: string;\n  'issuer': ConnectAccountReference;\n  'last_finalization_error'?: Record<string, any>;\n  'latest_revision'?: Record<string, any>;\n  'lines': {\n    'data': LineItem[];\n    'has_more': boolean;\n    'object': string;\n    'url': string;\n  };\n  'livemode': boolean;\n  'metadata'?: Record<string, any>;\n  'next_payment_attempt'?: number;\n  'number'?: string;\n  'object': string;\n  'on_behalf_of'?: Record<string, any>;\n  'parent'?: Record<string, any>;\n  'payment_settings': InvoicesPaymentSettings;\n  'payments'?: {\n    'data': InvoicePayment[];\n    'has_more': boolean;\n    'object': string;\n    'url': string;\n  };\n  'period_end': number;\n  'period_start': number;\n  'post_payment_credit_notes_amount': number;\n  'pre_payment_credit_notes_amount': number;\n  'receipt_number'?: string;\n  'rendering'?: Record<string, any>;\n  'shipping_cost'?: Record<string, any>;\n  'shipping_details'?: Record<string, any>;\n  'starting_balance': number;\n  'statement_descriptor'?: string;\n  'status'?: string;\n  'status_transitions': InvoicesResourceStatusTransitions;\n  'subtotal': number;\n  'subtotal_excluding_tax'?: number;\n  'test_clock'?: Record<string, any>;\n  'threshold_reason'?: InvoiceThresholdReason;\n  'total': number;\n  'total_discount_amounts'?: DiscountsResourceDiscountAmount[];\n  'total_excluding_tax'?: number;\n  'total_pretax_credit_amounts'?: InvoicesResourcePretaxCreditAmount[];\n  'total_taxes'?: BillingBillResourceInvoicingTaxesTax[];\n  'webhooks_delivered_at'?: number;\n};"
+    },
+    {
+      "name": "InvoiceItemThresholdReason",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoiceItemThresholdReason = {\n  'line_item_ids': string[];\n  'usage_gte': number;\n};"
+    },
+    {
+      "name": "InvoiceLineItemPeriod",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoiceLineItemPeriod = {\n  'end': number;\n  'start': number;\n};"
+    },
+    {
+      "name": "InvoicePayment",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoicePayment = {\n  'amount_paid'?: number;\n  'amount_requested': number;\n  'created': number;\n  'currency': string;\n  'id': string;\n  'invoice': Record<string, any>;\n  'is_default': boolean;\n  'livemode': boolean;\n  'object': string;\n  'payment': InvoicesPaymentsInvoicePaymentAssociatedPayment;\n  'status': string;\n  'status_transitions': InvoicesPaymentsInvoicePaymentStatusTransitions;\n};"
+    },
+    {
+      "name": "InvoiceSettingCustomerSetting",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoiceSettingCustomerSetting = {\n  'custom_fields'?: InvoiceSettingCustomField[];\n  'default_payment_method'?: Record<string, any>;\n  'footer'?: string;\n  'rendering_options'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "InvoiceSettingCustomField",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoiceSettingCustomField = {\n  'name': string;\n  'value': string;\n};"
+    },
+    {
+      "name": "InvoicesPaymentSettings",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoicesPaymentSettings = {\n  'default_mandate'?: string;\n  'payment_method_options'?: Record<string, any>;\n  'payment_method_types'?: string[];\n};"
+    },
+    {
+      "name": "InvoicesPaymentsInvoicePaymentAssociatedPayment",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoicesPaymentsInvoicePaymentAssociatedPayment = {\n  'charge'?: Record<string, any>;\n  'payment_intent'?: Record<string, any>;\n  'payment_record'?: Record<string, any>;\n  'type': string;\n};"
+    },
+    {
+      "name": "InvoicesPaymentsInvoicePaymentStatusTransitions",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoicesPaymentsInvoicePaymentStatusTransitions = {\n  'canceled_at'?: number;\n  'paid_at'?: number;\n};"
+    },
+    {
+      "name": "InvoicesResourceInvoiceTaxId",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoicesResourceInvoiceTaxId = {\n  'type': string;\n  'value'?: string;\n};"
+    },
+    {
+      "name": "InvoicesResourcePretaxCreditAmount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoicesResourcePretaxCreditAmount = {\n  'amount': number;\n  'credit_balance_transaction'?: Record<string, any>;\n  'discount'?: Record<string, any>;\n  'type': string;\n};"
+    },
+    {
+      "name": "InvoicesResourceStatusTransitions",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoicesResourceStatusTransitions = {\n  'finalized_at'?: number;\n  'marked_uncollectible_at'?: number;\n  'paid_at'?: number;\n  'voided_at'?: number;\n};"
+    },
+    {
+      "name": "InvoiceThresholdReason",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type InvoiceThresholdReason = {\n  'amount_gte'?: number;\n  'item_reasons': InvoiceItemThresholdReason[];\n};"
+    },
+    {
+      "name": "Item",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Item = {\n  'adjustable_quantity'?: Record<string, any>;\n  'amount_discount': number;\n  'amount_subtotal': number;\n  'amount_tax': number;\n  'amount_total': number;\n  'currency': string;\n  'description'?: string;\n  'discounts'?: LineItemsDiscountAmount[];\n  'id': string;\n  'metadata'?: Record<string, any>;\n  'object': string;\n  'price'?: Record<string, any>;\n  'quantity'?: number;\n  'taxes'?: LineItemsTaxAmount[];\n};"
+    },
+    {
+      "name": "LineItem",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type LineItem = {\n  'amount': number;\n  'currency': string;\n  'description'?: string;\n  'discount_amounts'?: DiscountsResourceDiscountAmount[];\n  'discountable': boolean;\n  'discounts': Record<string, any>[];\n  'id': string;\n  'invoice'?: string;\n  'livemode': boolean;\n  'metadata': Record<string, any>;\n  'object': string;\n  'parent'?: Record<string, any>;\n  'period': InvoiceLineItemPeriod;\n  'pretax_credit_amounts'?: InvoicesResourcePretaxCreditAmount[];\n  'pricing'?: Record<string, any>;\n  'quantity'?: number;\n  'quantity_decimal'?: string;\n  'subscription'?: Record<string, any>;\n  'subtotal': number;\n  'taxes'?: BillingBillResourceInvoicingTaxesTax[];\n};"
+    },
+    {
+      "name": "LineItemsDiscountAmount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type LineItemsDiscountAmount = {\n  'amount': number;\n  'discount': Discount;\n};"
+    },
+    {
+      "name": "LineItemsTaxAmount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type LineItemsTaxAmount = {\n  'amount': number;\n  'rate': TaxRate;\n  'taxability_reason'?: string;\n  'taxable_amount'?: number;\n};"
+    },
+    {
+      "name": "PaymentFlowsPaymentDetails",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentFlowsPaymentDetails = {\n  'customer_reference'?: string;\n  'order_reference'?: string;\n};"
+    },
+    {
+      "name": "PaymentFlowsPaymentIntentAsyncWorkflows",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentFlowsPaymentIntentAsyncWorkflows = {\n  'inputs'?: PaymentFlowsPaymentIntentAsyncWorkflowsResourceInputs;\n};"
+    },
+    {
+      "name": "PaymentFlowsPaymentIntentAsyncWorkflowsResourceInputs",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentFlowsPaymentIntentAsyncWorkflowsResourceInputs = {\n  'tax'?: PaymentFlowsPaymentIntentAsyncWorkflowsResourceInputsResourceTax;\n};"
+    },
+    {
+      "name": "PaymentFlowsPaymentIntentAsyncWorkflowsResourceInputsResourceTax",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentFlowsPaymentIntentAsyncWorkflowsResourceInputsResourceTax = {\n  'calculation': string;\n};"
+    },
+    {
+      "name": "PaymentFlowsPaymentIntentPresentmentDetails",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentFlowsPaymentIntentPresentmentDetails = {\n  'presentment_amount': number;\n  'presentment_currency': string;\n};"
+    },
+    {
+      "name": "PaymentFlowsPrivatePaymentMethodsAlipay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentFlowsPrivatePaymentMethodsAlipay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentFlowsPrivatePaymentMethodsCardPresentCommonWallet",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentFlowsPrivatePaymentMethodsCardPresentCommonWallet = {\n  'type': string;\n};"
+    },
+    {
+      "name": "PaymentIntent",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentIntent = {\n  'allowed_payment_method_types'?: string[];\n  'amount'?: number;\n  'amount_capturable'?: number;\n  'amount_details'?: Record<string, any>;\n  'amount_received'?: number;\n  'application'?: Record<string, any>;\n  'application_fee_amount'?: number;\n  'automatic_payment_methods'?: Record<string, any>;\n  'canceled_at'?: number;\n  'cancellation_reason'?: string;\n  'capture_method'?: string;\n  'client_secret'?: string;\n  'confirmation_method'?: string;\n  'created': number;\n  'currency'?: string;\n  'customer'?: Record<string, any>;\n  'customer_account'?: string;\n  'description'?: string;\n  'excluded_payment_method_types'?: string[];\n  'hooks'?: PaymentFlowsPaymentIntentAsyncWorkflows;\n  'id': string;\n  'last_payment_error'?: Record<string, any>;\n  'latest_charge'?: Record<string, any>;\n  'livemode': boolean;\n  'managed_payments'?: Record<string, any>;\n  'metadata'?: Record<string, any>;\n  'next_action'?: Record<string, any>;\n  'object': string;\n  'on_behalf_of'?: Record<string, any>;\n  'payment_details'?: PaymentFlowsPaymentDetails;\n  'payment_method'?: Record<string, any>;\n  'payment_method_configuration_details'?: Record<string, any>;\n  'payment_method_options'?: Record<string, any>;\n  'payment_method_types'?: string[];\n  'presentment_details'?: PaymentFlowsPaymentIntentPresentmentDetails;\n  'processing'?: Record<string, any>;\n  'receipt_email'?: string;\n  'review'?: Record<string, any>;\n  'setup_future_usage'?: string;\n  'shipping'?: Record<string, any>;\n  'statement_descriptor'?: string;\n  'statement_descriptor_suffix'?: string;\n  'status': string;\n  'transfer_data'?: Record<string, any>;\n  'transfer_group'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethod",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethod = {\n  'acss_debit'?: PaymentMethodAcssDebit;\n  'affirm'?: PaymentMethodAffirm;\n  'afterpay_clearpay'?: PaymentMethodAfterpayClearpay;\n  'alipay'?: PaymentFlowsPrivatePaymentMethodsAlipay;\n  'allow_redisplay'?: string;\n  'alma'?: PaymentMethodAlma;\n  'amazon_pay'?: PaymentMethodAmazonPay;\n  'au_becs_debit'?: PaymentMethodAuBecsDebit;\n  'bacs_debit'?: PaymentMethodBacsDebit;\n  'bancontact'?: PaymentMethodBancontact;\n  'billie'?: PaymentMethodBillie;\n  'billing_details': BillingDetails;\n  'bizum'?: PaymentMethodBizum;\n  'blik'?: PaymentMethodBlik;\n  'boleto'?: PaymentMethodBoleto;\n  'card'?: PaymentMethodCard;\n  'card_present'?: PaymentMethodCardPresent;\n  'cashapp'?: PaymentMethodCashapp;\n  'created': number;\n  'crypto'?: PaymentMethodCrypto;\n  'custom'?: PaymentMethodCustom;\n  'customer'?: Record<string, any>;\n  'customer_account'?: string;\n  'customer_balance'?: PaymentMethodCustomerBalance;\n  'eps'?: PaymentMethodEps;\n  'fpx'?: PaymentMethodFpx;\n  'giropay'?: PaymentMethodGiropay;\n  'grabpay'?: PaymentMethodGrabpay;\n  'id': string;\n  'ideal'?: PaymentMethodIdeal;\n  'interac_present'?: PaymentMethodInteracPresent;\n  'kakao_pay'?: PaymentMethodKakaoPay;\n  'klarna'?: PaymentMethodKlarna;\n  'konbini'?: PaymentMethodKonbini;\n  'kr_card'?: PaymentMethodKrCard;\n  'link'?: PaymentMethodLink;\n  'livemode': boolean;\n  'mb_way'?: PaymentMethodMbWay;\n  'metadata'?: Record<string, any>;\n  'mobilepay'?: PaymentMethodMobilepay;\n  'multibanco'?: PaymentMethodMultibanco;\n  'naver_pay'?: PaymentMethodNaverPay;\n  'nz_bank_account'?: PaymentMethodNzBankAccount;\n  'object': string;\n  'oxxo'?: PaymentMethodOxxo;\n  'p24'?: PaymentMethodP24;\n  'pay_by_bank'?: PaymentMethodPayByBank;\n  'payco'?: PaymentMethodPayco;\n  'paynow'?: PaymentMethodPaynow;\n  'paypal'?: PaymentMethodPaypal;\n  'payto'?: PaymentMethodPayto;\n  'pix'?: PaymentMethodPix;\n  'promptpay'?: PaymentMethodPromptpay;\n  'radar_options'?: RadarRadarOptions;\n  'revolut_pay'?: PaymentMethodRevolutPay;\n  'samsung_pay'?: PaymentMethodSamsungPay;\n  'satispay'?: PaymentMethodSatispay;\n  'scalapay'?: PaymentMethodScalapay;\n  'sepa_debit'?: PaymentMethodSepaDebit;\n  'sofort'?: PaymentMethodSofort;\n  'sunbit'?: PaymentMethodSunbit;\n  'swish'?: PaymentMethodSwish;\n  'twint'?: PaymentMethodTwint;\n  'type': string;\n  'upi'?: PaymentMethodUpi;\n  'us_bank_account'?: PaymentMethodUsBankAccount;\n  'wechat_pay'?: PaymentMethodWechatPay;\n  'zip'?: PaymentMethodZip;\n};"
+    },
+    {
+      "name": "PaymentMethodAcssDebit",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodAcssDebit = {\n  'bank_name'?: string;\n  'fingerprint'?: string;\n  'institution_number'?: string;\n  'last4'?: string;\n  'transit_number'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodAffirm",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodAffirm = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodAfterpayClearpay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodAfterpayClearpay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodAlma",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodAlma = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodAmazonPay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodAmazonPay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodAuBecsDebit",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodAuBecsDebit = {\n  'bsb_number'?: string;\n  'fingerprint'?: string;\n  'last4'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodBacsDebit",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodBacsDebit = {\n  'fingerprint'?: string;\n  'last4'?: string;\n  'sort_code'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodBancontact",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodBancontact = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodBillie",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodBillie = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodBizum",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodBizum = {\n  'buyer_id'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodBlik",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodBlik = {\n  'buyer_id'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodBoleto",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodBoleto = {\n  'tax_id': string;\n};"
+    },
+    {
+      "name": "PaymentMethodCard",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodCard = {\n  'brand': string;\n  'checks'?: Record<string, any>;\n  'country'?: string;\n  'display_brand'?: string;\n  'exp_month': number;\n  'exp_year': number;\n  'fingerprint'?: string;\n  'funding': string;\n  'generated_from'?: Record<string, any>;\n  'last4': string;\n  'networks'?: Record<string, any>;\n  'regulated_status'?: string;\n  'three_d_secure_usage'?: Record<string, any>;\n  'wallet'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "PaymentMethodCardPresent",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodCardPresent = {\n  'brand'?: string;\n  'brand_product'?: string;\n  'cardholder_name'?: string;\n  'country'?: string;\n  'description'?: string;\n  'exp_month': number;\n  'exp_year': number;\n  'fingerprint'?: string;\n  'funding'?: string;\n  'issuer'?: string;\n  'last4'?: string;\n  'networks'?: Record<string, any>;\n  'offline'?: Record<string, any>;\n  'preferred_locales'?: string[];\n  'read_method'?: string;\n  'wallet'?: PaymentFlowsPrivatePaymentMethodsCardPresentCommonWallet;\n};"
+    },
+    {
+      "name": "PaymentMethodCashapp",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodCashapp = {\n  'buyer_id'?: string;\n  'cashtag'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodCrypto",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodCrypto = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodCustom",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodCustom = {\n  'display_name'?: string;\n  'logo'?: Record<string, any>;\n  'type': string;\n};"
+    },
+    {
+      "name": "PaymentMethodCustomerBalance",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodCustomerBalance = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodEps",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodEps = {\n  'bank'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodFpx",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodFpx = {\n  'bank': string;\n};"
+    },
+    {
+      "name": "PaymentMethodGiropay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodGiropay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodGrabpay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodGrabpay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodIdeal",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodIdeal = {\n  'bank'?: string;\n  'bic'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodInteracPresent",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodInteracPresent = {\n  'brand'?: string;\n  'cardholder_name'?: string;\n  'country'?: string;\n  'description'?: string;\n  'exp_month': number;\n  'exp_year': number;\n  'fingerprint'?: string;\n  'funding'?: string;\n  'issuer'?: string;\n  'last4'?: string;\n  'networks'?: Record<string, any>;\n  'preferred_locales'?: string[];\n  'read_method'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodKakaoPay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodKakaoPay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodKlarna",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodKlarna = {\n  'dob'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "PaymentMethodKonbini",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodKonbini = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodKrCard",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodKrCard = {\n  'brand'?: string;\n  'last4'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodLink",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodLink = {\n  'email'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodMbWay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodMbWay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodMobilepay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodMobilepay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodMultibanco",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodMultibanco = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodNaverPay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodNaverPay = {\n  'buyer_id'?: string;\n  'funding': string;\n};"
+    },
+    {
+      "name": "PaymentMethodNzBankAccount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodNzBankAccount = {\n  'account_holder_name'?: string;\n  'bank_code': string;\n  'bank_name': string;\n  'branch_code': string;\n  'last4': string;\n  'suffix'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodOxxo",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodOxxo = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodP24",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodP24 = {\n  'bank'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodPayByBank",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodPayByBank = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodPayco",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodPayco = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodPaynow",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodPaynow = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodPaypal",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodPaypal = {\n  'country'?: string;\n  'payer_email'?: string;\n  'payer_id'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodPayto",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodPayto = {\n  'bsb_number'?: string;\n  'last4'?: string;\n  'pay_id'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodPix",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodPix = {\n  'fingerprint'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodPromptpay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodPromptpay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodRevolutPay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodRevolutPay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodSamsungPay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodSamsungPay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodSatispay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodSatispay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodScalapay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodScalapay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodSepaDebit",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodSepaDebit = {\n  'bank_code'?: string;\n  'branch_code'?: string;\n  'country'?: string;\n  'fingerprint'?: string;\n  'generated_from'?: Record<string, any>;\n  'last4'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodSofort",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodSofort = {\n  'country'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodSunbit",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodSunbit = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodSwish",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodSwish = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodTwint",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodTwint = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodUpi",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodUpi = {\n  'vpa'?: string;\n};"
+    },
+    {
+      "name": "PaymentMethodUsBankAccount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodUsBankAccount = {\n  'account_holder_type'?: string;\n  'account_type'?: string;\n  'bank_name'?: string;\n  'financial_connections_account'?: string;\n  'fingerprint'?: string;\n  'last4'?: string;\n  'networks'?: Record<string, any>;\n  'routing_number'?: string;\n  'status_details'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "PaymentMethodWechatPay",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodWechatPay = Record<string, any>;"
+    },
+    {
+      "name": "PaymentMethodZip",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentMethodZip = Record<string, any>;"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionAutomaticTax",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionAutomaticTax = {\n  'enabled': boolean;\n  'liability'?: Record<string, any>;\n  'provider'?: string;\n  'status'?: string;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionBrandingSettings",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionBrandingSettings = {\n  'background_color': string;\n  'border_style': string;\n  'button_color': string;\n  'display_name': string;\n  'font_family': string;\n  'icon'?: Record<string, any>;\n  'logo'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionBusinessName",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionBusinessName = {\n  'enabled': boolean;\n  'optional': boolean;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionCustomFields",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionCustomFields = {\n  'dropdown'?: PaymentPagesCheckoutSessionCustomFieldsDropdown;\n  'key': string;\n  'label': PaymentPagesCheckoutSessionCustomFieldsLabel;\n  'numeric'?: PaymentPagesCheckoutSessionCustomFieldsNumeric;\n  'optional': boolean;\n  'text'?: PaymentPagesCheckoutSessionCustomFieldsText;\n  'type': string;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionCustomFieldsDropdown",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionCustomFieldsDropdown = {\n  'default_value'?: string;\n  'options': PaymentPagesCheckoutSessionCustomFieldsOption[];\n  'value'?: string;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionCustomFieldsLabel",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionCustomFieldsLabel = {\n  'custom'?: string;\n  'type': string;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionCustomFieldsNumeric",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionCustomFieldsNumeric = {\n  'default_value'?: string;\n  'maximum_length'?: number;\n  'minimum_length'?: number;\n  'value'?: string;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionCustomFieldsOption",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionCustomFieldsOption = {\n  'label': string;\n  'value': string;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionCustomFieldsText",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionCustomFieldsText = {\n  'default_value'?: string;\n  'maximum_length'?: number;\n  'minimum_length'?: number;\n  'value'?: string;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionCustomText",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionCustomText = {\n  'after_submit'?: Record<string, any>;\n  'shipping_address'?: Record<string, any>;\n  'submit'?: Record<string, any>;\n  'terms_of_service_acceptance'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionDiscount",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionDiscount = {\n  'coupon'?: Record<string, any>;\n  'promotion_code'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionIndividualName",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionIndividualName = {\n  'enabled': boolean;\n  'optional': boolean;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionNameCollection",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionNameCollection = {\n  'business'?: PaymentPagesCheckoutSessionBusinessName;\n  'individual'?: PaymentPagesCheckoutSessionIndividualName;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionOptionalItem",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionOptionalItem = {\n  'adjustable_quantity'?: Record<string, any>;\n  'price': string;\n  'quantity': number;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionPhoneNumberCollection",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionPhoneNumberCollection = {\n  'enabled': boolean;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionShippingOption",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionShippingOption = {\n  'shipping_amount': number;\n  'shipping_rate': Record<string, any>;\n};"
+    },
+    {
+      "name": "PaymentPagesCheckoutSessionTaxIdCollection",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PaymentPagesCheckoutSessionTaxIdCollection = {\n  'enabled': boolean;\n  'required': string;\n};"
+    },
+    {
+      "name": "Price",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Price = {\n  'active': boolean;\n  'billing_scheme': string;\n  'created': number;\n  'currency': string;\n  'currency_options'?: Record<string, any>;\n  'custom_unit_amount'?: Record<string, any>;\n  'id': string;\n  'livemode': boolean;\n  'lookup_key'?: string;\n  'metadata': Record<string, any>;\n  'nickname'?: string;\n  'object': string;\n  'product': Record<string, any>;\n  'recurring'?: Record<string, any>;\n  'tax_behavior'?: string;\n  'tiers'?: PriceTier[];\n  'tiers_mode'?: string;\n  'transform_quantity'?: Record<string, any>;\n  'type': string;\n  'unit_amount'?: number;\n  'unit_amount_decimal'?: string;\n};"
+    },
+    {
+      "name": "PriceTier",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type PriceTier = {\n  'flat_amount'?: number;\n  'flat_amount_decimal'?: string;\n  'unit_amount'?: number;\n  'unit_amount_decimal'?: string;\n  'up_to'?: number;\n};"
+    },
+    {
+      "name": "Product",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Product = {\n  'active': boolean;\n  'created': number;\n  'default_price'?: Record<string, any>;\n  'description'?: string;\n  'id': string;\n  'images': string[];\n  'livemode': boolean;\n  'marketing_features': ProductMarketingFeature[];\n  'metadata': Record<string, any>;\n  'name': string;\n  'object': string;\n  'package_dimensions'?: Record<string, any>;\n  'shippable'?: boolean;\n  'statement_descriptor'?: string;\n  'tax_code'?: Record<string, any>;\n  'unit_label'?: string;\n  'updated': number;\n  'url'?: string;\n};"
+    },
+    {
+      "name": "ProductMarketingFeature",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type ProductMarketingFeature = {\n  'name'?: string;\n};"
+    },
+    {
+      "name": "RadarRadarOptions",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type RadarRadarOptions = {\n  'session'?: string;\n};"
+    },
+    {
+      "name": "SetupIntent",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SetupIntent = {\n  'allowed_payment_method_types'?: string[];\n  'application'?: Record<string, any>;\n  'attach_to_self'?: boolean;\n  'automatic_payment_methods'?: Record<string, any>;\n  'cancellation_reason'?: string;\n  'client_secret'?: string;\n  'created': number;\n  'customer'?: Record<string, any>;\n  'customer_account'?: string;\n  'description'?: string;\n  'excluded_payment_method_types'?: string[];\n  'flow_directions'?: string[];\n  'id': string;\n  'last_setup_error'?: Record<string, any>;\n  'latest_attempt'?: Record<string, any>;\n  'livemode': boolean;\n  'managed_payments'?: Record<string, any>;\n  'mandate'?: Record<string, any>;\n  'metadata'?: Record<string, any>;\n  'next_action'?: Record<string, any>;\n  'object': string;\n  'on_behalf_of'?: Record<string, any>;\n  'payment_method'?: Record<string, any>;\n  'payment_method_configuration_details'?: Record<string, any>;\n  'payment_method_options'?: Record<string, any>;\n  'payment_method_types': string[];\n  'single_use_mandate'?: Record<string, any>;\n  'status': string;\n  'usage': string;\n};"
+    },
+    {
+      "name": "Subscription",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type Subscription = {\n  'application'?: Record<string, any>;\n  'application_fee_percent'?: number;\n  'automatic_tax': SubscriptionAutomaticTax;\n  'billing_cycle_anchor': number;\n  'billing_cycle_anchor_config'?: Record<string, any>;\n  'billing_mode': SubscriptionsResourceBillingMode;\n  'billing_schedules': SubscriptionsResourceBillingSchedules[];\n  'billing_thresholds'?: Record<string, any>;\n  'cancel_at'?: number;\n  'cancel_at_period_end': boolean;\n  'canceled_at'?: number;\n  'cancellation_details'?: Record<string, any>;\n  'collection_method': string;\n  'created': number;\n  'currency': string;\n  'customer': Record<string, any>;\n  'customer_account'?: string;\n  'days_until_due'?: number;\n  'default_payment_method'?: Record<string, any>;\n  'default_source'?: Record<string, any>;\n  'default_tax_rates'?: TaxRate[];\n  'description'?: string;\n  'discounts': Record<string, any>[];\n  'ended_at'?: number;\n  'id': string;\n  'invoice_settings': SubscriptionsResourceSubscriptionInvoiceSettings;\n  'items': {\n    'data': SubscriptionItem[];\n    'has_more': boolean;\n    'object': string;\n    'url': string;\n  };\n  'latest_invoice'?: Record<string, any>;\n  'livemode': boolean;\n  'managed_payments'?: Record<string, any>;\n  'metadata': Record<string, any>;\n  'next_pending_invoice_item_invoice'?: number;\n  'object': string;\n  'on_behalf_of'?: Record<string, any>;\n  'pause_collection'?: Record<string, any>;\n  'payment_settings'?: Record<string, any>;\n  'pending_invoice_item_interval'?: Record<string, any>;\n  'pending_setup_intent'?: Record<string, any>;\n  'pending_update'?: Record<string, any>;\n  'presentment_details'?: SubscriptionsResourceSubscriptionPresentmentDetails;\n  'schedule'?: Record<string, any>;\n  'start_date': number;\n  'status': string;\n  'test_clock'?: Record<string, any>;\n  'transfer_data'?: Record<string, any>;\n  'trial_end'?: number;\n  'trial_settings'?: Record<string, any>;\n  'trial_start'?: number;\n};"
+    },
+    {
+      "name": "SubscriptionAutomaticTax",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionAutomaticTax = {\n  'disabled_reason'?: string;\n  'enabled': boolean;\n  'liability'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "SubscriptionItem",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionItem = {\n  'billed_until'?: number;\n  'billing_thresholds'?: Record<string, any>;\n  'created': number;\n  'current_period_end': number;\n  'current_period_start': number;\n  'discounts': Record<string, any>[];\n  'id': string;\n  'metadata': Record<string, any>;\n  'object': string;\n  'price': Price;\n  'quantity'?: number;\n  'subscription': string;\n  'tax_rates'?: TaxRate[];\n};"
+    },
+    {
+      "name": "SubscriptionsResourceBillingMode",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionsResourceBillingMode = {\n  'flexible'?: Record<string, any>;\n  'type': string;\n  'updated_at'?: number;\n};"
+    },
+    {
+      "name": "SubscriptionsResourceBillingSchedules",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionsResourceBillingSchedules = {\n  'applies_to'?: SubscriptionsResourceBillingSchedulesAppliesTo[];\n  'bill_until': SubscriptionsResourceBillingSchedulesBillUntil;\n  'key': string;\n};"
+    },
+    {
+      "name": "SubscriptionsResourceBillingSchedulesAppliesTo",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionsResourceBillingSchedulesAppliesTo = {\n  'price'?: Record<string, any>;\n  'type': string;\n};"
+    },
+    {
+      "name": "SubscriptionsResourceBillingSchedulesBillUntil",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionsResourceBillingSchedulesBillUntil = {\n  'computed_timestamp': number;\n  'duration'?: Record<string, any>;\n  'timestamp'?: number;\n  'type': string;\n};"
+    },
+    {
+      "name": "SubscriptionsResourceSubscriptionInvoiceSettings",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionsResourceSubscriptionInvoiceSettings = {\n  'account_tax_ids'?: Record<string, any>[];\n  'custom_fields'?: InvoiceSettingCustomField[];\n  'description'?: string;\n  'footer'?: string;\n  'issuer': ConnectAccountReference;\n};"
+    },
+    {
+      "name": "SubscriptionsResourceSubscriptionPresentmentDetails",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type SubscriptionsResourceSubscriptionPresentmentDetails = {\n  'presentment_currency': string;\n};"
+    },
+    {
+      "name": "TaxId",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type TaxId = {\n  'country'?: string;\n  'created': number;\n  'customer'?: Record<string, any>;\n  'customer_account'?: string;\n  'id': string;\n  'livemode': boolean;\n  'object': string;\n  'owner'?: Record<string, any>;\n  'type': string;\n  'value': string;\n  'verification'?: Record<string, any>;\n};"
+    },
+    {
+      "name": "TaxRate",
+      "file": "src/types/Stripe.ts",
+      "declaration": "export type TaxRate = {\n  'active': boolean;\n  'country'?: string;\n  'created': number;\n  'description'?: string;\n  'display_name': string;\n  'effective_percentage'?: number;\n  'flat_amount'?: Record<string, any>;\n  'id': string;\n  'inclusive': boolean;\n  'jurisdiction'?: string;\n  'jurisdiction_level'?: string;\n  'livemode': boolean;\n  'metadata'?: Record<string, any>;\n  'object': string;\n  'percentage': number;\n  'rate_type'?: string;\n  'state'?: string;\n  'tax_type'?: string;\n};"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+apiVersion: fused/v1
+kind: sdk
+name: dext-integrations-billing
+version: 1.0.0
+language: typescript
+bucket: default
+webhook_attachment: dext-integrations-stripe
+services:
+  stripe:
+    version: 2026-07-29.dahlia
+    auth:
+      type: bearer
+      name: bearerAuth
+    operations:
+      - PostCheckoutSessions
+      - GetSubscriptionsSubscriptionExposedId
+      - PostBillingPortalSessions
+      - PostWebhookEndpoints
+    webhooks:
+      - checkout.session.completed
+      - invoice.paid
+      - invoice.payment_failed
+      - customer.subscription.updated
+      - customer.subscription.deleted

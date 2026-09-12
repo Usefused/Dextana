@@ -1,0 +1,18 @@
+apiVersion: fused/v1
+kind: workspace
+services:
+    '@martins-joseph/google-oauth2':
+        versions:
+            - version: v2
+    '@martins-joseph/gmail':
+        versions:
+            - version: v1
+    '@martins-joseph/google-calendar':
+        versions:
+            - version: v3
+    '@martins-joseph/googledrive':
+        versions:
+            - version: v3
+    '@martins-joseph/stripe':
+        versions:
+            - version: 2026-07-29.dahlia

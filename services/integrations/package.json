@@ -1,0 +1,17 @@
+{
+  "name": "@dextana/integrations-service",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --experimental-sqlite src/server.mjs",
+    "test": "node --experimental-sqlite --test test/*.test.mjs",
+    "catalog:sync": "node src/sync-catalog.mjs",
+    "start:local": "node --env-file-if-exists=.env --experimental-sqlite src/server.mjs --local",
+    "webhook:register": "node --env-file-if-exists=.env src/register-webhook.mjs",
+    "webhook:bootstrap": "node --env-file-if-exists=.env src/register-webhook.mjs --bootstrap"
+  }
+}

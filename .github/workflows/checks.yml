@@ -5,15 +5,19 @@ permissions:
 jobs:
   source:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - run: npm run check:desktop
       - run: npm test
       - run: npm run build
 # Full desktop E2E runs require the Harnest CLI and a graphical session.
-# See README.md for the local full-flow gate before submitting a change.
+# See desktop/README.md for the local full-flow gate before submitting a change.

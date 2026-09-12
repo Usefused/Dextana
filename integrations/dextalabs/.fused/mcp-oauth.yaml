@@ -1,0 +1,73 @@
+apiVersion: fused/v1
+kind: mcp
+name: dextalabs-integrations
+version: 2.0.0
+description: Search and manage Gmail messages and drafts, find and organize Google Drive files, and check availability and manage Google Calendar events.
+bucket: default
+services:
+    '@martins-joseph/gmail':
+        version: v1
+        auth:
+            type: oauth
+            name: oauth2
+        connect:
+            scopes:
+                - https://www.googleapis.com/auth/gmail.modify
+        operations:
+            - gmail.users.getProfile
+            - gmail.users.messages.list
+            - gmail.users.messages.get
+            - gmail.users.messages.attachments.get
+            - gmail.users.messages.modify
+            - gmail.users.messages.send
+            - gmail.users.threads.list
+            - gmail.users.threads.get
+            - gmail.users.drafts.list
+            - gmail.users.drafts.get
+            - gmail.users.drafts.create
+            - gmail.users.drafts.update
+            - gmail.users.drafts.send
+            - gmail.users.labels.list
+            - gmail.users.labels.create
+    '@martins-joseph/google-calendar':
+        version: v3
+        auth:
+            type: oauth
+            name: oauth2
+            ref: '${bucket.auth.@martins-joseph/gmail.oauth2}'
+        connect:
+            scopes:
+                - https://www.googleapis.com/auth/calendar.calendarlist.readonly
+                - https://www.googleapis.com/auth/calendar.calendars.readonly
+                - https://www.googleapis.com/auth/calendar.events
+                - https://www.googleapis.com/auth/calendar.freebusy
+        operations:
+            - calendar.calendarList.list
+            - calendar.calendars.get
+            - calendar.events.list
+            - calendar.events.get
+            - calendar.events.instances
+            - calendar.events.insert
+            - calendar.events.patch
+            - calendar.events.delete
+            - calendar.freebusy.query
+    '@martins-joseph/googledrive':
+        version: v3
+        auth:
+            type: oauth
+            name: oauth2
+            ref: '${bucket.auth.@martins-joseph/gmail.oauth2}'
+        connect:
+            scopes:
+                - https://www.googleapis.com/auth/drive
+        operations:
+            - drive.about.get
+            - drive.drives.list
+            - drive.files.list
+            - drive.files.get
+            - drive.files.export
+            - drive.files.create
+            - drive.files.update
+            - drive.files.copy
+            - drive.comments.list
+            - drive.comments.create

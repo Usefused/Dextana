@@ -1,0 +1,19 @@
+{
+  "name": "dextalabs-stripe",
+  "version": "1.0.0",
+  "description": "GitOps managed SDK dextalabs-stripe",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.10.0",
+    "@grpc/proto-loader": "^0.7.12",
+    "@opentelemetry/api": "^1.8.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "scripts": {
+    "build": "tsc && cp src/engine.proto dist/"
+  }
+}

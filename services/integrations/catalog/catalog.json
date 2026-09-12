@@ -1,0 +1,104 @@
+{
+  "mcpId": "323aa26c-ea7b-45eb-87f6-b7b6ff01aa75",
+  "versionId": "2afaa86d-b8e5-505c-a3f8-264934e60dc9",
+  "mcpUrl": "https://fused.run.usefused.com/mcp/2afaa86d-b8e5-505c-a3f8-264934e60dc9",
+  "generatedAt": "2026-09-09T14:37:21.589Z",
+  "providers": [
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "serviceId": "1bb76a62-6aaf-452a-9cce-4c2ad8bb2782",
+      "authType": "oauth",
+      "authName": "oauth2",
+      "scopes": [
+        "https://www.googleapis.com/auth/gmail.modify"
+      ],
+      "operations": [
+        {
+          "id": "gmail.users.drafts.create",
+          "name": "Create an email draft"
+        },
+        {
+          "id": "gmail.users.drafts.send",
+          "name": "Send a draft"
+        },
+        {
+          "id": "gmail.users.getProfile",
+          "name": "Read your Gmail profile"
+        },
+        {
+          "id": "gmail.users.messages.get",
+          "name": "Read an email"
+        },
+        {
+          "id": "gmail.users.messages.list",
+          "name": "List emails"
+        },
+        {
+          "id": "gmail.users.messages.send",
+          "name": "Send an email"
+        }
+      ]
+    },
+    {
+      "id": "google-calendar",
+      "name": "Google Calendar",
+      "serviceId": "8a8e2418-afb6-464f-b23e-63b10e553bbd",
+      "authType": "oauth",
+      "authName": "oauth2",
+      "authRef": "${bucket.auth.gmail.oauth2}",
+      "scopes": [
+        "https://www.googleapis.com/auth/calendar"
+      ],
+      "operations": [
+        {
+          "id": "calendar.calendarList.list",
+          "name": "List calendars"
+        },
+        {
+          "id": "calendar.events.delete",
+          "name": "Delete an event"
+        },
+        {
+          "id": "calendar.events.get",
+          "name": "Read an event"
+        },
+        {
+          "id": "calendar.events.insert",
+          "name": "Create an event"
+        },
+        {
+          "id": "calendar.events.list",
+          "name": "List events"
+        },
+        {
+          "id": "calendar.events.update",
+          "name": "Update an event"
+        },
+        {
+          "id": "calendar.freebusy.query",
+          "name": "Check availability"
+        }
+      ]
+    },
+    {
+      "id": "google-oauth2",
+      "name": "Google OAuth2 API",
+      "serviceId": "7917bb0c-bc0b-4948-8750-329cc68a0230",
+      "authType": "oauth",
+      "authName": "oauth2",
+      "authRef": "${bucket.auth.gmail.oauth2}",
+      "scopes": [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "openid"
+      ],
+      "operations": [
+        {
+          "id": "oauth2.userinfo.v2.me.get",
+          "name": "Read your Google account profile"
+        }
+      ]
+    }
+  ]
+}
